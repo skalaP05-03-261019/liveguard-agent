@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-19T08:46:09.220616+00:00",
+  "scope": "Agent scaffold only",
+  "syntax": {
+    "status": "passed",
+    "files": [
+      "app/__init__.py",
+      "app/clients/__init__.py",
+      "app/clients/ports.py",
+      "app/graph.py",
+      "app/main.py",
+      "app/nodes.py",
+      "app/schemas.py",
+      "app/state.py"
+    ]
+  },
+  "pyproject": "parsed",
+  "fixture": {
+    "id": "D01",
+    "status": "parsed",
+    "mockToolCount": 8
+  },
+  "dependencyInstall": {
+    "status": "blocked",
+    "reason": "PyPI DNS lookup failed; uv sync could not fetch dependencies"
+  },
+  "unverified": [
+    "Dependency resolution and version compatibility",
+    "FastAPI import and HTTP execution",
+    "LangGraph compile and execution",
+    "Actual model tool selection",
+    "MCP and Backend integration",
+    "Checkpoint/resume",
+    "Business mutations"
+  ],
+  "courseBaselineCheck": "passed; record integrity only",
+  "implemented": "API/schema/state/graph boundaries and integration stubs; no completed investigation"
+}

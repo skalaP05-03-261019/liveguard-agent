@@ -1,0 +1,215 @@
+{
+  "fixtureId": "D01",
+  "taskEnvelope": {
+    "eventId": "5f7c28cb-b3f6-5455-8c73-9f347615e195",
+    "taskId": "99eeffb2-0fe9-51ff-be59-e69b571c0d7a",
+    "caseId": "9f1a497b-65ea-5ddf-970b-f03f0235a39e",
+    "kind": "ANALYZE",
+    "threadId": "case:9f1a497b-65ea-5ddf-970b-f03f0235a39e:analysis:1",
+    "expectedCaseVersion": 3,
+    "decisionId": null,
+    "attempt": 0,
+    "traceId": "d6c3d009-623c-577b-b9b8-4efab4f47312"
+  },
+  "seedMetadata": {
+    "channelId": "97affa7c-e640-5412-9975-81759d4c327f",
+    "subjectUserId": "9008a8c2-6006-5245-a281-daf6f3a84b49",
+    "policyVersion": "0.3-draft",
+    "evidenceVersion": 1,
+    "normalizationVersion": "fixture-v1",
+    "analysisRequestedAt": "2026-10-19T03:00:03.000Z",
+    "caseCollectionStartedAt": "2026-10-19T03:00:00.000Z",
+    "fixedWindowEnd": null,
+    "currentActiveTimeout": false,
+    "isolation": "RESET_BEFORE_EACH_FIXTURE_RUN"
+  },
+  "seedMessages": [
+    {
+      "messageId": "717fc78a-6994-5215-9c0a-2b1ade87c7fa",
+      "clientMessageId": "2f3f9535-b113-59cc-a95a-5551d20b2745",
+      "authorAlias": "U1",
+      "text": "무대 미쳤다ㅋㅋ",
+      "sentAt": "2026-10-19T03:00:00.000Z",
+      "receivedAt": "2026-10-19T03:00:00.000Z",
+      "arrivalIndex": 1,
+      "visibility": "PUBLIC",
+      "normalizedText": "무대 미쳤다ㅋㅋ",
+      "targetAlias": null,
+      "replyToId": null
+    },
+    {
+      "messageId": "02bb0b99-1f1f-5ea9-b15d-f5fdc4a15120",
+      "clientMessageId": "9494c735-c5b6-53d5-bbfd-f6aaa42710e9",
+      "authorAlias": "U2",
+      "text": "오늘 무대 너무 좋다",
+      "sentAt": "2026-10-19T03:00:00.500Z",
+      "receivedAt": "2026-10-19T03:00:00.500Z",
+      "arrivalIndex": 2,
+      "visibility": "PUBLIC",
+      "normalizedText": "오늘 무대 너무 좋다",
+      "targetAlias": null,
+      "replyToId": null
+    }
+  ],
+  "mockTools": [
+    {
+      "toolName": "get_moderation_case",
+      "input": {
+        "caseId": "9f1a497b-65ea-5ddf-970b-f03f0235a39e"
+      },
+      "response": {
+        "data": {
+          "caseId": "9f1a497b-65ea-5ddf-970b-f03f0235a39e",
+          "channelId": "97affa7c-e640-5412-9975-81759d4c327f",
+          "userAlias": "U1",
+          "caseVersion": 3,
+          "filterResult": "REVIEW",
+          "messageIds": [
+            "717fc78a-6994-5215-9c0a-2b1ade87c7fa"
+          ],
+          "visibilityByMessage": {
+            "717fc78a-6994-5215-9c0a-2b1ade87c7fa": "PUBLIC"
+          },
+          "actions": []
+        },
+        "traceId": "d6c3d009-623c-577b-b9b8-4efab4f47312"
+      }
+    },
+    {
+      "toolName": "get_chat_context",
+      "input": {
+        "caseId": "9f1a497b-65ea-5ddf-970b-f03f0235a39e",
+        "before": 10,
+        "after": 10
+      },
+      "response": {
+        "data": {
+          "caseVersion": 3,
+          "messages": [
+            {
+              "messageId": "717fc78a-6994-5215-9c0a-2b1ade87c7fa",
+              "authorAlias": "U1",
+              "text": "무대 미쳤다ㅋㅋ",
+              "sentAt": "2026-10-19T03:00:00.000Z",
+              "replyToId": null
+            },
+            {
+              "messageId": "02bb0b99-1f1f-5ea9-b15d-f5fdc4a15120",
+              "authorAlias": "U2",
+              "text": "오늘 무대 너무 좋다",
+              "sentAt": "2026-10-19T03:00:00.500Z",
+              "replyToId": null
+            }
+          ]
+        },
+        "traceId": "d6c3d009-623c-577b-b9b8-4efab4f47312"
+      }
+    },
+    {
+      "toolName": "get_user_history",
+      "input": {
+        "caseId": "9f1a497b-65ea-5ddf-970b-f03f0235a39e",
+        "days": 30
+      },
+      "response": {
+        "data": {
+          "effectiveViolationCount": 0,
+          "cancelledCount": 0,
+          "actions": [],
+          "recentMessageIds": [
+            "717fc78a-6994-5215-9c0a-2b1ade87c7fa",
+            "02bb0b99-1f1f-5ea9-b15d-f5fdc4a15120"
+          ]
+        },
+        "traceId": "d6c3d009-623c-577b-b9b8-4efab4f47312"
+      }
+    },
+    {
+      "toolName": "get_channel_user_role",
+      "input": {
+        "caseId": "9f1a497b-65ea-5ddf-970b-f03f0235a39e"
+      },
+      "response": {
+        "data": {
+          "subjectAlias": "U1",
+          "role": "VIEWER",
+          "isOfficialOperator": false
+        },
+        "traceId": "d6c3d009-623c-577b-b9b8-4efab4f47312"
+      }
+    },
+    {
+      "toolName": "get_stream_info",
+      "input": {
+        "caseId": "9f1a497b-65ea-5ddf-970b-f03f0235a39e"
+      },
+      "response": {
+        "data": {
+          "channelId": "97affa7c-e640-5412-9975-81759d4c327f",
+          "eventSummaries": [
+            "현재 로그인 인증 이벤트는 등록되어 있지 않습니다."
+          ],
+          "officialDomains": [
+            "official.example"
+          ]
+        },
+        "traceId": "d6c3d009-623c-577b-b9b8-4efab4f47312"
+      }
+    },
+    {
+      "toolName": "get_official_links",
+      "input": {
+        "caseId": "9f1a497b-65ea-5ddf-970b-f03f0235a39e"
+      },
+      "response": {
+        "data": {
+          "officialHosts": [
+            "official.example"
+          ],
+          "observedLinks": []
+        },
+        "traceId": "d6c3d009-623c-577b-b9b8-4efab4f47312"
+      }
+    },
+    {
+      "toolName": "search_policy",
+      "input": {
+        "query": "메시지 문맥과 현재 정책의 적용 조건 확인",
+        "policyVersion": "0.3-draft",
+        "topK": 4
+      },
+      "response": {
+        "data": {
+          "matches": [
+            {
+              "policyId": "CP-1.1",
+              "title": "정상 반응·내용 비판",
+              "text": "“무대 미쳤다”, “개잘한다” 등 긍정 과장과 “진행이 느리다” 같은 내용 비판은 맥락을 확인해 정상 예외로 둔다. 단어 일치만으로 인격 공격이라고 결론 내리지 않는다. 반어·표적 조롱 여부가 불명확하면 필요한 대화를 조회한다.\n\n정상 판단은 NO_VIOLATION이다. PUBLIC이면 유지, HELD면 서버 검증 후 RELEASE_HELD 자동 실행. 이미 HIDDEN이면 최초 조사 정상 분기로 풀지 않고 원조치 재검토를 거친다.",
+              "version": "0.3-draft",
+              "resourceUri": "policy://0.3-draft/CP/CP-1.1",
+              "score": 0.9
+            }
+          ]
+        },
+        "traceId": "d6c3d009-623c-577b-b9b8-4efab4f47312"
+      }
+    },
+    {
+      "toolName": "get_policy_section",
+      "input": {
+        "policyId": "CP-1.1",
+        "policyVersion": "0.3-draft"
+      },
+      "response": {
+        "data": {
+          "policyId": "CP-1.1",
+          "title": "정상 반응·내용 비판",
+          "text": "“무대 미쳤다”, “개잘한다” 등 긍정 과장과 “진행이 느리다” 같은 내용 비판은 맥락을 확인해 정상 예외로 둔다. 단어 일치만으로 인격 공격이라고 결론 내리지 않는다. 반어·표적 조롱 여부가 불명확하면 필요한 대화를 조회한다.\n\n정상 판단은 NO_VIOLATION이다. PUBLIC이면 유지, HELD면 서버 검증 후 RELEASE_HELD 자동 실행. 이미 HIDDEN이면 최초 조사 정상 분기로 풀지 않고 원조치 재검토를 거친다.",
+          "version": "0.3-draft",
+          "resourceUri": "policy://0.3-draft/CP/CP-1.1"
+        },
+        "traceId": "d6c3d009-623c-577b-b9b8-4efab4f47312"
+      }
+    }
+  ]
+}

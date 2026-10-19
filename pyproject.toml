@@ -1,0 +1,14 @@
+[project]
+name = "liveguard-agent"
+version = "0.1.0"
+description = "LIVE:GUARD Agent service scaffold (no live integrations yet)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic>=2,<3",
+    "langgraph",
+]
+
+[tool.uv]
+package = false
