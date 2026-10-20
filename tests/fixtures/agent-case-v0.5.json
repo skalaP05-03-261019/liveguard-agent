@@ -1,0 +1,44 @@
+{
+  "task": {
+    "eventId": "00000000-0000-4000-8000-000000000001",
+    "taskId": "00000000-0000-4000-8000-000000000002",
+    "caseId": "00000000-0000-4000-8000-000000000003",
+    "kind": "ANALYZE",
+    "threadId": "case:00000000-0000-4000-8000-000000000003:analysis:1",
+    "snapshotId": "00000000-0000-4000-8000-000000000004",
+    "expectedEvidenceVersion": 1,
+    "decisionId": null,
+    "traceId": "00000000-0000-4000-8000-000000000005"
+  },
+  "case": {
+    "caseId": "00000000-0000-4000-8000-000000000003",
+    "snapshotId": "00000000-0000-4000-8000-000000000004",
+    "evidenceVersion": 1,
+    "policyVersion": "fixture-policy-v1",
+    "targetMessageIds": ["00000000-0000-4000-8000-000000000006"],
+    "targetVersions": {"00000000-0000-4000-8000-000000000006": 1}
+  },
+  "context": {
+    "caseId": "00000000-0000-4000-8000-000000000003",
+    "snapshotId": "00000000-0000-4000-8000-000000000004",
+    "evidenceVersion": 1,
+    "messages": [
+      {
+        "messageId": "00000000-0000-4000-8000-000000000006",
+        "authorAlias": "U1",
+        "text": "무대 미쳤다ㅋㅋ",
+        "sentAt": "2026-10-20T01:00:00Z",
+        "visibility": "PUBLIC",
+        "replyToId": null
+      },
+      {
+        "messageId": "00000000-0000-4000-8000-000000000007",
+        "authorAlias": "U2",
+        "text": "오늘 무대 너무 좋다",
+        "sentAt": "2026-10-20T01:00:01Z",
+        "visibility": "PUBLIC",
+        "replyToId": null
+      }
+    ]
+  }
+}

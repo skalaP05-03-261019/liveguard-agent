@@ -18,11 +18,11 @@ class TaskEnvelope(Contract):
     event_id: UUID
     task_id: UUID
     case_id: UUID
-    kind: Literal["ANALYZE", "REANALYZE", "RESUME_REVIEW", "NOTIFY", "RECONCILE"]
+    kind: Literal["ANALYZE", "REANALYZE", "RESUME_REVIEW", "RECONCILE"]
     thread_id: str = Field(min_length=1)
-    expected_case_version: int = Field(ge=1)
+    snapshot_id: UUID
+    expected_evidence_version: int = Field(ge=1)
     decision_id: UUID | None = None
-    attempt: int = Field(default=0, ge=0)
     trace_id: UUID
 
     @model_validator(mode="after")
@@ -38,8 +38,59 @@ class Judgment(StrEnum):
     NEEDS_REVIEW = "NEEDS_REVIEW"
 
 
+class Category(StrEnum):
+    PROFANITY = "PROFANITY"
+    HARASSMENT = "HARASSMENT"
+    FLOOD = "FLOOD"
+    PHISHING = "PHISHING"
+    PII_EXPOSURE = "PII_EXPOSURE"
+
+
+class MessageFinding(Contract):
+    """Notion CONTRACTS 출력 제안. 제재 기간과 실행 명령은 포함하지 않는다."""
+
+    message_id: UUID
+    verdict: Judgment
+    categories: list[Category] = Field(default_factory=list)
+    policy_ids: list[str] = Field(default_factory=list)
+    evidence_message_ids: list[UUID] = Field(default_factory=list)
+    reason: str = Field(min_length=1, max_length=1000)
+    missing_facts: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_finding(self):
+        if len(self.categories) != len(set(self.categories)):
+            raise ValueError("categories must be unique")
+        if self.verdict == Judgment.VIOLATION and not (
+            self.categories and self.policy_ids and self.evidence_message_ids
+        ):
+            raise ValueError("VIOLATION requires category, policy and evidence")
+        if self.verdict == Judgment.NO_VIOLATION and self.categories:
+            raise ValueError("NO_VIOLATION cannot assign violation categories")
+        if self.verdict == Judgment.NEEDS_REVIEW and not self.missing_facts:
+            raise ValueError("NEEDS_REVIEW requires missingFacts")
+        return self
+
+
+class AnalysisResult(Contract):
+    """다음 PR의 조사 루프가 생성할 메시지별 출력. 아직 HTTP 결과로 반환하지 않는다."""
+
+    case_id: UUID
+    snapshot_id: UUID
+    evidence_version: int = Field(ge=1)
+    policy_version: str = Field(min_length=1)
+    message_findings: list[MessageFinding] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def unique_messages(self):
+        ids = [finding.message_id for finding in self.message_findings]
+        if len(ids) != len(set(ids)):
+            raise ValueError("messageFindings must contain unique message IDs")
+        return self
+
+
 class RequestedAction(Contract):
-    # v0.3 proposal only. Execution always uses Backend-issued ActionCommand.
+    # Legacy v0.3 scaffold only; AnalysisResult does not use this model.
     type: Literal["HIDE", "TIMEOUT", "RELEASE_HELD"]
     message_id: UUID | None = None
     duration_seconds: Literal[300] | None = None

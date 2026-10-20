@@ -2,16 +2,23 @@
 
 from typing import Any, TypedDict
 
-from app.schemas import JudgmentOutput, TaskEnvelope
+from app.schemas import JudgmentOutput, MessageFinding, TaskEnvelope
 
 
 class AgentState(TypedDict, total=False):
     task: TaskEnvelope
+    case_id: str
+    task_id: str
+    thread_id: str
+    snapshot_id: str
+    trace_id: str
     case_snapshot: dict[str, Any]
-    case_version: int
     evidence_version: int
     policy_version: str
     messages: list[Any]
+    target_messages: list[dict[str, Any]]
+    context_messages: list[dict[str, Any]]
+    message_findings: list[MessageFinding]
     evidence_refs: list[str]
     tool_observations: list[dict[str, Any]]  # 원문·토큰을 일반 trace에 복제하지 않는다.
     judgment: JudgmentOutput

@@ -1,7 +1,8 @@
 # LIVE:GUARD Agent 골격
 
 김태관 / ⑤ AI 1·Agent의 Python 서비스 시작 구조. 현재 범위는 **API·스키마·State·Graph 경계**다.
-Agent 작업 실행기의 실제 모델 판단·MCP/Backend 연결, 작업 저장, 제재, checkpoint/resume는 미구현이다.
+Agent의 작업 입력 스키마와 Business MCP 조회 클라이언트, `load_case`를 구현했다.
+실제 모델 판단·RAG 연결·전체 작업 실행·작업 저장·제재·checkpoint/resume는 미구현이다.
 
 ## 실행
 
@@ -33,38 +34,53 @@ uv run python -m app.business_mcp
 
 | 파일 | 역할 / 다음 작업 |
 |---|---|
-| app/schemas.py | camelCase JSON, 작업 입력·판단·후보 조치 검증 |
+| app/schemas.py | Notion 작업 입력·메시지별 AnalysisResult. 기존 JudgmentOutput은 미연결 Graph의 legacy 모델 |
 | app/state.py | 조사·실행 상태; Harness 담당과 저장 형식 합의 |
 | app/graph.py | 초기 분석 단계·판단 분기; 각 노드는 아직 연결 필요 오류 발생 |
-| app/nodes.py | 단계별 구현 위치. 첫 작업은 load_case와 investigate |
+| app/nodes.py | load_case 조회 연결 완료. investigate 이후 단계는 아직 미구현 |
 | app/clients/ports.py | Backend·조회 MCP·실행 MCP 인터페이스 초안 |
+| app/clients/business_mcp.py | 인증된 조회 전용 MCP 클라이언트, 도구당 10초 제한, 자동 재시도 없음 |
+| app/case_loader.py | 사건/대화의 snapshot·evidence 검증 및 TARGET/CONTEXT State 저장 |
 | app/business_mcp/ | BE2-01 Business MCP 도구, Backend API adapter 및 독립 실행 ASGI app |
 | prompts/investigator.md | 조사 규칙 초안; 아직 모델에 연결되지 않음 |
-| tests/fixtures/D01.json | 기존 개발 입력의 D01. 정답은 포함하지 않음 |
+| tests/fixtures/agent-case-v0.5.json | 이번 조회 연결용 요청·응답 제안. 가상 정책 버전이며 활성 정책 아님 |
+| tests/fixtures/D01.json | 역사 자료인 v0.3 fixture. 현재 TaskEnvelope 입력과 호환되지 않음 |
 
-BE2-01 Business MCP와 Agent 사이의 업무 데이터 계약 초안은 [docs/BE2-01-agent-business-mcp-contract.md](docs/BE2-01-agent-business-mcp-contract.md)에서 관리한다. BE1·AI1 합의 전 제안이며 구현 규격은 아니다.
+BE2-01 서버 계약 초안은 [Business MCP 계약](docs/BE2-01-agent-business-mcp-contract.md), 이번 Agent 소비자 구현의 필수 응답·호환성은 [AI1-01 조회 계약](docs/AI1-01-mcp-read-contract.md)을 참고한다. Backend 합의 전 구현 제안이며 실제 Spring 연동 완료를 뜻하지 않는다.
+
+## 조회 연결 검증
+
+```bash
+uv run --locked python -m unittest discover -s tests -v
+# TCP 포트를 열 수 있는 환경에서 동일 테스트를 실제 loopback HTTP로 실행:
+LIVEGUARD_TEST_TCP=1 uv run --locked python -m unittest discover -s tests -v
+```
+
+기본 테스트는 실제 Business MCP ASGI app·인증·MCP SDK/HTTP 직렬화를 사용하며 Backend만 가상이다. TCP 모드는 Uvicorn을 임시 로컬 포트에 띄운다. 테스트 범위와 결과는 [검증 기록](evidence/agent-read-check.json)에 구분한다.
+`load_case`는 Graph 노드와 직접 호출로 연결했지만 `/run`에는 전체 실행기가 아직 연결되지 않았다.
+조회 시 `BUSINESS_MCP_URL`, `BUSINESS_MCP_AGENT_TOKEN`을 process environment에서 읽는다. `.env` 자동 로드는 하지 않는다.
 
 Graph: load_case → investigate → validate_judgment → 정상 보고 / 검토 대기 / 계획 요청 → 실행 → 확인 → 보고.
 검토 노드는 현재 실행 불가이며 실제 interrupt·결정 재검증·재개 분기는 후속 구현한다.
 
-첫 목표는 D01에서 **실제 모델의 도구 선택 → mock 응답 조회 → 근거 검증 → 판단**이다.
-fixture는 HTTP 요청 자체가 아니다. POST에는 taskEnvelope만 넣고 모델에는 선택한 도구 응답만 제공한다.
-seedMetadata·seedMessages를 도구에서 얻은 사실처럼 모델에 넘기지 않는다.
+다음 목표는 **실제 모델의 도구 선택 → 조회/RAG → 근거 검증 → 메시지별 판단**이다.
+fixture 전체는 HTTP 요청이 아니다. POST에는 새 fixture의 `task`만 사용한다. 모델 연결 시 seed나 평가 정답을 도구에서 얻은 사실처럼 넘기지 않는다.
 
 ## 기준·미확정
 
-- 기준: main 문서 v0.3, 정책 0.3-draft, 로컬 Agent 연결 계약 v0.1. 출력·포트는 팀 검토용이다.
-- 0.4-review의 5개 유형·이력 기반 최대 7일 규칙은 반영하지 않았다.
-- P1~P6 중 출력 형식, task context, 전체 사건 증거, 이벤트, Harness 연결은 팀 합의 필요.
-- Agent runner의 모델·MCP 접속 설정과 Backend 내부 API 계약은 다음 작업이다. Business MCP 서버의 env 설정은 구현됐지만, Agent의 MCP 접속은 아직 연결되지 않았다.
+- 기준: [팀 Notion 통합 문서](https://app.notion.com/p/3fe61f4176b580af9a07c5a10a9e6745)의 PROJECT/POLICY/CONTRACTS/ARCHITECTURE. 각 문서의 미확정 표시는 유지한다.
+- 입력은 snapshotId·expectedEvidenceVersion 기반이다. 구 expectedCaseVersion·attempt·NOTIFY는 더 이상 받지 않는다.
+- AnalysisResult는 5개 유형의 메시지별 판정을 표현하며 제재 기간은 포함하지 않는다. 기존 단일 판단/300초 후보는 아직 미구현인 legacy Graph에만 남아 있으며 다음 PR에서 교체한다.
+- 활성 정책 버전·기간표, 실제 Backend 응답/결과 통지, 모델·RAG·Harness 연결은 합의/후속 구현 대상이다.
+- Agent의 Business MCP 접속은 연결했으며 실제 Spring 내부 API 계약과의 통합 검증은 남아 있다.
 - 수업 PDF 실제 72쪽은 변경 전 승인을 요구하지만 기획서는 최초 자동 조치다.
   현재 실행 기능은 없으며, 구현 전 팀·강사 확인 결과에 맞춰 실행 직전 경계를 확정한다.
 - PDF 74쪽 Agent 설계·구현: Graph/State, 모델 도구 선택·근거, 저장·재개·진행 이벤트 증거가 필요하다.
   현재 골격이나 import 확인을 해당 기능의 완료 증거로 사용하지 않는다.
 
-실행 검증 범위는 evidence/scaffold-check.json에 기록한다.
+기존 골격 검증은 evidence/scaffold-check.json, 이번 조회 연결 검증은 evidence/agent-read-check.json에 기록한다.
 
 분리 전 원본: taetegwgn/skala-capstone-P05_03의 agent/ (10a8e5d).
-공통 기획서·정책은 [Backend의 docs/live-guard/v0.3](https://github.com/skalaP05-03-261019/liveguard-be/tree/main/docs/live-guard/v0.3)에서 관리합니다.
+이전 [Backend docs/live-guard/v0.3](https://github.com/skalaP05-03-261019/liveguard-be/tree/main/docs/live-guard/v0.3)는 역사 자료로 보존합니다. 최신 프로젝트 기준은 위 Notion 통합 문서입니다.
 
 [Backend](https://github.com/skalaP05-03-261019/liveguard-be) · [Frontend](https://github.com/skalaP05-03-261019/liveguard-fe)

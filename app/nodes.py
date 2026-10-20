@@ -1,15 +1,19 @@
-"""노드 경계만 정의한다. 미연결 기능은 성공으로 위장하지 않고 중단한다."""
+"""사건 조회 노드를 연결한다. 아직 미연결인 나머지 단계는 명시적으로 중단한다."""
 
 from app.state import AgentState
+from app.case_loader import load_case_data
+from app.clients.business_mcp import BusinessMcpReadClient, BusinessMcpSettings
+from app.clients.ports import ReadTools
 
 
 class IntegrationNotConfigured(RuntimeError):
     pass
 
 
-async def load_case(state: AgentState) -> dict:
+async def load_case(state: AgentState, *, tools: ReadTools | None = None) -> dict:
     """작업 메타데이터·정책 버전·사건 스냅샷 로드."""
-    raise IntegrationNotConfigured("Backend/MCP 사건 조회 연결 필요")
+    client = tools if tools is not None else BusinessMcpReadClient(BusinessMcpSettings.from_env())
+    return await load_case_data(state["task"], client)
 
 
 async def investigate(state: AgentState) -> dict:
