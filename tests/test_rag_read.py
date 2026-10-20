@@ -212,6 +212,7 @@ class EvidenceTests(unittest.IsolatedAsyncioTestCase):
             ("foreign_uri", "INVALID_TOOL_RESPONSE"), ("traversal", "INVALID_TOOL_RESPONSE"),
             ("wrong_trace", "INVALID_TOOL_RESPONSE"), ("no_text", "INVALID_TOOL_RESPONSE"),
             ("invalid_score", "INVALID_TOOL_RESPONSE"), ("too_many", "INVALID_TOOL_RESPONSE"),
+            ("category", "INVALID_POLICY_EVIDENCE"),
         ]:
             fixture = PolicyFixture()
             if mode == "search_version": fixture.matches[0]["version"] = "different"
@@ -228,6 +229,7 @@ class EvidenceTests(unittest.IsolatedAsyncioTestCase):
             elif mode == "no_text": del fixture.section["text"]
             elif mode == "invalid_score": fixture.matches[0]["score"] = float("nan")
             elif mode == "too_many": fixture.matches *= 5
+            elif mode == "category": fixture.section["category"] = None
             initial = state()
             with self.subTest(mode=mode), self.assertRaises(AgentToolError) as raised:
                 await retrieve_policy_evidence(initial, query="정책", tools=fixture)

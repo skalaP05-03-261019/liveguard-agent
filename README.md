@@ -2,8 +2,8 @@
 
 김태관 / ⑤ AI 1·Agent의 Python 서비스 시작 구조. 현재 범위는 **API·스키마·State·Graph 경계**다.
 Agent의 작업 입력 스키마와 Business MCP 조회 클라이언트, `load_case`를 구현했다.
-RAG 소비자와 정책·원문 검증은 #8에서 추가했으며 계약 기반 테스트 서버로 검증한다.
-실제 RAG 제공자 연동·모델 판단·전체 작업 실행·작업 저장·제재·checkpoint/resume는 미구현/미검증이다.
+RAG 소비자와 정책·원문 검증은 #8에서 추가했으며 main에 병합된 #13 제공자 앱과 함께 검증한다.
+실제 임베딩 API까지 포함한 연동·모델 판단·전체 작업 실행·작업 저장·제재·checkpoint/resume는 미구현/미검증이다.
 
 ## 실행
 
@@ -93,8 +93,9 @@ LIVEGUARD_TEST_TCP=1 uv run --locked python -m unittest discover -s tests -v
 `RAG_MCP_URL`과 별도 `RAG_MCP_AGENT_TOKEN`을 process environment에서 읽고, 사건의 정책 버전으로만 조회한다.
 검색 결과·전체 조항·Resource의 ID/URI/버전/본문이 맞는 경우만 근거 State를 반환한다.
 정책 버전과 서버 주소를 추정하지 않으며 빈 결과·오류를 정상 판정으로 바꾸지 않는다.
-원문 Resource MIME/본문 형식은 제공자 확인 전 소비자 제안이다. 현재 지원은 단일 text/plain·text/markdown 원문이다.
-테스트 서버는 #4의 계약 대역이며 실제 정책 색인이나 AI2 서버의 구현이 아니다.
+제공자 #13은 단일 text/markdown 본문을 조항 text와 정확히 같게 제공한다. 현재 wire 정책 버전은 `3.0`이며, 소비자는 계속 사건의 정책 버전을 따른다.
+기존 계약 대역 테스트에 더해 실제 `app.rag_mcp.main.create_app`과 연결하는 통합 테스트를 추가했다.
+이 테스트는 제어된 임베딩을 사용한다. CI는 임시 pgvector DB를 제공해 실제 SQL 검색→도구→Resource→소비자 State도 확인한다. OpenAI의 실제 임베딩 품질 검증과 구분한다.
 
 실제 서버 준비 후 다음 명령으로 확인한다. 토큰은 환경에만 설정하고 명령 결과/문서에 넣지 않는다.
 

@@ -70,7 +70,8 @@ async def retrieve_policy_evidence(
         })
         section = parse_section(_data(section_response, trace_id), args.policy_version,
                                 trace_id, policy_id=match.policy_id)
-        if section.resource_uri != match.resource_uri or match.text not in section.text:
+        if (section.resource_uri != match.resource_uri or match.text not in section.text
+                or section.category != match.category):
             raise AgentToolError("INVALID_POLICY_EVIDENCE", trace_id=trace_id)
         resource = _data(await client.read_resource(
             section.resource_uri, policy_version=args.policy_version, trace_id=trace_id,

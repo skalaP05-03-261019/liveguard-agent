@@ -67,6 +67,7 @@ class PolicySection(Contract):
     title: str = Field(min_length=1, strict=True)
     text: str = Field(min_length=1, max_length=MAX_POLICY_TEXT_CHARS, strict=True)
     version: str = Field(min_length=1, strict=True)
+    category: Category | None = None
     resource_uri: str = Field(min_length=1, strict=True)
 
 

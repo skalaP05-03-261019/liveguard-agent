@@ -6,7 +6,7 @@
 
 AI2의 [#4](https://github.com/skalaP05-03-261019/liveguard-agent/issues/4) 계약으로 검색·조항·원문 Resource를 읽고 검증하는 Agent 소비자 구현이다. 정책 파싱·임베딩·pgvector·RAG 서버는 AI2 책임이며 이 PR에 구현하지 않는다. 실제 조사 모델·Graph 연결은 #9, 실제 조치·승인/재개는 #10이다. `/run`·`/resume`는 계속 501이며 실제 작업을 접수했다고 응답하지 않는다.
 
-현재 검증은 계약 기반 test double 서버다. HTTP 직렬화·인증·MCP SDK 연결을 시험하더라도 AI2의 실제 서버·색인·OpenAI 임베딩을 검증한 것은 아니다. 실제 서버 검증은 제공자 준비 후 수행한다.
+초기 검증은 계약 기반 test double 서버였다. 이후 #13의 실제 RAG FastAPI 앱·도구·Resource를 소비자에 연결하는 테스트를 추가했다. 아래 통합 기록처럼 실제 제공자 코드 검증과 제어된 임베딩/저장소를 구분한다. OpenAI 실제 임베딩을 통한 사용자 환경의 실행은 아직 미검증이다.
 
 ## 설정과 호출 경계
 
@@ -33,13 +33,13 @@ Agent는 매 호출에 작업 traceId를 보내고 응답의 동일 값을 검�
 
 이 소비자는 기존 Business Client의 안전 오류·envelope decoder를 재사용한다. 별도 transport·설정·도구 허용 목록을 가지므로 Business 인증이나 변경 도구를 상속하지 않는다. 기존 Business 코드는 수정하지 않았다.
 
-## Resource 표현: 제공자와 확인할 소비자 제안
+## Resource 표현: #13 제공자 구현과 확인
 
-#4는 Resource URI는 지정하지만 MIME·본문 직렬화는 아직 명시하지 않았다. 이 소비자는 **단일 `text/plain` 또는 `text/markdown` 콘텐츠(미지정 MIME도 허용)의 본문이 조항 전체 `text`와 정확히 동일**한 형식을 지원한다. JSON이나 여러 콘텐츠면 추측해서 읽지 않고 `INVALID_TOOL_RESPONSE`로 중단한다. 제공자가 실제 형태를 확정하면 이 문서와 소비자 테스트를 함께 맞춘다.
+#13은 **단일 `text/markdown` 콘텐츠의 본문이 조항 전체 `text`와 정확히 동일**하게 구현했다. 소비자는 이 형식과 `text/plain`(미지정 MIME도 허용)을 지원한다. JSON이나 여러 콘텐츠면 추측해서 읽지 않고 `INVALID_TOOL_RESPONSE`로 중단한다. 실제 제공자 코드를 사용한 테스트로 형식을 확인한다.
 
 Resource 응답의 URI가 요청 URI와 같은지 검사한다. `resources/read`에는 tool의 data/traceId envelope가 없으므로 결과의 traceId는 **Client가 로컬 상관관계용으로 붙인 값**이다. 서버가 이를 echo했다고 주장하지 않는다.
 
-문서 ID/조항 ID는 제공자가 돌려준 URI를 사용하며 policyId에서 임의로 조립하지 않는다. 요청 버전과 URI 버전을 대조하고 검색·조항 응답의 policyId/URI가 같은지 확인한다. 최종 문서·조항 ID 매핑의 권위는 제공자 원본이다.
+문서 ID/조항 ID는 제공자가 돌려준 URI를 사용하며 policyId에서 임의로 조립하지 않는다. 현재 제공자는 `policy://3.0/operating-policy/CP-2.1` 같은 주소를 돌려준다. 요청 버전과 URI 버전을 대조하고 검색·조항 응답의 policyId/URI/category가 같은지 확인한다. 최종 문서·조항 ID 매핑의 권위는 제공자 원본이다.
 
 ## 검증된 근거를 State에 넣는 과정
 
@@ -56,6 +56,8 @@ load_case의 policy_version
 ```
 
 `retrieve_policy_evidence(state, query=..., category=..., top_k=..., tools=...)`는 변경 전 State를 직접 수정하지 않는다. 전체 조항·ID·제목·버전·URI를 `policy_evidence`에 저장하고, 일반 `tool_observations`에는 호출 이름·ID·개수만 남긴다. 같은 버전/정책 ID에 원문이 달라지면 덮어쓰지 않고 중단한다. 기존 State 근거의 버전도 다시 검사한다.
+
+제공자의 `category`도 보존한다. 위험 유형 조항은 5개 enum 중 하나, 모든 유형에 적용되는 정상 예외·일반 원칙·제재 기준 등 공통 조항은 null이다. 공통 조항을 위험 유형 위반으로 강제 분류하지 않는다.
 
 검색 `text`가 조각일 수 있으므로 조항 전체와 무조건 같은 길이를 강제하지 않는다. 다만 조각이 전체 원문에 포함되지 않으면 받아들이지 않는다. HTML 변환·마스킹·정규화 차이는 자동 보정하지 않고 계약 차이로 확인한다.
 
@@ -100,3 +102,13 @@ uv run --locked python -m app.check_rag \
 Graph의 고정 조회 단계에 임의 검색을 삽입하지 않았다. #9의 모델 조사 루프가 필요한 query를 만들고 이 경계를 사용한다. 모델이 보고한 policyId는 검증된 `policy_evidence`와 대조한다. `app/state.py`에는 새 필드 하나만 추가했으며 Graph·resume·예산·프롬프트는 수정하지 않았다. #5의 공유 State 변경과 병합 시 함께 확인한다.
 
 실제 승인/강퇴 구현과 수업의 변경 전 승인 기준 차이는 #10에서 다룬다. 이 PR은 조회 전용이다.
+
+## #13 병합 후 통합 기록 (2026-10-20)
+
+- 인희님의 Slack 승인과 사용자의 명시적 실행 요청에 따라 #13의 정확한 head `2a7d8f0`를 확인하고 머지했다. main merge commit은 `096049c`다. #4는 종료됐다.
+- 최신 main을 #12 브랜치에 병합했다. `.env.example`의 동일 토큰 변수 중복만 정리하고 제공자 코드와 Graph/State 변경은 덮어쓰지 않았다.
+- `tests/test_rag_consumer_integration.py`는 실제 제공자 `create_app`/도구/Resource를 실행한다. 모델 없는 계약 검증은 제어된 저장소·임베딩으로 5개 유형, 공통 예외, 실제 제공자 오류 코드를 확인한다.
+- DB 통합 테스트는 실제 정책 23개를 **별도 임시 버전**으로 pgvector에 넣고, SQL 유사도 검색→실제 MCP 앱→전체 원문 Resource→소비자 State를 확인한 뒤 임시 버전을 삭제한다. 임베딩은 결정적인 테스트 벡터다.
+- CI에 임시 pgvector 서비스를 추가해 기존 5개 DB 테스트와 새 소비자 DB 테스트를 실행한다. 실제 TCP는 CI에서 검증하며 로컬 네트워크 제한은 기능 실패와 구분한다.
+- 로컬 전체 결과: 61 tests, 실패 없음, DB 의존 6개 skip. 설치는 uv.lock의 해시 고정 requirements를 사용했다. CI 결과는 PR과 작업공간의 진행 기록으로 갱신한다.
+- 남은 외부 실행: 사용자/통합 환경의 실제 OpenAI 질의 임베딩→색인→MCP 소비자 실행. 이 기록을 실제 모델 조사·제재·Harness 완료 증거로 사용하지 않는다.
