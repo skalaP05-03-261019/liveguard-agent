@@ -3,7 +3,9 @@
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 
+from app.harness.resume import ResumeError, resume_kick_review
 from app.schemas import TaskEnvelope
 
 app = FastAPI(title="LIVE:GUARD Agent", version="0.1.0")
@@ -24,11 +26,33 @@ async def run_task(task_id: UUID, task: TaskEnvelope):
     raise HTTPException(501, "Task persistence and Agent runner are not connected")
 
 
-@app.post("/agent/tasks/{task_id}/resume", responses={501: {"description": "Scaffold only"}})
+@app.post(
+    "/agent/tasks/{task_id}/resume",
+    status_code=202,
+    responses={
+        404: {"description": "No checkpoint for threadId"},
+        409: {"description": "No pending kick approval (already resumed) or case mismatch"},
+        501: {"description": "Checkpointed Agent graph is not configured"},
+    },
+)
 async def resume_task(task_id: UUID, task: TaskEnvelope):
     if task_id != task.task_id:
         raise HTTPException(400, "URL taskId and body taskId must match")
     if task.kind != "RESUME_REVIEW":
         raise HTTPException(400, "Expected RESUME_REVIEW")
-    # TODO: Backend의 권한·저장 결정 확인 후 같은 thread로 재개.
-    raise HTTPException(501, "Checkpoint and review resume are not connected")
+    # checkpointer가 붙은 Graph는 실행기 연결(#10)에서 app.state.agent_graph로 주입한다.
+    graph = getattr(app.state, "agent_graph", None)
+    if graph is None:
+        raise HTTPException(501, "Checkpointed Agent graph is not configured")
+    if task.review_kind != "KICK" or task.review_id is None:
+        # 문맥 결정(CONTEXT) 재개는 아직 연결되지 않았다.
+        raise HTTPException(400, "Only reviewKind KICK with reviewId is supported")
+    try:
+        # 결정 내용은 decisionId로만 받고, 승인 여부·재검증은 Graph가 Backend 저장본으로 확인한다.
+        kick_result = await resume_kick_review(
+            graph, thread_id=task.thread_id, review_id=task.review_id,
+            decision_id=task.decision_id, case_id=task.case_id,
+        )
+    except ResumeError as error:
+        raise HTTPException(error.status_code, {"code": error.code}) from None
+    return JSONResponse(status_code=202, content={"taskId": str(task_id), "kickResult": kick_result})

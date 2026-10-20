@@ -1,6 +1,6 @@
 # AI2-01 Agent ↔ RAG MCP 정책 검색 계약
 
-> 상태: 구현 기준 (2026-10-20, #4). 운영정책 v3.0 색인 기준이다. 도구 이름·입출력이 바뀌면 이 문서와 테스트를 함께 고친다.
+> 상태: 구현 기준 (2026-10-20, #4, #15). 활성 색인은 운영정책 v3.1(팀 POLICY 개정 반영), v3.0은 과거 판단 근거로 유지한다. 도구 이름·입출력이 바뀌면 이 문서와 테스트를 함께 고친다.
 
 ## 1. 목적과 책임 경계
 
@@ -61,9 +61,9 @@ Agent의 `app/clients/business_mcp.py`와 같은 방식(Bearer 헤더 + `streama
         "policyId": "MP-4.1",
         "title": "강퇴 심사",
         "text": "- **집계 대상:** ...",
-        "version": "3.0",
+        "version": "3.1",
         "category": null,
-        "resourceUri": "policy://3.0/operating-policy/MP-4.1",
+        "resourceUri": "policy://3.1/operating-policy/MP-4.1",
         "score": 0.4189
       }
     ]
@@ -102,10 +102,12 @@ Agent의 `app/clients/business_mcp.py`와 같은 방식(Bearer 헤더 + `streama
 |---|---|
 | `PROFANITY` | CP-2.1 |
 | `HARASSMENT` | CP-3.1, CP-3.2 |
-| `FLOOD` | CP-4.1 |
-| `PHISHING` | CP-5.1, SP-2.1 |
+| `FLOOD` | CP-4.1(최초 적발), CP-4.2(재적발) |
+| `PHISHING` | CP-5.1(링크 전송 금지), CP-5.2(사칭), SP-2.1(공식 링크 정보의 사용 범위) |
 | `PII_EXPOSURE` | SP-3.1 |
-| 공통(null) | 그 외 16개 (CP-1.x, CP-2.2, CP-6.1, CP-7.1, MP-x, SP-4.1, MM-x) |
+| 공통(null) | 그 외 20개 (CP-1.x, CP-2.2, CP-6.1, CP-7.1, MP-x, SP-4.1, MM-x) |
+
+v3.1 기준 29개 조항. v3.0(23개)에는 CP-4.2, CP-5.2, MP-1.3, MP-1.4, MP-4.2, MP-4.3이 없다.
 
 ## 7. 색인과 버전
 
@@ -113,12 +115,17 @@ Agent의 `app/clients/business_mcp.py`와 같은 방식(Bearer 헤더 + `streama
 - 임베딩: OpenAI `text-embedding-3-small`, 1536차원. 색인과 질의 모델이 다르면 `POLICY_INDEX_MISMATCH`.
 - 정책 개정: 노션 수정 → 버전 올림 → 새 파일 추가 → 재색인. 이전 버전 행은 남아 과거 판단의 근거를 다시 볼 수 있다.
 
-## 8. 확인된 동작 (2026-10-20, 실제 임베딩)
+- 활성 버전 값은 Backend·Agent·RAG가 같아야 한다(팀 TBD-08). 현재 RAG 기본 색인은 `3.1`이며, `get_moderation_case`의 `policyVersion`이 `3.1`이어야 v3.1 조항을 검색한다.
+
+## 8. 확인된 동작 (2026-10-20, v3.1 실제 임베딩)
 
 | 질의 (category) | 상위 3개 |
 |---|---|
-| 강퇴는 언제 승인 요청하나 (-) | MP-4.1, MP-3.2, SP-2.1 |
-| 전화번호가 채팅에 올라왔다 (PII_EXPOSURE) | SP-4.1, SP-3.1, CP-1.1 |
-| 같은 문장을 반복해서 보냄 (FLOOD) | MP-2.2, CP-4.1, MP-3.1 |
+| 공식 사이트 링크를 채팅에 보내도 되나 (PHISHING) | SP-2.1, CP-5.1, MP-1.2 |
+| 문맥 의심 채팅을 AI가 정상이라고 판단하면 바로 공개하나 (-) | MP-1.3, CP-1.2, CP-3.2 |
+| 강퇴를 거절하면 심사에 쓴 사건은 어떻게 되나 (-) | MP-4.1, MP-4.2, MP-4.3 |
+| 도배 안내 후 같은 문장을 다시 보냄 (FLOOD) | CP-4.1, CP-4.2, MM-1.1 |
+| 인용하면서 욕설을 쓴 채팅 (PROFANITY) | CP-2.1, CP-2.2, CP-1.2 |
+| 괴롭힘 세 번째 위반 채팅 제한 시간 (-) | MP-2.2, MM-2.1, MP-2.1 |
 
 공통 조항이 유형 조항보다 위에 올 수 있으므로, Agent는 `topK` 결과 전체를 근거 후보로 보고 `category`가 일치하는 조항을 우선 인용한다.

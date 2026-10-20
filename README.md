@@ -33,7 +33,7 @@ uv run python -m app.business_mcp
 
 ## RAG 정책 색인 (AI2, #3)
 
-운영정책 v3.0 원문(`app/rag_mcp/policies/policy-v3.0.md`, 노션 Export)을 조항 ID(`CP/SP/MP/MM-x.y`) 헤딩 단위로 나눠 OpenAI 임베딩과 함께 pgvector `rag.policy_chunks`에 넣는다. 장 제목 등 조항 밖 텍스트는 색인하지 않는다.
+운영정책 원문(`app/rag_mcp/policies/policy-v{version}.md`, 노션 Export, 기본 v3.1)을 조항 ID(`CP/SP/MP/MM-x.y`) 헤딩 단위로 나눠 OpenAI 임베딩과 함께 pgvector `rag.policy_chunks`에 넣는다. 장 제목 등 조항 밖 텍스트는 색인하지 않는다.
 
 ```bash
 cp .env.example .env   # RAG_DB_URL, OPENAI_API_KEY 입력. .env는 커밋하지 않는다.
@@ -53,6 +53,12 @@ uv run --env-file .env python -m app.rag_mcp   # http://127.0.0.1:8003/mcp
 
 `/health`는 색인된 policyVersion 목록과 준비 여부만 보고한다. 도구 입출력·오류 코드는 [docs/AI2-01-rag-mcp-contract.md](docs/AI2-01-rag-mcp-contract.md)를 따른다.
 
+## Harness: 강퇴 승인 interrupt/resume (AI2, #5)
+
+`verify_result` 뒤 `review_kick → execute_kick`이 Backend의 강퇴 심사 요청(`kick_review`)이 있을 때만 Graph를 멈추고(`interrupt`) Postgres checkpointer(`agent` 스키마, `AGENT_CHECKPOINT_DB_URL`)에 저장한다. 운영자 결정 후 `POST /agent/tasks/{taskId}/resume`(`reviewKind: KICK`)이 같은 `threadId`로 재개하고, Backend 재검증이 승인일 때만 `kick_user`를 호출한다. 중복 승인은 409로 막는다. 실행기 연결 전에는 `/resume`이 501이다.
+
+Postgres 재시작 복원 테스트는 `AGENT_TEST_CHECKPOINT_DB_URL`이 있을 때만 실행된다(임시 스키마 생성 후 삭제). 계약: [docs/AI2-02-harness-kick-approval-contract.md](docs/AI2-02-harness-kick-approval-contract.md)
+
 ## 파일과 다음 작업
 
 | 파일 | 역할 / 다음 작업 |
@@ -69,6 +75,7 @@ uv run --env-file .env python -m app.rag_mcp   # http://127.0.0.1:8003/mcp
 | app/check_rag.py | 제공자 준비 후 사용하는 실제 서버 연결·출처 검증 명령 |
 | app/business_mcp/ | BE2-01 Business MCP 도구, Backend API adapter 및 독립 실행 ASGI app |
 | app/rag_mcp/ | 운영정책 조항 파서·pgvector 색인, RAG MCP 서버(search_policy, get_policy_section, policy:// Resource) |
+| app/harness/ | Postgres checkpointer, 강퇴 승인 interrupt/resume 노드와 재개 함수 (#5) |
 | prompts/investigator.md | 조사 규칙 초안; 아직 모델에 연결되지 않음 |
 | tests/fixtures/agent-case-v0.5.json | 이번 조회 연결용 요청·응답 제안. 가상 정책 버전이며 활성 정책 아님 |
 | tests/fixtures/D01.json | 역사 자료인 v0.3 fixture. 현재 TaskEnvelope 입력과 호환되지 않음 |
@@ -154,3 +161,10 @@ MODEL_API_KEY가 따로 있으면 대화 모델 키는 그 값을 우선한다. 
 [연결 3건 → 평가 15건 실행법](docs/AI1-09-live-verification.md)을 따른다.
 실제 OpenAI·임베딩·pgvector가 준비되지 않으면 BLOCKED로 기록하며 대역으로 성공을 대신하지 않는다.
 이번 환경의 시도는 DB 접속 제한으로 BLOCKED다. 실제 모델 품질 검증 완료를 뜻하지 않는다.
+## Harness: 실행 한도·오류 복구 (AI2, #6)
+
+`app/harness/execution.py`의 `HarnessGate`가 조사 루프(#9)의 `ExecutionGate`를 구현한다. 모델 8회·같은 도구 3회·활성 120초 한도, retryable 오류만 호출당 최대 2회 재시도(시도도 한도에 포함), 카운터는 State `harness_budget`에 저장해 재시작·재개 후에도 이어 센다. `guarded_investigate(state)`는 한도 초과 시 판정 없이 `task_outcome: NEEDS_REVIEW`, 최종 실패 시 `FAILED`와 오류를 patch로 남긴다. 결과 미확인 조치는 `resolve_unknown_action`으로 상태를 먼저 조회한다. 계약: [docs/AI2-03-harness-execution-contract.md](docs/AI2-03-harness-execution-contract.md)
+
+## Harness: 안전장치·실행 추적 (AI2, #7)
+
+`app/harness/safety.py`의 `safe_presentation`이 조사 루프의 `present_data`를 구현한다. 본문의 전화·주민번호·카드·계좌·이메일을 가리되 messageId·policyId·URI·버전 같은 식별자는 그대로 두고, 12,000자 초과는 `[TRUNCATED]`, 채팅 템플릿 제어 토큰은 무력화한다. `app/harness/observability.py`는 모델·도구 호출, 재시도, 한도, 결과를 traceId 단위 JSON 이벤트로 남기며 원문·키는 기록하지 않는다. `LANGSMITH_TRACING=true`와 키를 설정하면 LangSmith 추적도 켜진다. 계약: [docs/AI2-04-harness-safety-observability.md](docs/AI2-04-harness-safety-observability.md)
