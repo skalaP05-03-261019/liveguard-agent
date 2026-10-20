@@ -5,6 +5,7 @@ import hmac
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from mcp.server import MCPServer
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.types import ASGIApp
 
 from app.rag_mcp.config import ServerSettings
@@ -78,7 +79,13 @@ def create_app(
         return await call_next(request)
 
     register_tools(mcp, lambda: resolved_repository, lambda: resolved_embedder)
-    mcp_http_app: ASGIApp = mcp.streamable_http_app()
+    # 보호는 켜 둔 채 허용 Host만 설정으로 넓힌다(컨테이너 간 호출 시 Host: rag-mcp:8003).
+    security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=list(resolved_settings.allowed_hosts),
+        allowed_origins=[f"http://{host}" for host in resolved_settings.allowed_hosts],
+    )
+    mcp_http_app: ASGIApp = mcp.streamable_http_app(transport_security=security)
     app.mount("/", mcp_http_app)
     return app
 

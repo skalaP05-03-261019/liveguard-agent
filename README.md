@@ -169,3 +169,7 @@ MODEL_API_KEY가 따로 있으면 대화 모델 키는 그 값을 우선한다. 
 ## Harness: 안전장치·실행 추적 (AI2, #7)
 
 `app/harness/safety.py`의 `safe_presentation`이 조사 루프의 `present_data`를 구현한다. 본문의 전화·주민번호·카드·계좌·이메일을 가리되 messageId·policyId·URI·버전 같은 식별자는 그대로 두고, 12,000자 초과는 `[TRUNCATED]`, 채팅 템플릿 제어 토큰은 무력화한다. `app/harness/observability.py`는 모델·도구 호출, 재시도, 한도, 결과를 traceId 단위 JSON 이벤트로 남기며 원문·키는 기록하지 않는다. `LANGSMITH_TRACING=true`와 키를 설정하면 LangSmith 추적도 켜진다. 계약: [docs/AI2-04-harness-safety-observability.md](docs/AI2-04-harness-safety-observability.md)
+
+## Docker 이미지 (AI2, #22)
+
+루트 `Dockerfile` 하나로 Agent 서버(기본), Business MCP(`python -m app.business_mcp`), RAG MCP(`python -m app.rag_mcp`), RAG 첫 색인(`python -m app.rag_mcp.index`)을 띄운다. compose 서비스 예시와 컨테이너 간 Host 검사 설정(`RAG_MCP_ALLOWED_HOSTS`)은 [docs/AI2-05-docker-compose.md](docs/AI2-05-docker-compose.md)를 따른다.

@@ -49,6 +49,8 @@ class ServerSettings:
     agent_token: str
     host: str
     port: int
+    # MCP SDK의 Host 헤더 검사(DNS rebinding 방지) 허용 목록. compose에서는 서비스 이름(rag-mcp:*)을 추가한다.
+    allowed_hosts: tuple[str, ...] = ("127.0.0.1:*", "localhost:*")
 
     def __post_init__(self) -> None:
         if not self.host:
@@ -70,6 +72,11 @@ class ServerSettings:
             agent_token=os.getenv("RAG_MCP_AGENT_TOKEN", ""),
             host=os.getenv("RAG_MCP_HOST", "127.0.0.1"),
             port=port,
+            allowed_hosts=tuple(
+                host.strip()
+                for host in os.getenv("RAG_MCP_ALLOWED_HOSTS", "127.0.0.1:*,localhost:*").split(",")
+                if host.strip()
+            ),
         )
 
     @property
