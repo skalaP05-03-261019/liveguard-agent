@@ -49,7 +49,7 @@ class FakeEmbedder:
 
 
 class FakeRepository:
-    """색인된 v3.0 조항을 메모리에 두고, 질의에 조항 ID가 들어 있으면 그 조항을 1위로 돌려준다."""
+    """색인된 기본 버전 조항을 메모리에 두고, 질의에 조항 ID가 들어 있으면 그 조항을 1위로 돌려준다."""
 
     def __init__(self, embedding_model: str = "text-embedding-3-small") -> None:
         self.embedding_model = embedding_model
