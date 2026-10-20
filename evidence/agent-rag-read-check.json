@@ -1,0 +1,63 @@
+{
+  "recordedOn": "2026-10-20",
+  "issue": 8,
+  "baseCommit": "976d779d834298bdce81c514f0c1a710e0380b8f",
+  "branch": "feat/agent-8-rag-client",
+  "scope": "Agent RAG consumer and verified policy State patch",
+  "tests": {
+    "asgi": {
+      "status": "passed",
+      "count": 33,
+      "python": "3.11.15",
+      "command": "python -m unittest discover -s tests -v",
+      "dependency": "contract-based RAG MCP test double; Business tests use fake Backend"
+    },
+    "tcpLocal": {
+      "status": "blocked_by_environment",
+      "reason": "loopback socket bind raises PermissionError (Operation not permitted); not an application assertion failure"
+    },
+    "ci": {
+      "status": "pending",
+      "expectedJobs": [
+        "asgi",
+        "tcp"
+      ]
+    },
+    "packages": {
+      "status": "passed",
+      "count": 57,
+      "command": "uv pip check"
+    },
+    "cliMissingConfig": {
+      "status": "passed",
+      "exitCode": 2,
+      "errorCode": "INVALID_RAG_CONFIGURATION"
+    }
+  },
+  "verified": [
+    "separate RAG Bearer authentication including 401/403",
+    "Streamable HTTP SDK serialization using locked mcp 2.3",
+    "search-section-Resource identity/version/original text checks",
+    "empty/missing/malformed policy failures do not become a normal verdict",
+    "caller-selected case policyVersion with no fallback",
+    "atomic State updates and evidence deduplication",
+    "timeout with no application retries",
+    "readonly tool allowlist and policy URI restriction"
+  ],
+  "pendingProviderContract": [
+    "exact active policyVersion wire value",
+    "Resource MIME/representation: single text/plain or text/markdown body proposed",
+    "actual AI2 server URL and credential delivery"
+  ],
+  "notVerified": [
+    "actual AI2 RAG server, pgvector index and embeddings",
+    "real model tool selection or Graph integration (#9)",
+    "actual Backend sanctions or checkpoint/resume (#10, #5)",
+    "full Harness budgets/masking/traces (#6/#7)"
+  ],
+  "limits": [
+    "run/resume still return 501; no task runner claimed",
+    "TCP mode is retained for CI; local port binding unavailable",
+    "no actual operational policy content/keys supplied to the test double"
+  ]
+}

@@ -15,6 +15,7 @@ class AgentState(TypedDict, total=False):
     case_snapshot: dict[str, Any]
     evidence_version: int
     policy_version: str
+    policy_evidence: list[dict[str, Any]]  # Verified full section + version + Resource URI; #8.
     messages: list[Any]
     target_messages: list[dict[str, Any]]
     context_messages: list[dict[str, Any]]
