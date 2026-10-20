@@ -38,3 +38,10 @@ class AgentState(TypedDict, total=False):
     kick_decision_id: str
     basis_case_ids: list[str]
     kick_result: dict[str, Any]
+    # 문맥 검토 Harness(#24). handling_route가 CONTEXT_REVIEW면 운영자 결정 전까지 멈춘다.
+    # review_kind는 현재 대기·처리 중인 심사 종류(CONTEXT / KICK).
+    handling_route: str
+    review_kind: str
+    context_review_id: str
+    context_decision_id: str
+    context_result: dict[str, Any]

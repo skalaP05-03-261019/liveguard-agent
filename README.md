@@ -59,6 +59,10 @@ uv run --env-file .env python -m app.rag_mcp   # http://127.0.0.1:8003/mcp
 
 Postgres 재시작 복원 테스트는 `AGENT_TEST_CHECKPOINT_DB_URL`이 있을 때만 실행된다(임시 스키마 생성 후 삭제). 계약: [docs/AI2-02-harness-kick-approval-contract.md](docs/AI2-02-harness-kick-approval-contract.md)
 
+## Harness: 문맥 검토 interrupt/resume (AI2, #24)
+
+`handling_route`가 `CONTEXT_REVIEW`면 `request_context_review → review_context → apply_context_decision`이 Backend에 검토 요청(reviewId)을 만들고, AI 제안이 정상이어도 운영자 결정 전까지 멈춘다. `/resume`(`reviewKind: CONTEXT`)으로 같은 `threadId`를 재개하면 Backend 저장본의 결정(CONFIRM_NORMAL / CONFIRM_VIOLATION / DEFER)을 `context_result`에 남기고, 보류면 다시 기다린다. 대기 중인 심사와 종류가 다른 재개는 409 `REVIEW_KIND_MISMATCH`다. Graph 연결과 결정 후 처리는 #10. 계약: [docs/AI2-06-harness-context-review-contract.md](docs/AI2-06-harness-context-review-contract.md)
+
 ## 파일과 다음 작업
 
 | 파일 | 역할 / 다음 작업 |

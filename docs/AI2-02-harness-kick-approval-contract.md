@@ -59,7 +59,8 @@
 | 응답 | 의미 |
 |---|---|
 | 202 `{taskId, kickResult}` | 재개 완료. `kickResult`는 아래 6 |
-| 400 | `reviewKind`가 KICK이 아니거나 `reviewId` 없음 (CONTEXT 재개는 미연결) |
+| 400 | `reviewKind` 또는 `reviewId` 없음 |
+| 409 `REVIEW_KIND_MISMATCH` | 대기 중인 심사가 문맥 검토(CONTEXT) 등 다른 종류 (#24) |
 | 404 `THREAD_NOT_FOUND` | 해당 threadId checkpoint 없음 |
 | 409 `NO_PENDING_APPROVAL` | 승인 대기가 없음(이미 재개됨). 중복 승인으로 kick 반복하지 않음 (AC-18) |
 | 409 `CASE_MISMATCH` / `REVIEW_MISMATCH` | 대기 중인 사건·심사와 불일치 |
@@ -92,4 +93,4 @@ async def kick(action_command, *, trace_id) -> dict
 
 - `app.harness.checkpoint.open_checkpointer(AGENT_CHECKPOINT_DB_URL)`: LangGraph `AsyncPostgresSaver`, `agent` 스키마 자동 생성.
 - 복원 허용 타입은 `app.schemas`의 계약 모델·enum으로 제한(임의 클래스 역직렬화 차단).
-- 문맥 결정(`reviewKind: CONTEXT`) interrupt는 이 PR 범위 밖이며 같은 checkpointer·resume 구조로 확장한다.
+- 문맥 결정(`reviewKind: CONTEXT`) interrupt는 #24에서 같은 checkpointer·resume 구조로 확장했다: `docs/AI2-06-harness-context-review-contract.md`.
