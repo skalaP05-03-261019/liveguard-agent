@@ -90,6 +90,54 @@ class RetryableKickBackend(FakeBackend):
 
 
 class BusinessMcpTests(unittest.IsolatedAsyncioTestCase):
+    def test_backend_error_codes_and_retryability_are_preserved(self) -> None:
+        cases = [
+            (400, "VALIDATION_FAILED"),
+            (401, "UNAUTHENTICATED"),
+            (403, "FORBIDDEN"),
+            (403, "KICKED"),
+            (404, "NOT_FOUND"),
+            (409, "STALE_VERSION"),
+            (409, "IDEMPOTENCY_CONFLICT"),
+            (422, "REVIEW_NOT_APPROVED"),
+            (501, "NOT_IMPLEMENTED"),
+            (503, "TEMPORARY_UNAVAILABLE"),
+            (500, "INTERNAL_ERROR"),
+            (429, "RATE_LIMITED"),
+        ]
+        for status, code in cases:
+            for retryable in (False, True):
+                with self.subTest(status=status, code=code, retryable=retryable):
+                    response = httpx.Response(status, json={
+                        "error": {"code": code, "retryable": retryable},
+                    })
+                    with self.assertRaises(BackendError) as raised:
+                        BackendApi._raise_response_error(response, str(TRACE_ID))
+                    payload = json.loads(raised.exception.as_tool_error())
+                    self.assertEqual(payload["error"]["code"], code)
+                    self.assertEqual(payload["error"]["retryable"], retryable)
+                    self.assertEqual(payload["traceId"], str(TRACE_ID))
+
+    def test_invalid_backend_error_codes_use_http_fallback(self) -> None:
+        bodies = [
+            None, {}, {"error": None},
+            *({"error": {"code": code}} for code in
+              (None, "", " ", 123, "invalid code", "A" * 65)),
+        ]
+        for body in bodies:
+            with self.subTest(body=body):
+                response = httpx.Response(403, json=body)
+                with self.assertRaises(BackendError) as raised:
+                    BackendApi._raise_response_error(response, str(TRACE_ID))
+                self.assertEqual(raised.exception.code, "FORBIDDEN")
+                self.assertFalse(raised.exception.retryable)
+
+        response = httpx.Response(503, text="not JSON")
+        with self.assertRaises(BackendError) as raised:
+            BackendApi._raise_response_error(response, str(TRACE_ID))
+        self.assertEqual(raised.exception.code, "TEMPORARY_UNAVAILABLE")
+        self.assertTrue(raised.exception.retryable)
+
     async def test_read_tool_limits_match_backend_query_contract(self) -> None:
         server = MCPServer("test")
         register_tools(server, FakeBackend)

@@ -1,3 +1,4 @@
+import re
 from typing import Any
 from uuid import UUID
 
@@ -143,21 +144,6 @@ class BackendApi:
         message = "Backend rejected the request"
         retryable = response.status_code >= 500
 
-        try:
-            body = response.json()
-        except ValueError:
-            body = None
-
-        if isinstance(body, dict):
-            error = body.get("error")
-            if isinstance(error, dict):
-                candidate_code = error.get("code")
-                candidate_retryable = error.get("retryable")
-                if isinstance(candidate_code, str):
-                    code = candidate_code
-                if isinstance(candidate_retryable, bool):
-                    retryable = candidate_retryable
-
         if response.status_code == 401:
             code = "UNAUTHENTICATED"
         elif response.status_code == 403:
@@ -173,5 +159,24 @@ class BackendApi:
         elif response.status_code == 429:
             code = "TEMPORARY_UNAVAILABLE"
             retryable = True
+
+        # HTTP 상태는 기본값만 제공하고, 유효한 BE 업무 오류 코드를 우선한다.
+        try:
+            body = response.json()
+        except ValueError:
+            body = None
+
+        if isinstance(body, dict):
+            error = body.get("error")
+            if isinstance(error, dict):
+                candidate_code = error.get("code")
+                candidate_retryable = error.get("retryable")
+                if (
+                    isinstance(candidate_code, str)
+                    and re.fullmatch(r"[A-Z][A-Z0-9_]{0,63}", candidate_code)
+                ):
+                    code = candidate_code
+                if isinstance(candidate_retryable, bool):
+                    retryable = candidate_retryable
 
         raise BackendError(code, message, retryable=retryable, trace_id=trace_id)
