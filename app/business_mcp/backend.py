@@ -31,13 +31,13 @@ class BackendApi:
         )
 
     async def get_user_history(
-        self, case_id: UUID, *, days: int, trace_id: str
+        self, case_id: UUID, *, days: int | None, trace_id: str
     ) -> dict[str, Any]:
         return await self._request(
             "GET",
             f"/internal/cases/{case_id}/history",
             trace_id=trace_id,
-            params={"days": days},
+            params={"days": days} if days is not None else None,
         )
 
     async def get_action_status(

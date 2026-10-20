@@ -30,7 +30,7 @@ class BackendOperations(Protocol):
     ) -> dict[str, Any]: ...
 
     async def get_user_history(
-        self, case_id: UUID, *, days: int, trace_id: str
+        self, case_id: UUID, *, days: int | None, trace_id: str
     ) -> dict[str, Any]: ...
 
     async def get_action_status(
@@ -89,8 +89,8 @@ def register_tools(
     @mcp.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False))
     async def get_chat_context(
         caseId: UUID,
-        before: Annotated[int, Field(ge=0, le=50)] = 5,
-        after: Annotated[int, Field(ge=0, le=50)] = 5,
+        before: Annotated[int, Field(ge=0, le=10)] = 5,
+        after: Annotated[int, Field(ge=0, le=10)] = 5,
         traceId: UUID | None = None,
     ) -> dict[str, Any]:
         """Get a minimal, masked window of chat around a moderation case."""
@@ -109,10 +109,10 @@ def register_tools(
     @mcp.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False))
     async def get_user_history(
         caseId: UUID,
-        days: Annotated[int, Field(ge=1)] = 30,
+        days: Annotated[int, Field(ge=1)] | None = None,
         traceId: UUID | None = None,
     ) -> dict[str, Any]:
-        """Get confirmed moderation history for the user involved in a case."""
+        """Get confirmed moderation history; optional days must be positive when provided."""
         trace_id = _trace_id(traceId)
         try:
             data = await get_backend().get_user_history(

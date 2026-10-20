@@ -36,7 +36,7 @@ class FakeBackend:
         }
 
     async def get_user_history(
-        self, case_id: UUID, *, days: int, trace_id: str
+        self, case_id: UUID, *, days: int | None, trace_id: str
     ) -> dict[str, Any]:
         return {"caseId": str(case_id), "days": days}
 
@@ -90,6 +90,42 @@ class RetryableKickBackend(FakeBackend):
 
 
 class BusinessMcpTests(unittest.IsolatedAsyncioTestCase):
+    async def test_read_tool_limits_match_backend_query_contract(self) -> None:
+        server = MCPServer("test")
+        register_tools(server, FakeBackend)
+
+        async with Client(server) as client:
+            tools = await client.list_tools()
+            by_name = {tool.name: tool for tool in tools.tools}
+            chat_schema = by_name["get_chat_context"].input_schema
+            history_schema = by_name["get_user_history"].input_schema
+
+            self.assertEqual(chat_schema["properties"]["before"]["maximum"], 10)
+            self.assertEqual(chat_schema["properties"]["after"]["maximum"], 10)
+            self.assertNotIn("days", history_schema.get("required", []))
+            days_schema = history_schema["properties"]["days"]
+            integer_schema = next(
+                branch for branch in days_schema["anyOf"]
+                if branch.get("type") == "integer"
+            )
+            self.assertEqual(integer_schema["minimum"], 1)
+
+            context = await client.call_tool(
+                "get_chat_context",
+                {"caseId": str(CASE_ID), "before": 10, "after": 10},
+            )
+            history = await client.call_tool(
+                "get_user_history", {"caseId": str(CASE_ID)}
+            )
+
+        self.assertFalse(context.is_error)
+        self.assertFalse(history.is_error)
+        self.assertEqual(
+            context.structured_content["data"]["params"],
+            {"before": 10, "after": 10},
+        )
+        self.assertIsNone(history.structured_content["data"]["days"])
+
     async def test_tools_publish_camel_case_schema_and_trace_envelope(self) -> None:
         server = MCPServer("test")
         register_tools(server, FakeBackend)
@@ -226,6 +262,35 @@ class BusinessMcpTests(unittest.IsolatedAsyncioTestCase):
             requests[0].headers["authorization"], "Bearer service-token"
         )
         self.assertEqual(requests[0].headers["x-trace-id"], str(TRACE_ID))
+
+    async def test_backend_history_omits_optional_days_when_unspecified(self) -> None:
+        requests: list[httpx.Request] = []
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return httpx.Response(200, json={"data": {"violationCount": 0}})
+
+        settings = Settings(
+            backend_base_url="http://backend.test",
+            backend_service_token="service-token",
+            agent_token="agent-token",
+            host="127.0.0.1",
+            port=8002,
+        )
+        async with httpx.AsyncClient(
+            base_url=settings.backend_base_url,
+            transport=httpx.MockTransport(handler),
+        ) as client:
+            backend = BackendApi(settings, client)
+            result = await backend.get_user_history(
+                CASE_ID, days=None, trace_id=str(TRACE_ID)
+            )
+
+        self.assertEqual(result, {"violationCount": 0})
+        self.assertEqual(
+            requests[0].url.path, f"/internal/cases/{CASE_ID}/history"
+        )
+        self.assertEqual(dict(requests[0].url.params), {})
 
     async def test_missing_backend_credential_is_an_explicit_tool_error(self) -> None:
         settings = Settings(

@@ -150,6 +150,20 @@ class ContractTests(unittest.TestCase):
             safe = {**finding, "verdict": verdict, "categories": [], "policyIds": [],
                     "missingFacts": ["context unavailable"] if verdict == "NEEDS_REVIEW" else []}
             AnalysisResult.model_validate({**result, "messageFindings": [safe]})
+        no_violation_with_policy = {
+            **finding, "verdict": "NO_VIOLATION", "categories": [],
+            "policyIds": ["CP-2.1"], "evidenceMessageIds": [],
+        }
+        AnalysisResult.model_validate({
+            **result, "messageFindings": [no_violation_with_policy],
+        })
+        no_violation_with_category = {
+            **no_violation_with_policy, "categories": ["PROFANITY"],
+        }
+        with self.assertRaises(ValidationError):
+            AnalysisResult.model_validate({
+                **result, "messageFindings": [no_violation_with_category],
+            })
 
     def test_configuration_has_no_secret_repr(self):
         with patch.dict("os.environ", {"BUSINESS_MCP_URL": "http://localhost:8002/mcp",
