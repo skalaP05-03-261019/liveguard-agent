@@ -1,9 +1,16 @@
 # LIVE:GUARD Agent 골격
 
-김태관 / ⑤ AI 1·Agent의 Python 서비스 시작 구조. 현재 범위는 **API·스키마·State·Graph 경계**다.
-Agent의 작업 입력 스키마와 Business MCP 조회 클라이언트, `load_case`를 구현했다.
-RAG 소비자와 정책·원문 검증은 #8에서 추가했으며 main에 병합된 #13 제공자 앱과 함께 검증한다.
-실제 임베딩 API까지 포함한 연동·모델 판단·전체 작업 실행·작업 저장·제재·checkpoint/resume는 미구현/미검증이다.
+김태관 / AI1 Agent의 조사·정책 검증·승인 흐름 연결 서비스다.
+Business/RAG MCP 조회와 실제 OpenAI 검증 결과는 각 이슈의 증거와 문서를 참조한다.
+
+## #10 통합 진행
+
+최신 Notion 문맥 승인 정책과 AI2 PR #25를 연결한 별도 실행 Graph를
+`app.integration.workflow.build_moderation_graph`에 추가했다. CONTEXT 대기·보류·재개 후
+Backend 처리와 별도 KICK 대기를 연결하며 공유 실행 예산/마스킹을 사용한다.
+실제 Backend 업무 Gateway와 작업 dispatcher 연결은 아직 남아 `/run`은 501을 유지한다.
+실제 B1 진행 이벤트 계약용 `BackendEvents` HTTP 어댑터는 추가했으며, 전체 Spring 집행 시험과 구분한다.
+[최신 명세 출처·Backend 잔여 계약](docs/AI1-10-latest-spec-and-boundary.md)을 먼저 확인한다.
 
 ## 실행
 

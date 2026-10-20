@@ -66,6 +66,7 @@ def review_card(state: AgentState, *, card_type: str, review_kind: str, review_i
         "reviewKind": review_kind,
         "reviewId": review_id,
         "caseId": state.get("case_id"),
+        **({"liveId": state["live_id"]} if state.get("live_id") else {}),
         "taskId": state.get("task_id"),
         "threadId": state.get("thread_id"),
         "traceId": state.get("trace_id"),
