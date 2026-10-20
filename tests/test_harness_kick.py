@@ -203,11 +203,16 @@ class ResumeEndpointTests(unittest.IsolatedAsyncioTestCase):
                             thread_config(thread))
         agent_app.state.agent_graph = graph
         with TestClient(agent_app) as client:
+            no_kind = client.post(f"/agent/tasks/{TASK_ID}/resume",
+                                  json=self.envelope(thread, review_kind=None))
             context = client.post(f"/agent/tasks/{TASK_ID}/resume",
                                   json=self.envelope(thread, review_kind="CONTEXT"))
             first = client.post(f"/agent/tasks/{TASK_ID}/resume", json=self.envelope(thread))
             second = client.post(f"/agent/tasks/{TASK_ID}/resume", json=self.envelope(thread))
-        self.assertEqual(context.status_code, 400)
+        self.assertEqual(no_kind.status_code, 400)
+        # 강퇴 대기 thread를 문맥 결정으로 재개하지 않는다.
+        self.assertEqual(context.status_code, 409)
+        self.assertEqual(context.json()["detail"]["code"], "REVIEW_KIND_MISMATCH")
         self.assertEqual(first.status_code, 202)
         self.assertEqual(first.json()["kickResult"]["status"], "APPLIED")
         self.assertEqual(second.status_code, 409)
