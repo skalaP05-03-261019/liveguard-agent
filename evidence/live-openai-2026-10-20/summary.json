@@ -16,7 +16,7 @@
     "total": 3
   },
   "finalFull": {
-    "passed": 12,
+    "passed": 14,
     "total": 15,
     "liveModelCases": 13,
     "ruleDispatcherCases": 2,
@@ -73,13 +73,24 @@
         "review-conflicting"
       ],
       "suiteSha256": "f6250381d3fad63daec33d24ac2caf403746e8aff2dbdfbca4ad8427ed828f04"
+    },
+    {
+      "file": "live-full-docker-r5-2026-10-20.json",
+      "status": "FAIL",
+      "passed": 14,
+      "total": 15,
+      "failed": [
+        "review-ambiguous"
+      ],
+      "suiteSha256": "f6250381d3fad63daec33d24ac2caf403746e8aff2dbdfbca4ad8427ed828f04",
+      "note": "Unchanged code/prompt rerun requested by user"
     }
   ],
   "limitations": [
     "Fixed evaluation set was used for prompt tuning; no held-out accuracy claim",
     "Repeated runs vary; latest result reported instead of cherry-picking best run",
     "Actual Spring Backend and mutations not tested",
-    "Remaining: impersonation fact lookup, ambiguous target policy, conflicting PII facts"
+    "Remaining in latest run: ambiguous target; prior impersonation/conflicting PII failures show variability"
   ],
   "keys": "read-only mounted .env, never copied into repository/image or printed"
 }

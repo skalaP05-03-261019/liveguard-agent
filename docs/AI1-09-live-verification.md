@@ -93,7 +93,7 @@ Operation not permitted로 거부되어 `DATABASE_UNREACHABLE`, BLOCKED, 실제 
 ## 후속 실행 결과 (동일 날짜)
 
 Docker 환경에서 실제 OpenAI·임베딩·pgvector 실행에 성공했다. 연결 3/3 PASS,
-마지막 고정 평가 12/15 FAIL. [실패를 포함한 전체 이력](AI1-09-live-openai-results.md)과
+마지막 고정 평가 14/15 FAIL. [실패를 포함한 전체 이력](AI1-09-live-openai-results.md)과
 `evidence/live-openai-2026-10-20/`을 최신 증거로 사용한다. 위 BLOCKED는 호스트 환경의 과거 기록이다.
 보고서는 promptSha256도 고정하므로 프롬프트 변경 후에는 smoke부터 새로 실행해야 한다.
 합성 평가 보고서에만 마스킹한 짧은 판정 이유를 기록하며, 일반 trace의 원문/이유 미기록 규칙은 유지한다.
