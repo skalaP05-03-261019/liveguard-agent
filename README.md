@@ -152,3 +152,7 @@ fixture 전체는 HTTP 요청이 아니다. POST에는 새 fixture의 `task`만 
 - 설정: `MODEL_PROVIDER`, `MODEL_NAME`, `MODEL_API_KEY`와 두 MCP의 URL·토큰.
   OpenAI 어댑터는 명시적 `MODEL_PROVIDER=openai`일 때만 사용하며 모델은 별도 지정한다.
   RAG 임베딩 키를 대화 모델 키로 자동 재사용하지 않는다.
+
+## Harness: 실행 한도·오류 복구 (AI2, #6)
+
+`app/harness/execution.py`의 `HarnessGate`가 조사 루프(#9)의 `ExecutionGate`를 구현한다. 모델 8회·같은 도구 3회·활성 120초 한도, retryable 오류만 호출당 최대 2회 재시도(시도도 한도에 포함), 카운터는 State `harness_budget`에 저장해 재시작·재개 후에도 이어 센다. `guarded_investigate(state)`는 한도 초과 시 판정 없이 `task_outcome: NEEDS_REVIEW`, 최종 실패 시 `FAILED`와 오류를 patch로 남긴다. 결과 미확인 조치는 `resolve_unknown_action`으로 상태를 먼저 조회한다. 계약: [docs/AI2-03-harness-execution-contract.md](docs/AI2-03-harness-execution-contract.md)
