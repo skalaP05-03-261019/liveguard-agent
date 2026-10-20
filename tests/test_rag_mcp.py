@@ -259,6 +259,19 @@ class RagMcpHttpTests(unittest.TestCase):
         self.assertEqual(unauthenticated.status_code, 401)
         self.assertEqual(wrong.status_code, 401)
 
+    def test_container_host_requires_explicit_allowed_hosts(self) -> None:
+        # compose에서 Agent는 Host: rag-mcp:8003으로 호출한다. 기본값은 localhost만 허용한다.
+        headers = {"Authorization": "Bearer agent-token", "Host": "rag-mcp:8003",
+                   "Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
+        body = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
+        default_app = create_app(self.settings(), repository=FakeRepository(), embedder=FakeEmbedder())
+        with TestClient(default_app) as client:
+            self.assertEqual(client.post("/mcp", json=body, headers=headers).status_code, 421)
+        allowed = replace(self.settings(), allowed_hosts=("rag-mcp:*", "localhost:*"))
+        compose_app = create_app(allowed, repository=FakeRepository(), embedder=FakeEmbedder())
+        with TestClient(compose_app) as client:
+            self.assertNotIn(client.post("/mcp", json=body, headers=headers).status_code, {401, 421})
+
     def test_unconfigured_token_rejects_mcp(self) -> None:
         app = create_app(self.settings(token=""), repository=FakeRepository(), embedder=FakeEmbedder())
         with TestClient(app) as client:
