@@ -6,7 +6,7 @@
 ## 실행
 
 ```bash
-cd agent
+cd liveguard-agent
 uv sync
 uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
 ```
@@ -46,3 +46,6 @@ seedMetadata·seedMessages를 도구에서 얻은 사실처럼 모델에 넘기�
   현재 골격이나 import 확인을 해당 기능의 완료 증거로 사용하지 않는다.
 
 실행 검증 범위는 evidence/scaffold-check.json에 기록한다.
+
+분리 전 원본: taetegwgn/skala-capstone-P05_03의 agent/ (10a8e5d).
+공통 기획서·정책은 같은 organization의 liveguard-be/docs/live-guard/v0.3에서 관리합니다.
