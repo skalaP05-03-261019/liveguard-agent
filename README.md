@@ -31,6 +31,28 @@ uv run python -m app.business_mcp
 `BUSINESS_BACKEND_BASE_URL`은 기본 `http://127.0.0.1:8080`이다. 서비스는 Backend `/internal/**` API를 호출하며 업무 DB에 직접 연결하지 않는다. `/health`는 credential 설정 여부만 보고하고 비밀값을 노출하지 않는다. `BUSINESS_MCP_URL`은 Agent 측 MCP 접속 URL용이며, 서버 listen 설정은 `BUSINESS_MCP_HOST`와 `BUSINESS_MCP_PORT`다.
 이 서버는 process environment를 읽는다. `.env.example`은 설정 참고 파일이며 자동 로드되지 않는다.
 
+## RAG 정책 색인 (AI2, #3)
+
+운영정책 v3.0 원문(`app/rag_mcp/policies/policy-v3.0.md`, 노션 Export)을 조항 ID(`CP/SP/MP/MM-x.y`) 헤딩 단위로 나눠 OpenAI 임베딩과 함께 pgvector `rag.policy_chunks`에 넣는다. 장 제목 등 조항 밖 텍스트는 색인하지 않는다.
+
+```bash
+cp .env.example .env   # RAG_DB_URL, OPENAI_API_KEY 입력. .env는 커밋하지 않는다.
+uv run --env-file .env python -m app.rag_mcp.index
+```
+
+같은 `POLICY_VERSION`으로 다시 실행하면 해당 버전 행을 한 트랜잭션으로 교체한다. 정책을 고칠 때는 노션 수정 → 버전 올림 → Export한 파일을 `policy-v{version}.md`로 추가 → 재색인한다. pgvector 통합 테스트는 `RAG_TEST_DB_URL`이 있을 때만 실행되며 임시 버전으로 색인한 뒤 지운다.
+
+## RAG MCP 서버 (AI2, #4)
+
+Business MCP와 같은 구조(FastAPI `/mcp`, Streamable HTTP, Bearer 토큰)로 `search_policy`, `get_policy_section` 도구와 조항 원문 Resource `policy://{version}/{documentId}/{sectionId}`를 제공한다. 모두 조회 전용이다.
+
+```bash
+# .env에 RAG_DB_URL, OPENAI_API_KEY, RAG_MCP_AGENT_TOKEN 설정 후
+uv run --env-file .env python -m app.rag_mcp   # http://127.0.0.1:8003/mcp
+```
+
+`/health`는 색인된 policyVersion 목록과 준비 여부만 보고한다. 도구 입출력·오류 코드는 [docs/AI2-01-rag-mcp-contract.md](docs/AI2-01-rag-mcp-contract.md)를 따른다.
+
 ## 파일과 다음 작업
 
 | 파일 | 역할 / 다음 작업 |
@@ -46,6 +68,7 @@ uv run python -m app.business_mcp
 | app/policy_evidence.py | 검색→조항→Resource 일치 검사 후 policy_evidence State patch 반환 |
 | app/check_rag.py | 제공자 준비 후 사용하는 실제 서버 연결·출처 검증 명령 |
 | app/business_mcp/ | BE2-01 Business MCP 도구, Backend API adapter 및 독립 실행 ASGI app |
+| app/rag_mcp/ | 운영정책 조항 파서·pgvector 색인, RAG MCP 서버(search_policy, get_policy_section, policy:// Resource) |
 | prompts/investigator.md | 조사 규칙 초안; 아직 모델에 연결되지 않음 |
 | tests/fixtures/agent-case-v0.5.json | 이번 조회 연결용 요청·응답 제안. 가상 정책 버전이며 활성 정책 아님 |
 | tests/fixtures/D01.json | 역사 자료인 v0.3 fixture. 현재 TaskEnvelope 입력과 호환되지 않음 |
