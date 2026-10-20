@@ -1,0 +1,35 @@
+{
+  "recordedAt": "2026-10-20T10:54:39.389088+09:00",
+  "issue": "https://github.com/skalaP05-03-261019/liveguard-agent/issues/1",
+  "baseCommit": "461711db732250f1c7201e675dd8833a982ec0d5",
+  "scope": "Notion-contract Agent input/output models and read-only Business MCP case loading",
+  "python": "3.11.15",
+  "dependencyVersions": "57 applicable packages installed at uv.lock versions on Python 3.11/macOS; uv pip check passed",
+  "tests": {
+    "command": ".venv/bin/python -m unittest discover -s tests -v",
+    "result": "PASS",
+    "methods": 16,
+    "businessMcpExistingMethods": 6,
+    "agentMethods": 10,
+    "transport": "Real Business MCP FastAPI app + SDK Streamable HTTP over httpx2.ASGITransport; controlled fake Backend",
+    "loopbackTcp": "Local execution blocked by sandbox socket-bind restriction; CI tcp job added, result not yet observed",
+    "realSpringBackend": "NOT RUN",
+    "modelRagExecution": "NOT RUN",
+    "taskPersistenceApprovalResume": "NOT IMPLEMENTED"
+  },
+  "syntaxFilesChecked": 19,
+  "fileHashes": {
+    "app/schemas.py": "6618b99cf27569770b888a973dac9c97300e4a64c42d16d96346ebe55c0a9e10",
+    "app/state.py": "c7c2b5fe11c2b37b144d18e511710ff590cc9199eafeaba07c5727b7327bbfcf",
+    "app/nodes.py": "5927a90549fcb863f4785b3a1438c728a9e7b1bb1b8e173e1ae94bc3bf84af8e",
+    "app/clients/business_mcp.py": "4d93c7d60c030df1954e20675b447142759f78e3ead274478768bde0043433ca",
+    "app/case_loader.py": "0788a22cc5bc56a96c9c8fe8f9554a0ed85092000703a607148bc2beedc509f0",
+    "tests/test_agent_read.py": "df6365b845620c28fad504294b0cbe18133e83ea1f97ac46926be4ca77bb2be4",
+    "tests/fixtures/agent-case-v0.5.json": "4ff17dd0117e053b32f82ffe9713b88a69f37fd93ec3c631db6866d8b5896d3d"
+  },
+  "limits": [
+    "Notion shared draft fields are implementation proposals, not recorded team approval",
+    "HTTP run/resume intentionally return 501",
+    "Context response now requires caseId/snapshotId/evidenceVersion; provider agreement remains necessary"
+  ]
+}

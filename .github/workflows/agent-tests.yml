@@ -1,0 +1,44 @@
+name: Agent tests
+
+on:
+  pull_request:
+    paths:
+      - "app/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/agent-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/agent-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Python 3.11 / ${{ matrix.transport }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        transport: [asgi, tcp]
+    env:
+      LIVEGUARD_TEST_TCP: ${{ matrix.transport == 'tcp' && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        with:
+          version: "0.11.29"
+      - run: uv sync --locked --python 3.11
+      - run: uv pip check
+      - run: uv run --locked python -m unittest discover -s tests -v
