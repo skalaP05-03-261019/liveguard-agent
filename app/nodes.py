@@ -16,14 +16,39 @@ async def load_case(state: AgentState, *, tools: ReadTools | None = None) -> dic
     return await load_case_data(state["task"], client)
 
 
-async def investigate(state: AgentState) -> dict:
-    """모델이 조회 도구를 선택하는 유한 루프. 변경 도구는 노출하지 않는다."""
-    raise IntegrationNotConfigured("모델 + 조회 MCP + 공통 실행 예산 연결 필요")
+async def investigate(state: AgentState, *, model=None, business=None, policy=None,
+                      gate=None, present_data=None) -> dict:
+    """AI1 read-only investigation; injectable #6 execution gate and #7 presentation."""
+    from app.investigation.model import model_from_env
+    from app.investigation.runner import run_investigation
+    from app.clients.rag_mcp import RagMcpReadClient, RagMcpSettings
+
+    if model is None:
+        try:
+            model = model_from_env()
+        except ValueError:
+            raise IntegrationNotConfigured("MODEL_PROVIDER/MODEL_NAME/MODEL_API_KEY 설정 필요") from None
+    if business is None:
+        business = BusinessMcpReadClient(BusinessMcpSettings.from_env())
+    if policy is None:
+        policy = RagMcpReadClient(RagMcpSettings.from_env())
+    options = {"gate": gate}
+    if present_data is not None:
+        options["present_data"] = present_data
+    return await run_investigation(state, model=model, business=business, policy=policy, **options)
 
 
 async def validate_judgment(state: AgentState) -> dict:
-    """JSON 검증 외에 실제 조회한 증거 ID·정책 버전·허용 조치를 검사."""
-    raise IntegrationNotConfigured("조회 근거와 판단 출력의 대조 검증 구현 필요")
+    """Recheck every finding against the immutable case and verified policy evidence."""
+    from app.investigation.validation import validate_analysis
+    payload = {
+        "caseId": state["case_id"], "snapshotId": state["snapshot_id"],
+        "evidenceVersion": state["evidence_version"], "policyVersion": state["policy_version"],
+        "messageFindings": [f.model_dump(mode="json", by_alias=True) if hasattr(f, "model_dump") else f
+                            for f in state.get("message_findings", [])],
+    }
+    result = validate_analysis(state, payload)
+    return {"message_findings": result.message_findings}
 
 
 async def request_plan(state: AgentState) -> dict:
