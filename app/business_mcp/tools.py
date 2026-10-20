@@ -17,6 +17,8 @@ from app.business_mcp.schemas import (
 
 
 class BackendOperations(Protocol):
+    """도구 로직과 Backend 전송 구현(현재 HTTP adapter)을 분리하는 경계."""
+
     async def get_case_context(
         self,
         case_id: UUID,
@@ -44,16 +46,19 @@ class BackendOperations(Protocol):
 
 
 def _trace_id(trace_id: UUID | None) -> str:
+    # 작업 trace를 전달받으면 유지하고, 단독 호출에서만 새 ID를 만든다.
     if trace_id is None:
         return str(uuid4())
     return str(trace_id)
 
 
 def _success(data: dict[str, Any], trace_id: str) -> dict[str, Any]:
+    # Backend의 결과를 공통 계약 envelope에 담아 Agent로 돌려준다.
     return {"data": data, "traceId": trace_id}
 
 
 def _raise_tool_error(error: BackendError) -> None:
+    # 예상 가능한 Backend 오류는 MCP tool 결과로 알려 재시도/검토 판단에 쓰게 한다.
     raise ToolError(error.as_tool_error()) from error
 
 
@@ -61,6 +66,8 @@ def register_tools(
     mcp: MCPServer,
     get_backend: Callable[[], BackendOperations],
 ) -> None:
+    # 조회/변경 tool이 같은 서버에 등록된다. annotations는 힌트일 뿐 권한 통제가 아니므로,
+    # Agent 쪽에서 변경 tool을 모델에 직접 노출하지 않고 코드 경로로만 호출해야 한다.
     @mcp.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False))
     async def get_moderation_case(
         caseId: UUID, traceId: UUID | None = None
@@ -68,6 +75,7 @@ def register_tools(
         """Get the moderation snapshot, evidence version, policy version, and targets."""
         trace_id = _trace_id(traceId)
         try:
+            # view 값은 내부 API 초안이므로 실제 BE 경로·요청 규격과 맞춰야 한다.
             data = await get_backend().get_case_context(
                 caseId,
                 view="moderationCase",
@@ -217,10 +225,12 @@ async def _execute_expected(
     backend: BackendOperations,
     trace_id: UUID | None,
 ) -> dict[str, Any]:
+    # tool 이름과 명령 타입이 다르면 Backend에 전달하기 전에 차단한다.
     if command.type != expected_type:
         raise ToolError(f"actionCommand.type must be {expected_type}")
     resolved_trace_id = _trace_id(trace_id)
     try:
+        # 현재 상태/버전/권한/멱등성의 최종 검증은 Backend가 다시 수행한다.
         data = await backend.execute_action(command, trace_id=resolved_trace_id)
     except BackendError as error:
         _raise_tool_error(error)

@@ -1,4 +1,4 @@
-"""Typed MCP inputs. JSON fields use camelCase to match the integration contract."""
+"""MCP 입력 계약 모델. 외부 JSON은 camelCase, Python 코드는 snake_case를 사용한다."""
 
 import json
 from typing import Literal
@@ -9,6 +9,7 @@ from pydantic.alias_generators import to_camel
 
 
 class Contract(BaseModel):
+    # 계약에 없는 필드는 조용히 무시하지 않고 거부해 BE/Agent 간 불일치를 드러낸다.
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
@@ -17,6 +18,7 @@ class Contract(BaseModel):
 
 
 class ActionCommand(Contract):
+    # Backend가 검증·발급한 명령만 받는다. Agent가 조치 조건을 임의로 만들지 않는다.
     action_id: UUID
     plan_id: UUID
     case_id: UUID
@@ -30,6 +32,7 @@ class ActionCommand(Contract):
 
     @model_validator(mode="after")
     def validate_duration(self) -> "ActionCommand":
+        # 제재 기간 산정은 Backend 책임이다. TIMEOUT 외 조치에는 기간을 허용하지 않는다.
         if self.type == "TIMEOUT" and self.duration_seconds is None:
             raise ValueError("TIMEOUT requires a Backend-issued durationSeconds")
         if self.type != "TIMEOUT" and self.duration_seconds is not None:
@@ -38,6 +41,7 @@ class ActionCommand(Contract):
 
 
 class HideCommand(ActionCommand):
+    # MCP tool마다 허용 조치 종류를 입력 스키마 단계에서 제한한다.
     type: Literal["HIDE"]
 
 
@@ -50,6 +54,8 @@ class ReleaseHeldCommand(ActionCommand):
 
 
 class BackendError(Exception):
+    """Backend 오류를 MCP tool 오류 envelope로 변환하기 위한 내부 표현."""
+
     def __init__(
         self,
         code: str,
