@@ -51,7 +51,7 @@ RULE_CONFIRMED는 `confirmationStatus=CONFIRMED`도 필요하다. 필드 이름�
 - `get_decision(review_id, decision_id, trace_id)` → 저장된 CONTEXT 결정 및 해당 case/live/snapshot/evidence/policy/thread/review/decision 참조.
 - `apply_context(request, trace_id)` → 저장된 사람 결정의 실제 처리. AI 제안은 승인으로 쓰지 않음.
 - `submit_analysis(analysis, trace_id)` → PII 경로의 메시지별 제안과 liveId/handlingRoute/taskId 전달.
-- `revalidate(review_id, decision_id, trace_id)` / `kick(command, trace_id)` → AI2 KickGateway. KICK 명령의 liveId/reviewId/decisionId/policyVersion 확인. MCP 재시도를 외부에서 중복 적용하지 않음.
+- `revalidate(review_id, decision_id, trace_id)` / `kick(command, trace_id)` → AI2 KickGateway. 재검증 응답의 live/review 참조를 확인하고 기존 MCP KickCommand를 검증한다. 명령에 미지원 liveId/reviewId 필드를 주입하지 않으며 case/target/decision/evidence/policy 바인딩을 검사한다. MCP 재시도를 외부에서 중복 적용하지 않음.
 
 처리 응답의 제안 필드: 조사 참조(caseId/liveId/snapshotId/evidenceVersion/policyVersion),
 `status=APPLIED|NO_ACTION|NEEDS_REVIEW`, `observation=CONFIRMED|UNKNOWN`, `kickReview.required`.

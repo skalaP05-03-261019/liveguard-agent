@@ -243,8 +243,11 @@ class WorkflowTests(unittest.IsolatedAsyncioTestCase):
         self.backend.decision, self.backend.require_kick = "CONFIRM_VIOLATION", True
         async def approve(**kwargs):
             return {**self.backend.refs(), "reviewId": KICK, "decisionId": USER, "status": "APPROVED",
-                    "actionCommand": {"actionId": DECISION, "type": "KICK", "liveId": LIVE,
-                                      "reviewId": KICK, "decisionId": USER,
+                    "actionCommand": {"actionId": DECISION, "planId": REVIEW, "type": "KICK",
+                                      "caseId": self.state["case_id"], "targetId": USER,
+                                      "decisionId": USER, "expectedEvidenceVersion": 1,
+                                      "expectedTargetVersion": 1, "idempotencyKey": DECISION,
+                                      "violationIds": [REVIEW, DECISION, self.state["case_id"]],
                                       "policyVersion": self.state["policy_version"]}}
         async def apply(command, **kwargs):
             self.backend.calls.append(("kick", command))

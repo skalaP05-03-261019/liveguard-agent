@@ -7,9 +7,11 @@ implicit task acceptance. A real gateway and persistent checkpointer are require
 from typing import Any, Protocol
 
 from langgraph.graph import END, START, StateGraph
+from pydantic import ValidationError
 
 from app import nodes
 from app.clients.business_mcp import AgentToolError
+from app.business_mcp.schemas import KickCommand
 from app.harness.context_review import (
     apply_context_decision, request_context_review, review_context,
 )
@@ -200,12 +202,19 @@ def build_moderation_graph(*, model, business, policy, backend: ModerationGatewa
                 if not isinstance(result, dict) or any(result.get(k) != v for k, v in refs.items()):
                     return {"status": "INVALID"}
                 command = result.get("actionCommand")
-                if result.get("status") == "APPROVED" and (
-                    not isinstance(command, dict) or command.get("liveId") != state["live_id"]
-                    or command.get("decisionId") != decision_id or command.get("reviewId") != review_id
-                    or command.get("policyVersion") != state["policy_version"]
-                ):
-                    return {"status": "INVALID"}
+                if result.get("status") == "APPROVED":
+                    try:
+                        validated = KickCommand.model_validate(command)
+                    except ValidationError:
+                        return {"status": "INVALID"}
+                    # Live/review refs are bound by revalidation above. Keep the existing
+                    # MCP command shape; injecting new fields would make MCP reject it.
+                    if (str(validated.case_id) != state["case_id"]
+                            or str(validated.target_id) != state["user_id"]
+                            or str(validated.decision_id) != decision_id
+                            or validated.policy_version != state["policy_version"]
+                            or validated.expected_evidence_version != state["evidence_version"]):
+                        return {"status": "INVALID"}
                 return result
 
             async def kick(self, action_command, *, trace_id):
