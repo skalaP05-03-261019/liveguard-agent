@@ -145,3 +145,12 @@ fixture 전체는 HTTP 요청이 아니다. POST에는 새 fixture의 `task`만 
 - 설정: `MODEL_PROVIDER`, `MODEL_NAME`, `MODEL_API_KEY`와 두 MCP의 URL·토큰.
   OpenAI 어댑터는 명시적 `MODEL_PROVIDER=openai`일 때만 사용하며 모델은 별도 지정한다.
   RAG 임베딩 키를 대화 모델 키로 자동 재사용하지 않는다.
+
+
+## 실제 모델 검증 실행 (#8/#9)
+
+사용자 선택 모델은 GPT-5.4 mini다. 다운로드 `.env`의 OPENAI_API_KEY를 사용하며
+MODEL_API_KEY가 따로 있으면 대화 모델 키는 그 값을 우선한다. 키 파일을 저장소에 복사하지 않는다.
+[연결 3건 → 평가 15건 실행법](docs/AI1-09-live-verification.md)을 따른다.
+실제 OpenAI·임베딩·pgvector가 준비되지 않으면 BLOCKED로 기록하며 대역으로 성공을 대신하지 않는다.
+이번 환경의 시도는 DB 접속 제한으로 BLOCKED다. 실제 모델 품질 검증 완료를 뜻하지 않는다.

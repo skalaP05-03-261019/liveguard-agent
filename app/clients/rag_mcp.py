@@ -141,8 +141,9 @@ def parse_matches(data: Any, version: str, top_k: int, trace_id: str) -> list[Po
 class RagMcpReadClient:
     """Only AI2 search/section tools and policy:// Resources; one attempt per call."""
 
-    def __init__(self, settings: RagMcpSettings):
+    def __init__(self, settings: RagMcpSettings, *, http_client_factory=None):
         self._settings = settings
+        self._http_client_factory = http_client_factory
 
     @asynccontextmanager
     async def _session(self, trace_id: str):
@@ -155,7 +156,7 @@ class RagMcpReadClient:
 
         try:
             async with asyncio.timeout(self._settings.timeout_seconds):
-                async with create_mcp_http_client(
+                async with (self._http_client_factory or create_mcp_http_client)(
                     headers={"Authorization": f"Bearer {self._settings.token}"},
                 ) as http_client:
                     http_client.event_hooks["response"].append(record_status)
