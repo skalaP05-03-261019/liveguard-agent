@@ -1,10 +1,12 @@
 [project]
 name = "liveguard-agent"
 version = "0.1.0"
-description = "LIVE:GUARD Agent service scaffold (no live integrations yet)"
+description = "LIVE:GUARD Agent scaffold and Business MCP integration draft"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi",
+    "httpx>=0.27,<1",
+    "mcp>=2,<3",
     "uvicorn",
     "pydantic>=2,<3",
     "langgraph",
