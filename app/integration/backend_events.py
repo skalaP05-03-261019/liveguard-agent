@@ -42,7 +42,7 @@ class BackendEvents:
         try:
             response = await self.client.post(
                 f"/internal/cases/{case_id}/events", json={"event": event, "payload": clean},
-                headers={"Authorization": f"Bearer {self._token}", "X-Trace-Id": trace_id})
+                headers={"X-Service-Token": self._token, "X-Trace-Id": trace_id})
         except httpx.RequestError:
             # A lost response may have published the event; don't blindly resend it.
             raise AgentToolError("EVENT_DELIVERY_UNKNOWN", trace_id=trace_id) from None

@@ -294,6 +294,8 @@ class EventContractTests(unittest.IsolatedAsyncioTestCase):
         wire = json.loads(requests[0].content)
         self.assertNotIn("arguments", wire["payload"])
         self.assertEqual(requests[0].headers["X-Trace-Id"], DECISION)
+        self.assertEqual(requests[0].headers["X-Service-Token"], "fixture-service-token")
+        self.assertNotIn("Authorization", requests[0].headers)
         self.assertEqual(requests[0].url.path, f"/internal/cases/{REVIEW}/events")
 
     async def test_delivery_loss_is_unknown_without_automatic_retry(self):
