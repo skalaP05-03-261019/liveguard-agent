@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 POLICY_DIR = Path(__file__).parent / "policies"
-DEFAULT_POLICY_VERSION = "3.0"
+DEFAULT_POLICY_VERSION = "3.1"
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 # 테이블의 vector 차원과 같아야 한다. 모델을 바꾸면 스키마도 함께 바꾼다.
 EMBEDDING_DIMENSIONS = 1536

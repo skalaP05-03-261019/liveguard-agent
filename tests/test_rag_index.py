@@ -15,9 +15,10 @@ POLICY_FILE = POLICY_DIR / f"policy-v{DEFAULT_POLICY_VERSION}.md"
 
 EXPECTED_POLICY_IDS = [
     "CP-1.1", "CP-1.2", "CP-2.1", "CP-2.2", "CP-3.1", "CP-3.2", "CP-4.1",
-    "CP-5.1", "SP-2.1", "SP-3.1", "CP-6.1", "MP-1.1", "MP-1.2", "MP-2.1",
-    "MP-2.2", "MP-2.3", "MP-3.1", "MP-3.2", "MP-4.1", "SP-4.1", "MM-1.1",
-    "MM-2.1", "CP-7.1",
+    "CP-4.2", "CP-5.1", "CP-5.2", "SP-2.1", "SP-3.1", "CP-6.1", "MP-1.1",
+    "MP-1.2", "MP-1.3", "MP-1.4", "MP-2.1", "MP-2.2", "MP-2.3", "MP-3.1",
+    "MP-3.2", "MP-4.1", "MP-4.2", "MP-4.3", "SP-4.1", "MM-1.1", "MM-2.1",
+    "CP-7.1",
 ]
 
 
@@ -45,20 +46,30 @@ class PolicyParserTest(unittest.TestCase):
     def test_excludes_text_outside_policy_sections(self) -> None:
         for chunk in self.chunks:
             self.assertNotIn("# 제", chunk.text)
-            self.assertNotIn("운영정책 v3.0", chunk.text)
+            self.assertNotIn("운영정책 v", chunk.text)
             self.assertFalse(chunk.text.startswith("#"))
 
     def test_keeps_section_body_and_title(self) -> None:
         profanity = self.by_id["CP-2.1"]
         self.assertEqual(profanity.title, "욕설 (PROFANITY)")
-        self.assertIn("욕설 사전에 등록된 확실한 욕설 키워드", profanity.text)
+        self.assertIn("인용, 설명, 제지 목적이어도 위반", profanity.text)
         self.assertIn("5개다", self.by_id["CP-1.2"].text)
-        self.assertIn("| `PHISHING` |", self.by_id["MP-2.1"].text)
+        self.assertIn("| `PHISHING` | HIDE + TIMEOUT 600초 | HIDE + TIMEOUT 600초 |",
+                      self.by_id["MP-2.1"].text)
+        self.assertIn("공식 사이트 링크도 예외가 아니다", self.by_id["CP-5.1"].text)
+
+    def test_previous_version_source_still_parses(self) -> None:
+        # 과거 판단의 근거를 다시 볼 수 있도록 v3.0 원문도 레포에 남긴다.
+        old = parse_policy((POLICY_DIR / "policy-v3.0.md").read_text(encoding="utf-8"), version="3.0")
+        self.assertEqual(len(old), 23)
+        self.assertNotIn("CP-5.2", {chunk.policy_id for chunk in old})
 
     def test_maps_categories_and_leaves_common_sections_unmapped(self) -> None:
         self.assertEqual(self.by_id["CP-2.1"].category, Category.PROFANITY)
         self.assertEqual(self.by_id["CP-3.2"].category, Category.HARASSMENT)
         self.assertEqual(self.by_id["CP-4.1"].category, Category.FLOOD)
+        self.assertEqual(self.by_id["CP-4.2"].category, Category.FLOOD)
+        self.assertEqual(self.by_id["CP-5.2"].category, Category.PHISHING)
         self.assertEqual(self.by_id["SP-2.1"].category, Category.PHISHING)
         self.assertEqual(self.by_id["SP-3.1"].category, Category.PII_EXPOSURE)
         # 오탐 예외와 제재 조항은 모든 유형에 적용되는 공통 조항이다.
@@ -67,7 +78,7 @@ class PolicyParserTest(unittest.TestCase):
 
     def test_builds_resource_uri_and_embedding_input(self) -> None:
         chunk = self.by_id["MP-4.1"]
-        self.assertEqual(chunk.resource_uri, f"policy://3.0/{DOCUMENT_ID}/MP-4.1")
+        self.assertEqual(chunk.resource_uri, f"policy://{DEFAULT_POLICY_VERSION}/{DOCUMENT_ID}/MP-4.1")
         self.assertTrue(chunk.embedding_input.startswith("MP-4.1 강퇴 심사\n"))
 
     def test_rejects_duplicate_and_empty_documents(self) -> None:
@@ -89,7 +100,7 @@ class VectorLiteralTest(unittest.TestCase):
     os.getenv("RAG_TEST_DB_URL"), "RAG_TEST_DB_URL이 없으면 pgvector 통합 테스트를 건너뛴다"
 )
 class IndexDatabaseTest(unittest.TestCase):
-    """실제 pgvector에 임시 버전으로 색인하고 지운다. 실제 v3.0 색인은 건드리지 않는다."""
+    """실제 pgvector에 임시 버전으로 색인하고 지운다. 실제 정책 색인은 건드리지 않는다."""
 
     def setUp(self) -> None:
         self.db_url = os.environ["RAG_TEST_DB_URL"]
@@ -142,7 +153,7 @@ class IndexDatabaseTest(unittest.TestCase):
         )
 
     def test_build_index_reads_policy_file_and_reports_count(self) -> None:
-        # build_index는 설정된 버전(3.0)으로 색인하므로, 결과 확인 후 같은 방식으로 정리한다.
+        # build_index는 기본 버전으로 색인하므로, 결과 확인 후 같은 방식으로 정리한다.
         embedder = FakeEmbedder()
         self.version = DEFAULT_POLICY_VERSION
         with psycopg.connect(self.db_url) as conn:
@@ -150,7 +161,7 @@ class IndexDatabaseTest(unittest.TestCase):
             had_real_index = store.count_version(conn, DEFAULT_POLICY_VERSION) > 0
         if had_real_index:
             self.version = "unused"
-            self.skipTest("실제 v3.0 색인이 있어 덮어쓰지 않는다")
+            self.skipTest("실제 기본 버전 색인이 있어 덮어쓰지 않는다")
         self.assertEqual(build_index(self.settings, embedder), len(EXPECTED_POLICY_IDS))
         self.assertEqual(len(embedder.calls), 1)
 

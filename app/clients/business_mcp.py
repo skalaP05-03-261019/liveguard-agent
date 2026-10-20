@@ -113,8 +113,9 @@ def _decode_result(result, trace_id: str) -> dict[str, Any]:
 class BusinessMcpReadClient:
     """Every call owns/closes its session. No mutations and no automatic retries."""
 
-    def __init__(self, settings: BusinessMcpSettings):
+    def __init__(self, settings: BusinessMcpSettings, *, http_client_factory=None):
         self._settings = settings
+        self._http_client_factory = http_client_factory
 
     async def call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         try:
@@ -134,7 +135,7 @@ class BusinessMcpReadClient:
 
         try:
             async with asyncio.timeout(self._settings.timeout_seconds):
-                async with create_mcp_http_client(
+                async with (self._http_client_factory or create_mcp_http_client)(
                     headers={"Authorization": f"Bearer {self._settings.token}"},
                 ) as http_client:
                     http_client.event_hooks["response"].append(record_auth_status)

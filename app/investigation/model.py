@@ -81,4 +81,4 @@ def model_from_env() -> InvestigationModel:
     if os.getenv("MODEL_PROVIDER") != "openai":
         raise ValueError("Set MODEL_PROVIDER explicitly or inject InvestigationModel")
     return OpenAIInvestigationModel(model=os.getenv("MODEL_NAME", ""),
-                                    api_key=os.getenv("MODEL_API_KEY", ""))
+                                    api_key=os.getenv("MODEL_API_KEY") or os.getenv("OPENAI_API_KEY", ""))

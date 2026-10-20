@@ -23,6 +23,9 @@ class TaskEnvelope(Contract):
     snapshot_id: UUID
     expected_evidence_version: int = Field(ge=1)
     decision_id: UUID | None = None
+    # CONTRACTS §11 재개 envelope. 문맥 결정(CONTEXT)과 강퇴 승인(KICK)을 구분한다.
+    review_kind: Literal["CONTEXT", "KICK"] | None = None
+    review_id: UUID | None = None
     trace_id: UUID
 
     @model_validator(mode="after")
