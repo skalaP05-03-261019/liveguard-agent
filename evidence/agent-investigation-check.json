@@ -1,0 +1,42 @@
+{
+  "issue": 9,
+  "date": "2026-10-20",
+  "base_commit": "83d9aac1cfab15cb557728888b0b21337c43f703",
+  "provider": "OpenAI API (user confirmed)",
+  "model_name": "not configured",
+  "local": {
+    "command": ".venv/bin/python -m unittest discover -s tests -v",
+    "discovered": 84,
+    "passed": 78,
+    "skipped": 6,
+    "failed": 0,
+    "skip_reason": "RAG_TEST_DB_URL not configured",
+    "dependency_check": "pip check PASS",
+    "diff_check": "PASS"
+  },
+  "verified": [
+    "Scripted model selects read-only tools and finishes TARGET findings",
+    "Same-version search/section/Resource evidence validation",
+    "TARGET/context boundaries, multiple categories, invalid evidence, stale responses",
+    "Limits, read-only runtime allowlist, masking/truncation",
+    "Actual RAG app/SDK with fake repository and embeddings",
+    "Actual OpenAI SDK with HTTP MockTransport, no API call"
+  ],
+  "unverified": [
+    "Actual OpenAI model quality and live API call",
+    "Real Backend integration",
+    "Shared Harness #6/#7 budgets/masking/recovery/observability",
+    "Top-level Graph legacy judgment migration and mutations (#10)"
+  ],
+  "configuration_check": {
+    "command": "python -m app.check_investigation --task-json <envelope>",
+    "result": "not_configured",
+    "exit_code": 2
+  },
+  "shared_files": {
+    "graph.py": "unchanged",
+    "state.py": "unchanged",
+    "main.py": "unchanged"
+  },
+  "scope": "Read-only investigation subgraph; no mutations/approval/DB changes"
+}

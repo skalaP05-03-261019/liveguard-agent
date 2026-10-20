@@ -131,3 +131,17 @@ fixture 전체는 HTTP 요청이 아니다. POST에는 새 fixture의 `task`만 
 이전 [Backend docs/live-guard/v0.3](https://github.com/skalaP05-03-261019/liveguard-be/tree/main/docs/live-guard/v0.3)는 역사 자료로 보존합니다. 최신 프로젝트 기준은 위 Notion 통합 문서입니다.
 
 [Backend](https://github.com/skalaP05-03-261019/liveguard-be) · [Frontend](https://github.com/skalaP05-03-261019/liveguard-fe)
+
+
+## Agent 조사·판정 (#9)
+
+#12 기반의 읽기 전용 조사 서브그래프를 추가했다. 모델이 조회 도구를 선택하고 각 TARGET의
+판정·실제 메시지/정책 근거를 검증한다. 최상위 승인 Graph 및 /run·/resume·업무 조치는 #10 통합 범위다.
+대화 모델 공급자는 사용자 확인으로 OpenAI API를 사용한다. 모델명·인증 설정 후 실제 실행을 확인하며 현재 고정 응답 모델/HTTP 대역으로 검증한다.
+
+- [입출력·Harness 연결·검증 범위](docs/AI1-09-investigation-contract.md)
+- 테스트: `uv run --locked python -m unittest discover -s tests -v`
+- 실제 모델 확인: `uv run --locked python -m app.check_investigation --task-json /path/to/backend-task.json`
+- 설정: `MODEL_PROVIDER`, `MODEL_NAME`, `MODEL_API_KEY`와 두 MCP의 URL·토큰.
+  OpenAI 어댑터는 명시적 `MODEL_PROVIDER=openai`일 때만 사용하며 모델은 별도 지정한다.
+  RAG 임베딩 키를 대화 모델 키로 자동 재사용하지 않는다.
