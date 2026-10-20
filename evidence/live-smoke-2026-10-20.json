@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "mode": "smoke",
+  "startedAt": "2026-10-20T06:07:37.938290+00:00",
+  "status": "BLOCKED",
+  "model": "gpt-5.4-mini",
+  "embeddingModel": "text-embedding-3-small",
+  "policyVersion": "3.1",
+  "policySource": {
+    "pr": 16,
+    "commit": "fd3988fffcc85d5a56cdfdd9054377dc284ecf85",
+    "sha256": "c34ae086df1254ee32190f3a02839aaa4edda2e6e9450b4b9b814dd3787e8f2d"
+  },
+  "suiteSha256": "f6250381d3fad63daec33d24ac2caf403746e8aff2dbdfbca4ad8427ed828f04",
+  "businessDependency": "synthetic cases behind production Business MCP, not Spring Backend",
+  "transport": "production MCP apps and SDK via authenticated ASGI HTTP; SQL and OpenAI use network",
+  "expectedCases": 3,
+  "results": [],
+  "mutations": 0,
+  "liveModelExecuted": false,
+  "realIndexBuilt": false,
+  "notice": "Controlled evaluation, not real-user safety or actual Backend filtering proof.",
+  "blockedStage": "database",
+  "errorCode": "DATABASE_UNREACHABLE",
+  "finishedAt": "2026-10-20T06:07:37.940426+00:00"
+}

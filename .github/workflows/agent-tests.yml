@@ -32,6 +32,7 @@ jobs:
     env:
       LIVEGUARD_TEST_TCP: ${{ matrix.transport == 'tcp' && '1' || '0' }}
       RAG_TEST_DB_URL: postgresql://ragtest:local-test-password@127.0.0.1:5432/ragtest
+      AGENT_TEST_CHECKPOINT_DB_URL: postgresql://ragtest:local-test-password@127.0.0.1:5432/ragtest
     services:
       postgres:
         image: pgvector/pgvector:pg16
