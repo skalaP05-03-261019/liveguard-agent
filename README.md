@@ -48,4 +48,6 @@ seedMetadata·seedMessages를 도구에서 얻은 사실처럼 모델에 넘기�
 실행 검증 범위는 evidence/scaffold-check.json에 기록한다.
 
 분리 전 원본: taetegwgn/skala-capstone-P05_03의 agent/ (10a8e5d).
-공통 기획서·정책은 같은 organization의 liveguard-be/docs/live-guard/v0.3에서 관리합니다.
+공통 기획서·정책은 [Backend의 docs/live-guard/v0.3](https://github.com/skalaP05-03-261019/liveguard-be/tree/main/docs/live-guard/v0.3)에서 관리합니다.
+
+[Backend](https://github.com/skalaP05-03-261019/liveguard-be) · [Frontend](https://github.com/skalaP05-03-261019/liveguard-fe)
