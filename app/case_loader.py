@@ -1,6 +1,6 @@
 """Read-only case loading. Business data remains behind the MCP boundary."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import AwareDatetime, ConfigDict, Field, ValidationError, model_validator
@@ -21,6 +21,14 @@ class CaseSnapshot(Contract):
     policy_version: str = Field(min_length=1)
     target_message_ids: list[UUID] = Field(min_length=1)
     target_versions: dict[UUID, Annotated[int, Field(ge=1)]]
+    # New team contract fields; older read-only callers remain compatible.
+    # The integrated workflow requires these explicitly and never substitutes channelId.
+    live_id: UUID | None = None
+    user_id: UUID | None = None
+    handling_route: Literal["PASS", "RULE_CONFIRMED", "CONTEXT_REVIEW",
+                            "PII_INVESTIGATION", "FLOOD_REVIEW"] | None = None
+    kick_review: dict | None = None
+    confirmation_status: Literal["CONFIRMED", "UNCONFIRMED"] | None = None
 
     @model_validator(mode="after")
     def validate_targets(self):
@@ -80,7 +88,7 @@ async def load_case_data(task: TaskEnvelope, tools: ReadTools) -> AgentState:
 
     messages = [message.model_dump(mode="json", by_alias=True) for message in context.messages]
     targets = {str(message_id) for message_id in snapshot.target_message_ids}
-    return {
+    patch = {
         "task": task,
         "case_id": str(task.case_id), "task_id": str(task.task_id),
         "thread_id": task.thread_id, "snapshot_id": str(task.snapshot_id),
@@ -96,3 +104,10 @@ async def load_case_data(task: TaskEnvelope, tools: ReadTools) -> AgentState:
             {"toolName": "get_chat_context", "traceId": trace_id},
         ],
     }
+    for key, value in (("live_id", snapshot.live_id), ("user_id", snapshot.user_id),
+                       ("handling_route", snapshot.handling_route)):
+        if value is not None:
+            patch[key] = str(value)
+    if snapshot.kick_review is not None:
+        patch["kick_review"] = snapshot.kick_review
+    return patch

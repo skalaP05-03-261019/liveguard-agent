@@ -307,7 +307,7 @@ class BusinessMcpTests(unittest.IsolatedAsyncioTestCase):
             {"view": "chatContext", "before": "4", "after": "2"},
         )
         self.assertEqual(
-            requests[0].headers["authorization"], "Bearer service-token"
+            requests[0].headers["x-service-token"], "service-token"
         )
         self.assertEqual(requests[0].headers["x-trace-id"], str(TRACE_ID))
 

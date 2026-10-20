@@ -1,0 +1,35 @@
+{
+  "issue": 10,
+  "branch": "feat/agent-10-context-integration",
+  "basePr": 25,
+  "baseCommit": "9fbac03854c2c0aa607e2639d8177948c2b471ac",
+  "notionRevisionDate": "2026-10-20",
+  "sourceStatus": "Policy meanings confirmed; new HTTP paths/field names remain draft",
+  "sources": {
+    "project": "https://app.notion.com/p/64861f4176b582258d2901b744ea5fd1",
+    "policy": "https://app.notion.com/p/e3661f4176b582ab920d01ba690418b7",
+    "contracts": "https://app.notion.com/p/f8e61f4176b5829c9e1c8157b8124676",
+    "architecture": "https://app.notion.com/p/e1a61f4176b5830f966801498c154344",
+    "slackTaskSplit": "https://theskala.slack.com/archives/C0C6UJ4AJRK/p1792479920438699",
+    "b1EventsCommit": "f1adab35d2bc0fd573c27eba3e62ba884011d5e1"
+  },
+  "verification": {
+    "environment": "Docker Python 3.11, uv.lock, dedicated pgvector DB",
+    "asgi": {"tests": 164, "passed": 164, "skipped": 0},
+    "tcp": {"tests": 164, "passed": 164, "skipped": 0},
+    "postgresRestartScenario": "Integrated investigation -> CONTEXT interrupt -> close/reopen -> context decision -> KICK interrupt -> close/reopen -> rejection; one model investigation and one review creation",
+    "controlledDependencies": ["Backend business operations", "chat model", "policy search storage in model tests", "B1 HTTP event response"],
+    "actualComponents": ["LangGraph", "Postgres checkpoint serialization", "MCP apps/SDK and TCP in existing regression suite", "pgvector integration tests"],
+    "realOpenAIExecutedThisChange": false,
+    "realSpringMutationExecuted": false,
+    "apiKeyRequired": false
+  },
+  "remaining": [
+    "BE2 ModerationGateway HTTP implementation and shared JSON contract",
+    "B1 ContextData snapshot/evidence/live fields and B2 InternalCase agreement",
+    "Persistent task dispatcher, service auth and duplicate task handling before enabling /run",
+    "Actual Spring HIDE/TIMEOUT/release/KICK, cancellation and restoration tests",
+    "Business MCP Compose Host 421 configuration",
+    "TBD-03 TIMEOUT history window and TBD-11 first FLOOD confirmation owner"
+  ]
+}

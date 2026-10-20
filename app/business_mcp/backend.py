@@ -96,7 +96,7 @@ class BackendApi:
                 params=params,
                 json=json,
                 headers={
-                    "Authorization": f"Bearer {self._settings.backend_service_token}",
+                    "X-Service-Token": self._settings.backend_service_token,
                     "X-Trace-Id": trace_id,
                 },
             )

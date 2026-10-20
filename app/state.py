@@ -45,3 +45,6 @@ class AgentState(TypedDict, total=False):
     context_review_id: str
     context_decision_id: str
     context_result: dict[str, Any]
+    live_id: str
+    user_id: str
+    backend_result: dict[str, Any]
