@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-20",
+  "model": "gpt-5.4-mini",
+  "realOpenAI": true,
+  "realEmbeddings": true,
+  "realPgvector": true,
+  "policyVersion": "3.1",
+  "indexedSections": 29,
+  "businessBackend": "synthetic, not Spring",
+  "mcpTransport": "production apps/SDK, ASGI HTTP",
+  "mutationCount": 0,
+  "environment": "Docker container, uv sync --locked",
+  "image": "ghcr.io/astral-sh/uv@sha256:4f5d923c9dcea037f57bda425dd209f3ec643da2f0b74227f68d09dab0b3bb36",
+  "smoke": {
+    "passed": 3,
+    "total": 3
+  },
+  "finalFull": {
+    "passed": 12,
+    "total": 15,
+    "liveModelCases": 13,
+    "ruleDispatcherCases": 2,
+    "status": "FAIL"
+  },
+  "runs": [
+    {
+      "file": "live-full-docker-2026-10-20.json",
+      "status": "FAIL",
+      "passed": 10,
+      "total": 15,
+      "failed": [
+        "normal-injected-context",
+        "violation-flood",
+        "review-ambiguous",
+        "review-outside-type",
+        "review-conflicting"
+      ],
+      "suiteSha256": "f6250381d3fad63daec33d24ac2caf403746e8aff2dbdfbca4ad8427ed828f04"
+    },
+    {
+      "file": "live-full-docker-r2-2026-10-20.json",
+      "status": "FAIL",
+      "passed": 10,
+      "total": 15,
+      "failed": [
+        "normal-criticism",
+        "normal-quotation",
+        "normal-injected-context",
+        "review-ambiguous",
+        "review-outside-type"
+      ],
+      "suiteSha256": "f6250381d3fad63daec33d24ac2caf403746e8aff2dbdfbca4ad8427ed828f04"
+    },
+    {
+      "file": "live-full-docker-r3-2026-10-20.json",
+      "status": "FAIL",
+      "passed": 13,
+      "total": 15,
+      "failed": [
+        "review-ambiguous",
+        "review-outside-type"
+      ],
+      "suiteSha256": "f6250381d3fad63daec33d24ac2caf403746e8aff2dbdfbca4ad8427ed828f04"
+    },
+    {
+      "file": "live-full-docker-r4-2026-10-20.json",
+      "status": "FAIL",
+      "passed": 12,
+      "total": 15,
+      "failed": [
+        "violation-impersonation",
+        "review-ambiguous",
+        "review-conflicting"
+      ],
+      "suiteSha256": "f6250381d3fad63daec33d24ac2caf403746e8aff2dbdfbca4ad8427ed828f04"
+    }
+  ],
+  "limitations": [
+    "Fixed evaluation set was used for prompt tuning; no held-out accuracy claim",
+    "Repeated runs vary; latest result reported instead of cherry-picking best run",
+    "Actual Spring Backend and mutations not tested",
+    "Remaining: impersonation fact lookup, ambiguous target policy, conflicting PII facts"
+  ],
+  "keys": "read-only mounted .env, never copied into repository/image or printed"
+}

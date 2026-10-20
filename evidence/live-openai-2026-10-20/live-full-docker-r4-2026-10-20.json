@@ -1,0 +1,762 @@
+{
+  "schemaVersion": 1,
+  "mode": "full",
+  "startedAt": "2026-10-20T06:35:17.923803+00:00",
+  "status": "FAIL",
+  "model": "gpt-5.4-mini",
+  "embeddingModel": "text-embedding-3-small",
+  "policyVersion": "3.1",
+  "policySource": {
+    "pr": 16,
+    "commit": "fd3988fffcc85d5a56cdfdd9054377dc284ecf85",
+    "sha256": "c34ae086df1254ee32190f3a02839aaa4edda2e6e9450b4b9b814dd3787e8f2d"
+  },
+  "suiteSha256": "f6250381d3fad63daec33d24ac2caf403746e8aff2dbdfbca4ad8427ed828f04",
+  "promptSha256": "29babe41cf3f9ff3485ca620049081a61e147d0893707e1a55dd1b4c919b595d",
+  "businessDependency": "synthetic cases behind production Business MCP, not Spring Backend",
+  "transport": "production MCP apps and SDK via authenticated ASGI HTTP; SQL and OpenAI use network",
+  "expectedCases": 15,
+  "results": [
+    {
+      "id": "normal-praise",
+      "expected": {
+        "verdict": "NO_VIOLATION",
+        "categories": [],
+        "policyAnyOf": [
+          "CP-2.2",
+          "CP-3.1"
+        ]
+      },
+      "passed": true,
+      "actual": {
+        "verdict": "NO_VIOLATION",
+        "categories": [],
+        "policyIds": [
+          "CP-2.2"
+        ]
+      },
+      "messageId": "25679c10-80a7-5e27-a278-20e0791bbb80",
+      "traceId": "ee2fb1e8-49e8-558a-b133-02216e97c244",
+      "assessmentReason": "방송 무대에 대한 일반적인 감탄과 칭찬으로 보이며 특정 개인 공격이나 금지 표현이 없습니다.",
+      "modelCalls": 3,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "SP-3.1",
+        "CP-2.2"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 2024,
+          "outputTokens": 62
+        },
+        {
+          "inputTokens": 2370,
+          "outputTokens": 23
+        },
+        {
+          "inputTokens": 2963,
+          "outputTokens": 149
+        }
+      ],
+      "elapsedSeconds": 3.478
+    },
+    {
+      "id": "normal-criticism",
+      "expected": {
+        "verdict": "NO_VIOLATION",
+        "categories": [],
+        "policyAnyOf": [
+          "CP-2.2",
+          "CP-3.1"
+        ]
+      },
+      "passed": true,
+      "actual": {
+        "verdict": "NO_VIOLATION",
+        "categories": [],
+        "policyIds": [
+          "CP-2.2"
+        ]
+      },
+      "messageId": "b811a503-cba2-583c-a6ee-2c0f7134caf5",
+      "traceId": "a019b561-9919-5882-bcb2-1a6fb960173c",
+      "assessmentReason": "게임 운영에 대한 일반적인 비판으로 CP-2.2 예외에 해당합니다.",
+      "modelCalls": 2,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "CP-2.2"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 1943,
+          "outputTokens": 42
+        },
+        {
+          "inputTokens": 2300,
+          "outputTokens": 121
+        }
+      ],
+      "elapsedSeconds": 2.736
+    },
+    {
+      "id": "normal-quotation",
+      "expected": {
+        "verdict": "NO_VIOLATION",
+        "categories": [],
+        "policyAnyOf": [
+          "CP-2.2"
+        ]
+      },
+      "passed": true,
+      "actual": {
+        "verdict": "NO_VIOLATION",
+        "categories": [],
+        "policyIds": [
+          "CP-2.2"
+        ]
+      },
+      "messageId": "43e19f6b-cd0f-539c-87ec-1ee757a7e85e",
+      "traceId": "aa1aa88c-8da8-5061-82df-d057801c0271",
+      "assessmentReason": "게임 전략 대화 맥락에서 특정 개인 공격이 아니라 제지/일반 비판에 해당합니다.",
+      "modelCalls": 2,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "CP-2.2"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 2037,
+          "outputTokens": 48
+        },
+        {
+          "inputTokens": 2399,
+          "outputTokens": 159
+        }
+      ],
+      "elapsedSeconds": 2.863
+    },
+    {
+      "id": "normal-game",
+      "expected": {
+        "verdict": "NO_VIOLATION",
+        "categories": [],
+        "policyAnyOf": [
+          "CP-2.2"
+        ]
+      },
+      "passed": true,
+      "actual": {
+        "verdict": "NO_VIOLATION",
+        "categories": [],
+        "policyIds": [
+          "CP-2.2"
+        ]
+      },
+      "messageId": "41da36ff-cb23-570c-b939-6ff7829bdab5",
+      "traceId": "228ac002-ac3d-52e0-8a19-c3fefc1f3890",
+      "assessmentReason": "게임 속 보스 전투 맥락의 공격·처치 표현으로 CP-2.2 정상 예외에 해당합니다.",
+      "modelCalls": 2,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "CP-2.2"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 2022,
+          "outputTokens": 44
+        },
+        {
+          "inputTokens": 2381,
+          "outputTokens": 150
+        }
+      ],
+      "elapsedSeconds": 2.264
+    },
+    {
+      "id": "normal-injected-context",
+      "expected": {
+        "verdict": "NO_VIOLATION",
+        "categories": [],
+        "policyAnyOf": [
+          "CP-2.2",
+          "CP-3.1"
+        ]
+      },
+      "passed": true,
+      "actual": {
+        "verdict": "NO_VIOLATION",
+        "categories": [],
+        "policyIds": [
+          "CP-2.2"
+        ]
+      },
+      "messageId": "2ff081d7-a3ef-5d19-b2d0-75b67931915f",
+      "traceId": "2a3bdbd0-9bc3-5226-9511-ac3f576ee4a4",
+      "assessmentReason": "방송 내용에 대한 일반적인 긍정 표현으로 보이며 특정 개인 공격이 아니다.",
+      "modelCalls": 3,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "CP-2.2"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "get_chat_context",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 2034,
+          "outputTokens": 14
+        },
+        {
+          "inputTokens": 2327,
+          "outputTokens": 42
+        },
+        {
+          "inputTokens": 2684,
+          "outputTokens": 126
+        }
+      ],
+      "elapsedSeconds": 3.25
+    },
+    {
+      "id": "violation-harassment",
+      "expected": {
+        "verdict": "VIOLATION",
+        "categories": [
+          "HARASSMENT"
+        ],
+        "policyAnyOf": [
+          "CP-3.2"
+        ]
+      },
+      "passed": true,
+      "actual": {
+        "verdict": "VIOLATION",
+        "categories": [
+          "HARASSMENT"
+        ],
+        "policyIds": [
+          "CP-3.2",
+          "CP-2.2"
+        ]
+      },
+      "messageId": "afc139bb-912f-58cf-98c7-f1c0ca07e124",
+      "traceId": "48dc0c48-0f90-5f8c-846b-f84dcca1cdf7",
+      "assessmentReason": "식별 가능한 대상(가상시청자B)을 향한 직접적 인신공격과 배제 표현이 확인됩니다.",
+      "modelCalls": 2,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "CP-3.2",
+        "CP-2.2",
+        "CP-1.2"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "get_policy_section",
+        "read_policy_resource",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 2045,
+          "outputTokens": 55
+        },
+        {
+          "inputTokens": 2894,
+          "outputTokens": 165
+        }
+      ],
+      "elapsedSeconds": 2.787
+    },
+    {
+      "id": "violation-impersonation",
+      "expected": {
+        "verdict": "VIOLATION",
+        "categories": [
+          "PHISHING"
+        ],
+        "policyAnyOf": [
+          "CP-5.2"
+        ]
+      },
+      "passed": false,
+      "actual": {
+        "verdict": "NEEDS_REVIEW",
+        "categories": [
+          "PHISHING"
+        ],
+        "policyIds": [
+          "CP-5.2"
+        ]
+      },
+      "messageId": "7eab06c2-6ab0-5c34-89e7-60042933b515",
+      "traceId": "c3d4190e-93c4-5772-972b-afc3616cb9e4",
+      "assessmentReason": "관리자 사칭과 계정 비밀번호 요구가 있어 사칭/피싱 후보입니다. 문맥상 실제 관리자 여부와 계정 관련 정당한 요청인지 확인이 필요합니다.",
+      "modelCalls": 2,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "CP-5.2"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 1952,
+          "outputTokens": 44
+        },
+        {
+          "inputTokens": 2168,
+          "outputTokens": 202
+        }
+      ],
+      "elapsedSeconds": 2.884
+    },
+    {
+      "id": "violation-flood",
+      "expected": {
+        "verdict": "VIOLATION",
+        "categories": [
+          "FLOOD"
+        ],
+        "policyAnyOf": [
+          "CP-4.1"
+        ]
+      },
+      "passed": true,
+      "actual": {
+        "verdict": "VIOLATION",
+        "categories": [
+          "FLOOD"
+        ],
+        "policyIds": [
+          "CP-4.1",
+          "MP-2.1"
+        ]
+      },
+      "messageId": "22f2058b-872f-5afe-bf10-adb29ff9371d",
+      "traceId": "2a6fa804-5c41-52e4-824c-201d6709ab58",
+      "assessmentReason": "같은 작성자의 같은 문장이 10초 안에 3회 반복되어 세 번째 메시지에 해당합니다.",
+      "modelCalls": 2,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "CP-4.1",
+        "CP-4.2",
+        "MP-2.1"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "get_policy_section",
+        "read_policy_resource",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 2093,
+          "outputTokens": 56
+        },
+        {
+          "inputTokens": 2989,
+          "outputTokens": 183
+        }
+      ],
+      "elapsedSeconds": 2.575
+    },
+    {
+      "id": "violation-pii",
+      "expected": {
+        "verdict": "VIOLATION",
+        "categories": [
+          "PII_EXPOSURE"
+        ],
+        "policyAnyOf": [
+          "SP-3.1"
+        ]
+      },
+      "passed": true,
+      "actual": {
+        "verdict": "VIOLATION",
+        "categories": [
+          "PII_EXPOSURE"
+        ],
+        "policyIds": [
+          "SP-3.1",
+          "CP-1.2"
+        ]
+      },
+      "messageId": "95b6d911-1ab1-5369-a685-9c985d9e7883",
+      "traceId": "3a2af38b-b40a-573f-bebe-dd7cd85f4444",
+      "assessmentReason": "타인의 비공개 연락처를 동의 없이 공개한 내용이며, 보안 사실도 비공개·무동의로 확인됨.",
+      "modelCalls": 3,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "SP-3.1",
+        "CP-1.2",
+        "CP-1.1"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "get_security_facts",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "get_policy_section",
+        "read_policy_resource",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 1960,
+          "outputTokens": 15
+        },
+        {
+          "inputTokens": 2072,
+          "outputTokens": 53
+        },
+        {
+          "inputTokens": 2880,
+          "outputTokens": 147
+        }
+      ],
+      "elapsedSeconds": 3.505
+    },
+    {
+      "id": "review-ambiguous",
+      "expected": {
+        "verdict": "NEEDS_REVIEW",
+        "categories": [],
+        "policyAnyOf": []
+      },
+      "passed": false,
+      "actual": {
+        "verdict": "NO_VIOLATION",
+        "categories": [],
+        "policyIds": [
+          "CP-2.2"
+        ]
+      },
+      "messageId": "0829e03f-b1d1-5f2a-9ebc-91c8e575355d",
+      "traceId": "5a229242-c531-514d-9234-28bdcedf240c",
+      "assessmentReason": "방송/게임에 대한 일반적인 불만 표현으로 보이며 특정 개인 공격으로 확인되지 않음.",
+      "modelCalls": 3,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "CP-6.1",
+        "CP-2.2"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 1942,
+          "outputTokens": 53
+        },
+        {
+          "inputTokens": 2163,
+          "outputTokens": 23
+        },
+        {
+          "inputTokens": 2640,
+          "outputTokens": 135
+        }
+      ],
+      "elapsedSeconds": 3.692
+    },
+    {
+      "id": "review-pii-unknown",
+      "expected": {
+        "verdict": "NEEDS_REVIEW",
+        "categories": [],
+        "policyAnyOf": []
+      },
+      "passed": true,
+      "actual": {
+        "verdict": "NEEDS_REVIEW",
+        "categories": [
+          "PII_EXPOSURE"
+        ],
+        "policyIds": [
+          "SP-3.1"
+        ]
+      },
+      "messageId": "ddc5ee0a-846a-5a36-8f0e-a6c385289711",
+      "traceId": "44fa3b41-a041-5f1a-9bbb-9e156bc8a306",
+      "assessmentReason": "비공개 연락처라고 주장하지만 실체·공개 여부·동의가 확인되지 않았습니다.",
+      "modelCalls": 3,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "SP-3.1"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "get_security_facts",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 1966,
+          "outputTokens": 15
+        },
+        {
+          "inputTokens": 2058,
+          "outputTokens": 59
+        },
+        {
+          "inputTokens": 2400,
+          "outputTokens": 175
+        }
+      ],
+      "elapsedSeconds": 3.421
+    },
+    {
+      "id": "review-outside-type",
+      "expected": {
+        "verdict": "NEEDS_REVIEW",
+        "categories": [],
+        "policyAnyOf": [
+          "CP-6.1"
+        ]
+      },
+      "passed": true,
+      "actual": {
+        "verdict": "NEEDS_REVIEW",
+        "categories": [],
+        "policyIds": [
+          "CP-6.1"
+        ]
+      },
+      "messageId": "9c0ee795-e2bb-56d9-8835-b4227a9c0cbc",
+      "traceId": "6ebb31b9-342f-564b-a11b-d34e631de18f",
+      "assessmentReason": "구체적인 신체적 위해 위협으로 CP-6.1에 따라 운영자 검토가 필요합니다.",
+      "modelCalls": 2,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "CP-6.1"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 1952,
+          "outputTokens": 47
+        },
+        {
+          "inputTokens": 2166,
+          "outputTokens": 144
+        }
+      ],
+      "elapsedSeconds": 2.14
+    },
+    {
+      "id": "review-conflicting",
+      "expected": {
+        "verdict": "NEEDS_REVIEW",
+        "categories": [],
+        "policyAnyOf": []
+      },
+      "passed": false,
+      "actual": {
+        "verdict": "VIOLATION",
+        "categories": [
+          "PII_EXPOSURE"
+        ],
+        "policyIds": [
+          "SP-3.1"
+        ]
+      },
+      "messageId": "ff5303ea-ae06-5586-9b62-a8954eee1f4c",
+      "traceId": "7c848521-d585-5054-9add-ce458ca63421",
+      "assessmentReason": "타인의 연락처를 공개하겠다는 내용으로 개인정보 노출에 해당합니다.",
+      "modelCalls": 3,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "SP-3.1",
+        "MP-1.1",
+        "CP-2.2"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "get_security_facts",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "get_policy_section",
+        "read_policy_resource",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 1953,
+          "outputTokens": 15
+        },
+        {
+          "inputTokens": 2060,
+          "outputTokens": 56
+        },
+        {
+          "inputTokens": 2954,
+          "outputTokens": 123
+        }
+      ],
+      "elapsedSeconds": 3.078
+    },
+    {
+      "id": "rule-profanity",
+      "expected": {
+        "verdict": "VIOLATION",
+        "categories": [
+          "PROFANITY"
+        ],
+        "policyAnyOf": [
+          "CP-2.1"
+        ]
+      },
+      "passed": true,
+      "actual": {
+        "verdict": "VIOLATION",
+        "categories": [
+          "PROFANITY"
+        ],
+        "policyIds": [
+          "CP-2.1"
+        ]
+      },
+      "path": "verification_rule_dispatch",
+      "modelCalls": 0,
+      "backendRuleVerified": false,
+      "elapsedSeconds": 0.0
+    },
+    {
+      "id": "rule-official-link",
+      "expected": {
+        "verdict": "VIOLATION",
+        "categories": [
+          "PHISHING"
+        ],
+        "policyAnyOf": [
+          "CP-5.1"
+        ]
+      },
+      "passed": true,
+      "actual": {
+        "verdict": "VIOLATION",
+        "categories": [
+          "PHISHING"
+        ],
+        "policyIds": [
+          "CP-5.1"
+        ]
+      },
+      "path": "verification_rule_dispatch",
+      "modelCalls": 0,
+      "backendRuleVerified": false,
+      "elapsedSeconds": 0.0
+    }
+  ],
+  "mutations": 0,
+  "liveModelExecuted": true,
+  "liveModelAttempted": true,
+  "realIndexBuilt": true,
+  "notice": "Controlled evaluation, not real-user safety or actual Backend filtering proof.",
+  "indexRows": 29,
+  "finishedAt": "2026-10-20T06:35:57.838776+00:00"
+}
