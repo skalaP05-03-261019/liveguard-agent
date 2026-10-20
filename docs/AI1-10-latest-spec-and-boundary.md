@@ -59,7 +59,7 @@ RULE_CONFIRMED는 `confirmationStatus=CONFIRMED`도 필요하다. 필드 이름�
 조치 상태 조회·부분 성공·outbox는 아직 실제 BE 연결에서 검증해야 한다.
 
 **실제 B1 계약에 맞춰 구현한 HTTP 어댑터는 `BackendEvents`다.**
-`POST /internal/cases/{caseId}/events`, Bearer 서비스 토큰, X-Trace-Id,
+`POST /internal/cases/{caseId}/events`, X-Service-Token 서비스 토큰, X-Trace-Id,
 TOOL_START/TOOL_END/TASK_FAILED와 B1 payload 필드만 전송한다. 원문 도구 인자는 버린다.
 응답 유실은 EVENT_DELIVERY_UNKNOWN이며 자동 재전송하지 않는다. 이 어댑터는 업무 변경을 수행하지 않는다.
 
@@ -72,3 +72,28 @@ TOOL_START/TOOL_END/TASK_FAILED와 B1 payload 필드만 전송한다. 원문 도
 5. Business MCP Compose DNS Host 421은 PR23의 미해결 사항이며 이 Graph 단위 시험으로 해결됐다고 주장하지 않는다.
 6. 이번 검증은 합성 Backend/model/RAG와 실제 Graph·체크포인터. 실제 OpenAI 재평가·Spring 집행 성공과 구분한다.
 7. 수업의 모든 변경 도구 사전 승인 기준과 BE 규칙 자동 집행 차이는 PROJECT TBD-12로 남는다.
+
+
+## 실제 Backend 연결 확인 후속
+
+Backend main `0387bd3`를 소스 해시 검증 후 Docker로 빌드·기동하고 임시 pgvector DB에 합성 사건을 넣어 시험했다.
+Agent/MCP의 Backend 인증 헤더는 실제 B1 ServiceTokenFilter에 맞춰 **X-Service-Token**으로 수정했다.
+MCP inbound Agent 인증은 기존 Bearer를 유지한다. 앞선 Bearer 기반 Backend 계약 설명은 이번 실행으로 정정한다.
+문맥 조회·channel-info는 200, 진행 이벤트는 202이며 Agent→Business MCP→Spring의 실제 TCP도 통과했다.
+합성 이메일의 [EMAIL] 마스킹도 실제 Spring 응답에서 확인했다. 이벤트 ACK는 SSE 화면 수신 검증과 구분한다.
+사건 조회는 404, 실제 Swagger에 B2 사건/판정/강퇴/문맥 결정 경로는 없었다.
+B1 문맥에는 caseId/snapshotId/evidenceVersion/visibility가 없어 현재 Agent의 증거 검증을 통과하지 못한다.
+MCP get_moderation_case의 기존 view 호출도 B1에서 ContextData를 받아 사건 스키마와 맞지 않는다.
+누락 필드를 생성하거나 검사 제거로 우회하지 않았다. 전체 업무 집행은 여전히 미연결이다.
+재현 명령은 `app.check_backend_connection` CLI와 `evidence/backend-connection-2026-10-20.json`을 참조한다.
+
+```bash
+# 실행 환경에 BUSINESS_BACKEND_BASE_URL, BUSINESS_MCP_URL,
+# BUSINESS_MCP_AGENT_TOKEN, BUSINESS_MCP_SERVICE_TOKEN 설정.
+# 마지막 값은 Backend INTERNAL_SERVICE_TOKEN과 일치해야 한다. 키 값 출력 금지.
+uv run --locked python -m app.check_backend_connection \
+  --case-id <조회할-사건-UUID> --output evidence/backend-connection-local.json
+```
+
+기본 실행은 조회만 한다. `--publish-test-event`는 명시적으로 선택한 검증용 사건에만 사용한다.
+진단 status PARTIAL은 통신 일부 성공/계약 미완성이며 전체 Agent 준비 완료를 의미하지 않는다.

@@ -1,0 +1,66 @@
+{
+  "status": "PARTIAL",
+  "traceId": "6dd28534-8257-4205-9fd2-e2644a844de5",
+  "caseId": "30000000-0000-4000-8000-000000000003",
+  "backendHttpObserved": true,
+  "mutationExecuted": false,
+  "checks": {
+    "withoutServiceToken": 403,
+    "bearerOnly": 403,
+    "contextWithServiceToken": 200,
+    "contextMessageCount": 1,
+    "rawContextSchemaGaps": [
+      "caseId",
+      "snapshotId",
+      "evidenceVersion",
+      "messages.0.visibility"
+    ],
+    "channelInfo": 200,
+    "caseEndpoint": 404,
+    "implementedB2Routes": {
+      "case": false,
+      "judgment": false,
+      "kickExecution": false,
+      "contextDecision": false
+    },
+    "testProgressEvent": "ACCEPTED_202",
+    "mcpToSpringContext": "CONNECTED",
+    "mcpContextSchemaGaps": [
+      "caseId",
+      "snapshotId",
+      "evidenceVersion",
+      "messages.0.visibility"
+    ],
+    "mcpCaseSchemaGaps": [
+      "caseId",
+      "snapshotId",
+      "evidenceVersion",
+      "policyVersion",
+      "targetMessageIds",
+      "targetVersions"
+    ],
+    "workflowScopeMissing": [
+      "liveId",
+      "userId",
+      "handlingRoute"
+    ]
+  },
+  "notice": "Connectivity inspection, not moderation/approval/kick execution proof",
+  "readContractReady": false,
+  "backendCommit": "0387bd30a92e81ec3c69823a9cc01095f8e61971",
+  "environment": "Disposable Docker Spring image built from hash-verified Backend main sources, PostgreSQL pgvector, seeded synthetic case",
+  "scope": "Real Spring + SQL + Business MCP TCP + Agent read client; no LLM, moderation mutation, kick or full task execution",
+  "syntheticEmailMaskingVerified": true,
+  "regression": {
+    "asgi": {
+      "tests": 168,
+      "passed": 168,
+      "skipped": 0
+    },
+    "tcp": {
+      "tests": 168,
+      "passed": 168,
+      "skipped": 0
+    }
+  }
+}
