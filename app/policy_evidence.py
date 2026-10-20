@@ -88,3 +88,40 @@ async def retrieve_policy_evidence(
             {"resourceUri": section.resource_uri, "traceId": trace_id},
         ])
     return {"policy_evidence": list(evidence.values()), "tool_observations": observations}
+
+
+async def retrieve_policy_section_evidence(
+    state: AgentState, *, policy_id: str, tools: PolicyTools,
+) -> AgentState:
+    """Read a known clause by ID and verify its Resource; no semantic-search guess.
+
+    This exposes the provider's existing get_policy_section capability to the
+    investigation model. It never accepts a model-selected version or URI.
+    """
+    trace_id = require_trace(state.get('trace_id', ''))
+    from app.clients.rag_mcp import SectionArguments
+    try:
+        args = SectionArguments.model_validate({
+            'policyId': policy_id, 'policyVersion': state.get('policy_version',''), 'traceId': trace_id,
+        })
+    except ValidationError:
+        raise AgentToolError('INVALID_INPUT', trace_id=trace_id) from None
+    response = await tools.call('get_policy_section', args.model_dump(mode='json',by_alias=True))
+    section = parse_section(_data(response,trace_id), args.policy_version, trace_id, policy_id=args.policy_id)
+    resource = _data(await tools.read_resource(section.resource_uri, policy_version=args.policy_version,
+                                               trace_id=trace_id),trace_id)
+    if resource.get('resourceUri') != section.resource_uri or resource.get('text') != section.text:
+        raise AgentToolError('INVALID_POLICY_EVIDENCE',trace_id=trace_id)
+    evidence = {}
+    for saved in state.get('policy_evidence',[]):
+        prior = parse_section(saved,args.policy_version,trace_id)
+        evidence[prior.policy_id] = prior.model_dump(mode='json',by_alias=True)
+    item = section.model_dump(mode='json',by_alias=True)
+    if section.policy_id in evidence and evidence[section.policy_id] != item:
+        raise AgentToolError('POLICY_MISMATCH',trace_id=trace_id)
+    evidence[section.policy_id] = item
+    return {'policy_evidence':list(evidence.values()),'tool_observations':[
+        *state.get('tool_observations',[]),
+        {'toolName':'get_policy_section','traceId':trace_id,'policyId':section.policy_id},
+        {'resourceUri':section.resource_uri,'traceId':trace_id},
+    ]}

@@ -14,6 +14,7 @@
 
 모델에게 제공하는 기능:
 - search_policy(query, category?, topK=2): #8 소비자로 원문까지 검증. 동일 버전 고정.
+- get_policy_section(policyId): 알려진 조항을 직접 조회하고 Resource 원문·버전을 검증. 모델이 버전/URI를 선택하지 않는다.
 - get_chat_context / get_user_history / get_stream_info / get_official_links / get_security_facts:
   모델 입력은 빈 객체. runtime이 현재 caseId·traceId를 주입한다. 이력은 30일이며 강퇴 집계가 아니다.
 - finish_investigation(messageFindings): TARGET마다 정확히 하나의 판정 제출.
@@ -86,3 +87,7 @@ OpenAI 어댑터는 실제 SDK+HTTP MockTransport로 API 요청·토큰 수·429
 이 증거는 실제 모델의 분류 정확도, 실제 OpenAI 호출, 실제 BE 연결을 입증하지 않는다.
 
 공식 API 확인: [OpenAI function calling](https://developers.openai.com/api/docs/guides/function-calling) (2026-10-20).
+
+
+2026-10-20 후속: 실제 OpenAI 연결을 확인했고 모델 품질 평가 실패도 발견했다.
+[실제 검증 결과](AI1-09-live-openai-results.md)를 최신 증거로 확인한다.

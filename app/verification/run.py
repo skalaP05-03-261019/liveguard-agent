@@ -27,6 +27,8 @@ from app.clients.business_mcp import AgentToolError, BusinessMcpReadClient, Busi
 from app.clients.rag_mcp import RagMcpReadClient, RagMcpSettings
 from app.investigation.graph import build_investigation_graph
 from app.investigation.model import OpenAIInvestigationModel
+from app.investigation.runner import PROMPT
+from app.harness.safety import safe_presentation
 from app.rag_mcp.config import ServerSettings
 from app.rag_mcp.embeddings import OpenAIEmbedder
 from app.rag_mcp.policy import parse_policy
@@ -135,6 +137,7 @@ async def verify(args, *, check=preflight):
         'policySource': {'pr': 16, 'commit': POLICY_COMMIT,
                          'sha256': hashlib.sha256((FIXTURES / 'policy-v3.1.md').read_bytes()).hexdigest()},
         'suiteSha256': hashlib.sha256((FIXTURES / 'cases.json').read_bytes()).hexdigest(),
+        'promptSha256': hashlib.sha256(PROMPT.read_bytes()).hexdigest(),
         'businessDependency': 'synthetic cases behind production Business MCP, not Spring Backend',
         'transport': 'production MCP apps and SDK via authenticated ASGI HTTP; SQL and OpenAI use network',
         'expectedCases': len(selected), 'results': [], 'mutations': 0,
@@ -154,6 +157,7 @@ async def verify(args, *, check=preflight):
                 if (smoke.get('mode') != 'smoke' or smoke.get('status') != 'PASS'
                         or smoke.get('model') != MODEL or smoke.get('policySource') != report['policySource']
                         or smoke.get('suiteSha256') != report['suiteSha256']
+                        or smoke.get('promptSha256') != report['promptSha256']
                         or not smoke.get('liveModelExecuted') or not smoke.get('realIndexBuilt')
                         or {r['id'] for r in smoke.get('results', []) if r.get('passed')} != smoke_ids):
                     raise ValueError
@@ -191,10 +195,20 @@ async def verify(args, *, check=preflight):
                                  http_client_factory=client_factory(apps['rag']))
         delegate = OpenAIInvestigationModel(model=MODEL, api_key=key)
         class ObservedModel:
+            last_finish_shape = None
+
             async def complete(self, messages, tools, *, trace_id):
                 report['liveModelAttempted'] = True
                 turn = await delegate.complete(messages, tools, trace_id=trace_id)
                 report['liveModelExecuted'] = True
+                for call in turn.calls:
+                    if call.name == 'finish_investigation':
+                        values = call.arguments.get('messageFindings', [])
+                        if isinstance(values,list):
+                            self.last_finish_shape = [{'verdict': item.get('verdict') if item.get('verdict') in
+                                {'VIOLATION','NO_VIOLATION','NEEDS_REVIEW'} else 'INVALID',
+                                'missingFactsCount': len(item['missingFacts']) if isinstance(item.get('missingFacts'),list) else None}
+                                for item in values if isinstance(item,dict)]
                 return turn
         model = ObservedModel()
         async with AsyncExitStack() as stack:
@@ -202,6 +216,7 @@ async def verify(args, *, check=preflight):
                 await stack.enter_async_context(app.router.lifespan_context(app))
             for case in selected:
                 start = time.monotonic()
+                model.last_finish_shape = None
                 result = {'id': case['id'], 'expected': case['expected'], 'passed': False}
                 try:
                     rule = rule_dispatch(case)
@@ -210,12 +225,14 @@ async def verify(args, *, check=preflight):
                                       backendRuleVerified=False)
                     else:
                         fixture = make_fixture(case)
-                        graph = build_investigation_graph(model=model, business=business, policy=policy)
+                        graph = build_investigation_graph(model=model, business=business, policy=policy,
+                                                          present_data=safe_presentation)
                         state = await graph.ainvoke({'task': TaskEnvelope.model_validate(fixture['task'])})
                         finding = state['message_findings'][0]
                         result.update(actual={'verdict': finding.verdict, 'categories': finding.categories,
                                               'policyIds': finding.policy_ids},
                                       messageId=str(finding.message_id), traceId=fixture['task']['traceId'],
+                                      assessmentReason=safe_presentation(finding.reason),
                                       modelCalls=state['turn_count'], path='live_model_investigation',
                                       policyEvidenceIds=[p['policyId'] for p in state['policy_evidence']],
                                       toolCalls=[o['toolName'] for o in state['tool_observations'] if 'toolName' in o],
@@ -223,6 +240,8 @@ async def verify(args, *, check=preflight):
                     result['passed'] = assess(case['expected'], result['actual'])
                 except AgentToolError as error:
                     result.update(errorCode=error.code, retryable=error.retryable)
+                    if error.code == 'INVALID_MODEL_OUTPUT':
+                        result['modelOutputShape'] = model.last_finish_shape
                 except Exception as error:
                     result.update(errorCode='VERIFICATION_CASE_FAILED', exceptionType=type(error).__name__)
                 result['elapsedSeconds'] = round(time.monotonic() - start, 3)

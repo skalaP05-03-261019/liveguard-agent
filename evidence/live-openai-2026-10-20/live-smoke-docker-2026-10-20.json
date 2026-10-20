@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "mode": "smoke",
+  "startedAt": "2026-10-20T06:29:26.817075+00:00",
+  "status": "PASS",
+  "model": "gpt-5.4-mini",
+  "embeddingModel": "text-embedding-3-small",
+  "policyVersion": "3.1",
+  "policySource": {
+    "pr": 16,
+    "commit": "fd3988fffcc85d5a56cdfdd9054377dc284ecf85",
+    "sha256": "c34ae086df1254ee32190f3a02839aaa4edda2e6e9450b4b9b814dd3787e8f2d"
+  },
+  "suiteSha256": "f6250381d3fad63daec33d24ac2caf403746e8aff2dbdfbca4ad8427ed828f04",
+  "businessDependency": "synthetic cases behind production Business MCP, not Spring Backend",
+  "transport": "production MCP apps and SDK via authenticated ASGI HTTP; SQL and OpenAI use network",
+  "expectedCases": 3,
+  "results": [
+    {
+      "id": "normal-praise",
+      "expected": {
+        "verdict": "NO_VIOLATION",
+        "categories": [],
+        "policyAnyOf": [
+          "CP-2.2",
+          "CP-3.1"
+        ]
+      },
+      "passed": true,
+      "actual": {
+        "verdict": "NO_VIOLATION",
+        "categories": [],
+        "policyIds": [
+          "CP-2.2",
+          "CP-3.2"
+        ]
+      },
+      "messageId": "25679c10-80a7-5e27-a278-20e0791bbb80",
+      "traceId": "ee2fb1e8-49e8-558a-b133-02216e97c244",
+      "modelCalls": 2,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "CP-2.2",
+        "CP-3.2"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 1260,
+          "outputTokens": 62
+        },
+        {
+          "inputTokens": 1820,
+          "outputTokens": 135
+        }
+      ],
+      "elapsedSeconds": 2.621
+    },
+    {
+      "id": "violation-harassment",
+      "expected": {
+        "verdict": "VIOLATION",
+        "categories": [
+          "HARASSMENT"
+        ],
+        "policyAnyOf": [
+          "CP-3.2"
+        ]
+      },
+      "passed": true,
+      "actual": {
+        "verdict": "VIOLATION",
+        "categories": [
+          "HARASSMENT"
+        ],
+        "policyIds": [
+          "CP-3.2",
+          "CP-2.2"
+        ]
+      },
+      "messageId": "afc139bb-912f-58cf-98c7-f1c0ca07e124",
+      "traceId": "48dc0c48-0f90-5f8c-846b-f84dcca1cdf7",
+      "modelCalls": 2,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "CP-3.2",
+        "CP-2.2"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 1281,
+          "outputTokens": 52
+        },
+        {
+          "inputTokens": 1829,
+          "outputTokens": 142
+        }
+      ],
+      "elapsedSeconds": 2.47
+    },
+    {
+      "id": "review-pii-unknown",
+      "expected": {
+        "verdict": "NEEDS_REVIEW",
+        "categories": [],
+        "policyAnyOf": []
+      },
+      "passed": true,
+      "actual": {
+        "verdict": "NEEDS_REVIEW",
+        "categories": [
+          "PII_EXPOSURE"
+        ],
+        "policyIds": [
+          "SP-3.1",
+          "CP-1.2"
+        ]
+      },
+      "messageId": "ddc5ee0a-846a-5a36-8f0e-a6c385289711",
+      "traceId": "44fa3b41-a041-5f1a-9bbb-9e156bc8a306",
+      "modelCalls": 2,
+      "path": "live_model_investigation",
+      "policyEvidenceIds": [
+        "SP-3.1",
+        "CP-1.2"
+      ],
+      "toolCalls": [
+        "get_moderation_case",
+        "get_chat_context",
+        "search_policy",
+        "get_policy_section",
+        "read_policy_resource",
+        "get_policy_section",
+        "read_policy_resource",
+        "model",
+        "model"
+      ],
+      "usage": [
+        {
+          "inputTokens": 1198,
+          "outputTokens": 56
+        },
+        {
+          "inputTokens": 1833,
+          "outputTokens": 192
+        }
+      ],
+      "elapsedSeconds": 2.589
+    }
+  ],
+  "mutations": 0,
+  "liveModelExecuted": true,
+  "liveModelAttempted": true,
+  "realIndexBuilt": true,
+  "notice": "Controlled evaluation, not real-user safety or actual Backend filtering proof.",
+  "indexRows": 29,
+  "finishedAt": "2026-10-20T06:29:36.370300+00:00"
+}
