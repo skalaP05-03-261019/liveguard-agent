@@ -2,7 +2,8 @@
 
 김태관 / ⑤ AI 1·Agent의 Python 서비스 시작 구조. 현재 범위는 **API·스키마·State·Graph 경계**다.
 Agent의 작업 입력 스키마와 Business MCP 조회 클라이언트, `load_case`를 구현했다.
-실제 모델 판단·RAG 연결·전체 작업 실행·작업 저장·제재·checkpoint/resume는 미구현이다.
+RAG 소비자와 정책·원문 검증은 #8에서 추가했으며 main에 병합된 #13 제공자 앱과 함께 검증한다.
+실제 임베딩 API까지 포함한 연동·모델 판단·전체 작업 실행·작업 저장·제재·checkpoint/resume는 미구현/미검증이다.
 
 ## 실행
 
@@ -63,6 +64,9 @@ uv run --env-file .env python -m app.rag_mcp   # http://127.0.0.1:8003/mcp
 | app/clients/ports.py | Backend·조회 MCP·실행 MCP 인터페이스 초안 |
 | app/clients/business_mcp.py | 인증된 조회 전용 MCP 클라이언트, 도구당 10초 제한, 자동 재시도 없음 |
 | app/case_loader.py | 사건/대화의 snapshot·evidence 검증 및 TARGET/CONTEXT State 저장 |
+| app/clients/rag_mcp.py | RAG 전용 인증·조회 허용 목록·버전/응답 검사·원문 Resource 읽기 |
+| app/policy_evidence.py | 검색→조항→Resource 일치 검사 후 policy_evidence State patch 반환 |
+| app/check_rag.py | 제공자 준비 후 사용하는 실제 서버 연결·출처 검증 명령 |
 | app/business_mcp/ | BE2-01 Business MCP 도구, Backend API adapter 및 독립 실행 ASGI app |
 | app/rag_mcp/ | 운영정책 조항 파서·pgvector 색인, RAG MCP 서버(search_policy, get_policy_section, policy:// Resource) |
 | prompts/investigator.md | 조사 규칙 초안; 아직 모델에 연결되지 않음 |
@@ -82,6 +86,26 @@ LIVEGUARD_TEST_TCP=1 uv run --locked python -m unittest discover -s tests -v
 기본 테스트는 실제 Business MCP ASGI app·인증·MCP SDK/HTTP 직렬화를 사용하며 Backend만 가상이다. TCP 모드는 Uvicorn을 임시 로컬 포트에 띄운다. 테스트 범위와 결과는 [검증 기록](evidence/agent-read-check.json)에 구분한다.
 `load_case`는 Graph 노드와 직접 호출로 연결했지만 `/run`에는 전체 실행기가 아직 연결되지 않았다.
 조회 시 `BUSINESS_MCP_URL`, `BUSINESS_MCP_AGENT_TOKEN`을 process environment에서 읽는다. `.env` 자동 로드는 하지 않는다.
+
+## RAG 소비자 연결 (#8)
+
+[AI1-08 계약](docs/AI1-08-rag-read-contract.md)에 입력·응답·원문 검증·오류·제공자 확인 항목을 기록했다.
+`RAG_MCP_URL`과 별도 `RAG_MCP_AGENT_TOKEN`을 process environment에서 읽고, 사건의 정책 버전으로만 조회한다.
+검색 결과·전체 조항·Resource의 ID/URI/버전/본문이 맞는 경우만 근거 State를 반환한다.
+정책 버전과 서버 주소를 추정하지 않으며 빈 결과·오류를 정상 판정으로 바꾸지 않는다.
+제공자 #13은 단일 text/markdown 본문을 조항 text와 정확히 같게 제공한다. 현재 wire 정책 버전은 `3.0`이며, 소비자는 계속 사건의 정책 버전을 따른다.
+기존 계약 대역 테스트에 더해 실제 `app.rag_mcp.main.create_app`과 연결하는 통합 테스트를 추가했다.
+이 테스트는 제어된 임베딩을 사용한다. CI는 임시 pgvector DB를 제공해 실제 SQL 검색→도구→Resource→소비자 State도 확인한다. OpenAI의 실제 임베딩 품질 검증과 구분한다.
+
+실제 서버 준비 후 다음 명령으로 확인한다. 토큰은 환경에만 설정하고 명령 결과/문서에 넣지 않는다.
+
+```bash
+uv run --locked python -m app.check_rag \
+  --policy-version '<제공자와 확인한 정확한 버전>' \
+  --query '욕설 판단 조건과 정상 예외' --top-k 1
+```
+
+이 명령은 성공한 경우 정책 ID·버전·URI·원문 해시를 출력한다. 모델 조사 루프는 #9에서 이 소비자 경계와 연결한다.
 
 Graph: load_case → investigate → validate_judgment → 정상 보고 / 검토 대기 / 계획 요청 → 실행 → 확인 → 보고.
 검토 노드는 현재 실행 불가이며 실제 interrupt·결정 재검증·재개 분기는 후속 구현한다.

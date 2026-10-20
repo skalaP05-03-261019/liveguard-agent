@@ -1,0 +1,13 @@
+{
+  "note": "Synthetic consumer fixture, not approved operational policy v3.0 or an evaluation answer.",
+  "version": "fixture-policy-v1",
+  "section": {
+    "policyId": "CP-2.1",
+    "title": "테스트 정책 조항",
+    "text": "테스트용 조항입니다. 문맥과 정상 예외를 함께 확인합니다.",
+    "version": "fixture-policy-v1",
+    "category": "PROFANITY",
+    "resourceUri": "policy://fixture-policy-v1/CP/2.1"
+  },
+  "score": 0.9
+}
