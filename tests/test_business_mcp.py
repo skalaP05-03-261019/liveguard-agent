@@ -73,6 +73,22 @@ class FailingBackend(FakeBackend):
         )
 
 
+class RetryableKickBackend(FakeBackend):
+    def __init__(self) -> None:
+        self.kick_calls: list[ActionCommand] = []
+
+    async def execute_action(
+        self, command: ActionCommand, *, trace_id: str
+    ) -> dict[str, Any]:
+        self.kick_calls.append(command)
+        raise BackendError(
+            "TEMPORARY_UNAVAILABLE",
+            "Backend temporarily unavailable",
+            retryable=True,
+            trace_id=trace_id,
+        )
+
+
 class BusinessMcpTests(unittest.IsolatedAsyncioTestCase):
     async def test_tools_publish_camel_case_schema_and_trace_envelope(self) -> None:
         server = MCPServer("test")
@@ -92,6 +108,7 @@ class BusinessMcpTests(unittest.IsolatedAsyncioTestCase):
                 type_schema.get("const", type_schema.get("enum")),
                 "HIDE" if "const" in type_schema else ["HIDE"],
             )
+            self.assertIn("kick_user", {tool.name for tool in tools.tools})
 
             result = await client.call_tool(
                 "get_moderation_case",
@@ -125,6 +142,53 @@ class BusinessMcpTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.is_error)
         self.assertIn("STALE_EVIDENCE", result.content[0].text)
         self.assertIn(str(TRACE_ID), result.content[0].text)
+
+    async def test_kick_user_retries_twice_then_returns_failed(self) -> None:
+        backend = RetryableKickBackend()
+        server = MCPServer("test")
+        register_tools(server, lambda: backend)
+        action_command = {
+            "actionId": "00000000-0000-4000-8000-000000000010",
+            "planId": "00000000-0000-4000-8000-000000000011",
+            "caseId": str(CASE_ID),
+            "type": "KICK",
+            "targetId": "00000000-0000-4000-8000-000000000012",
+            "expectedEvidenceVersion": 4,
+            "expectedTargetVersion": 2,
+            "policyVersion": "0.4-review",
+            "idempotencyKey": "00000000-0000-4000-8000-000000000010",
+            "decisionId": "00000000-0000-4000-8000-000000000013",
+            "violationIds": [
+                "00000000-0000-4000-8000-000000000020",
+                "00000000-0000-4000-8000-000000000021",
+                "00000000-0000-4000-8000-000000000022",
+            ],
+        }
+
+        async with Client(server) as client:
+            result = await client.call_tool(
+                "kick_user",
+                {"actionCommand": action_command, "traceId": str(TRACE_ID)},
+            )
+
+        self.assertFalse(result.is_error)
+        self.assertEqual(len(backend.kick_calls), 3)
+        self.assertEqual(
+            {command.idempotency_key for command in backend.kick_calls},
+            {"00000000-0000-4000-8000-000000000010"},
+        )
+        self.assertEqual(
+            result.structured_content,
+            {
+                "data": {
+                    "actionId": "00000000-0000-4000-8000-000000000010",
+                    "status": "FAILED",
+                    "attempts": 3,
+                    "errorCode": "TEMPORARY_UNAVAILABLE",
+                },
+                "traceId": str(TRACE_ID),
+            },
+        )
 
     async def test_backend_adapter_sends_auth_trace_and_typed_query(self) -> None:
         requests: list[httpx.Request] = []

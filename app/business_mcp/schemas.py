@@ -22,13 +22,15 @@ class ActionCommand(Contract):
     action_id: UUID
     plan_id: UUID
     case_id: UUID
-    type: Literal["HIDE", "TIMEOUT", "RELEASE_HELD"]
+    type: Literal["HIDE", "TIMEOUT", "RELEASE_HELD", "KICK"]
     target_id: UUID
     expected_evidence_version: int = Field(ge=1)
     expected_target_version: int = Field(ge=1)
     policy_version: str = Field(min_length=1)
     idempotency_key: str = Field(min_length=1, max_length=200)
     duration_seconds: int | None = Field(default=None, ge=1)
+    decision_id: UUID | None = None
+    violation_ids: list[UUID] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_duration(self) -> "ActionCommand":
@@ -37,6 +39,13 @@ class ActionCommand(Contract):
             raise ValueError("TIMEOUT requires a Backend-issued durationSeconds")
         if self.type != "TIMEOUT" and self.duration_seconds is not None:
             raise ValueError("durationSeconds is only valid for TIMEOUT")
+        if self.type == "KICK":
+            if self.decision_id is None:
+                raise ValueError("KICK requires an approved decisionId")
+            if len(set(self.violation_ids)) < 3:
+                raise ValueError("KICK requires at least three distinct violationIds")
+        elif self.decision_id is not None or self.violation_ids:
+            raise ValueError("decisionId and violationIds are only valid for KICK")
         return self
 
 
@@ -51,6 +60,13 @@ class TimeoutCommand(ActionCommand):
 
 class ReleaseHeldCommand(ActionCommand):
     type: Literal["RELEASE_HELD"]
+
+
+class KickCommand(ActionCommand):
+    # 승인된 운영자 결정과 누적 위반 참조를 포함한 Backend 발급 명령만 받는다.
+    type: Literal["KICK"]
+    decision_id: UUID
+    violation_ids: list[UUID] = Field(min_length=3)
 
 
 class BackendError(Exception):

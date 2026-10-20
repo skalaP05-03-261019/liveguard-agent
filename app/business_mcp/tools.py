@@ -11,6 +11,7 @@ from app.business_mcp.schemas import (
     ActionCommand,
     BackendError,
     HideCommand,
+    KickCommand,
     ReleaseHeldCommand,
     TimeoutCommand,
 )
@@ -205,6 +206,13 @@ def register_tools(
         )
 
     @mcp.tool(annotations=ToolAnnotations(destructive_hint=True, idempotent_hint=True))
+    async def kick_user(
+        actionCommand: KickCommand, traceId: UUID | None = None
+    ) -> dict[str, Any]:
+        """Execute an approved, Backend-issued kick command after Backend revalidation."""
+        return await _execute_kick(actionCommand, get_backend(), traceId)
+
+    @mcp.tool(annotations=ToolAnnotations(destructive_hint=True, idempotent_hint=True))
     async def reconcile_review(
         caseId: UUID, decisionId: UUID, traceId: UUID | None = None
     ) -> dict[str, Any]:
@@ -235,3 +243,34 @@ async def _execute_expected(
     except BackendError as error:
         _raise_tool_error(error)
     return _success(data, resolved_trace_id)
+
+
+async def _execute_kick(
+    command: KickCommand,
+    backend: BackendOperations,
+    trace_id: UUID | None,
+) -> dict[str, Any]:
+    resolved_trace_id = _trace_id(trace_id)
+    max_attempts = 3  # 최초 실행 1회와 재시도 2회
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            # 재시도도 같은 actionId/idempotencyKey를 사용해 중복 강퇴를 막는다.
+            data = await backend.execute_action(command, trace_id=resolved_trace_id)
+        except BackendError as error:
+            if not error.retryable:
+                _raise_tool_error(error)
+            if attempt == max_attempts:
+                return _success(
+                    {
+                        "actionId": str(command.action_id),
+                        "status": "FAILED",
+                        "attempts": attempt,
+                        "errorCode": error.code,
+                    },
+                    resolved_trace_id,
+                )
+        else:
+            return _success(data, resolved_trace_id)
+
+    raise RuntimeError("Kick retry loop ended unexpectedly")

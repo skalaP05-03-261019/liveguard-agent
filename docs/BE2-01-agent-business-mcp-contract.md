@@ -127,9 +127,13 @@ Contract Draft v0.5의 HTTP 우선 경계를 기준으로 한다.
 | `hide_message` | `{ "actionCommand": { ...ActionCommand, "type": "HIDE" }, "traceId?": "uuid-trace" }` | `actionId`, 적용 상태, 실제 변경된 target/version |
 | `timeout_user` | `{ "actionCommand": { ...ActionCommand, "type": "TIMEOUT" }, "traceId?": "uuid-trace" }`; Backend 계획에 포함된 기간 | `actionId`, 적용 상태, 최초 `startedAt`, `expiresAt` |
 | `release_message` | `{ "actionCommand": { ...ActionCommand, "type": "RELEASE_HELD" }, "traceId?": "uuid-trace" }` | `actionId`, 해당 HELD 해제 결과 및 현재 visibility |
+| `kick_user` | `{ "actionCommand": { ...ActionCommand, "type": "KICK", "decisionId": "uuid-decision", "violationIds": ["uuid-1", "uuid-2", "uuid-3"] }, "traceId?": "uuid-trace" }` | `actionId`, 강퇴 결과 |
 | `reconcile_review` | `{ "caseId": "uuid-case", "decisionId": "uuid-decision", "traceId?": "uuid-trace" }` | 취소·감경·복구 결과, 실제 복구 상태 |
 
-- MCP 변경 tool은 `actionCommand` 객체를 받고, tool별로 `type`을 고정한다(`HIDE`, `TIMEOUT`, `RELEASE_HELD`). Backend는 실행 시에도 계획에 발급된 명령인지 다시 검증한다.
+- MCP 변경 tool은 `actionCommand` 객체를 받고, tool별로 `type`을 고정한다(`HIDE`, `TIMEOUT`, `RELEASE_HELD`, `KICK`). Backend는 실행 시에도 계획·권한·대상 상태가 유효한지 다시 검증한다.
+- `kick_user` 명령은 승인된 운영자 `decisionId`와 최소 3개의 서로 다른 위반 ID를 요구한다. 단, 현재 포함·최근 24시간·해제/소진 제외 조건과 승인 유효성은 Backend가 실행 직전에 재검증한다. 누적 계산을 MCP에서 수행하지 않는다.
+- 퇴장 실패가 retryable이면 최초 실행에 더해 최대 2회 재시도한다. 모든 시도에서 같은 `actionId`와 `idempotencyKey`를 사용한다. 재시도 소진 시 `{ "status": "FAILED", "attempts": 3, "errorCode": "..." }`를 반환한다. 비재시도 오류(예: 권한·결정·증거 만료)는 즉시 MCP tool 오류로 돌려보낸다.
+- 3회 위반 대기, 운영자 interrupt/checkpoint, 같은 `threadId` 재개는 Agent Graph/Harness 책임이며 MCP tool이 수행하지 않는다. `kick_user`는 승인 후 호출되는 코드 실행 경로에만 연결하고, LLM 조사 tool 목록에는 노출하지 않는다.
 - timeout 기간은 Agent나 모델이 정하지 않는다. 재검토 감경도 Backend가 검증한 결과만 실행한다.
 - 같은 `actionId`의 재요청은 같은 idempotency key와 같은 payload로만 허용한다. 다른 payload는 `IDEMPOTENCY_CONFLICT`다.
 - 응답 유실 등으로 적용 여부가 불명확하면 새 변경 요청을 보내지 말고 `get_action_status`를 조회한다. 성공한 timeout 재시도로 만료 시각을 연장하지 않는다.
