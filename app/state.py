@@ -12,6 +12,9 @@ class AgentState(TypedDict, total=False):
     thread_id: str
     snapshot_id: str
     trace_id: str
+    # 실행 한도·재시도 예산(#6). 재시작·재개 후에도 이어서 센다. task_outcome은 한도 초과·최종 실패 결과.
+    harness_budget: dict[str, Any]
+    task_outcome: str
     case_snapshot: dict[str, Any]
     evidence_version: int
     policy_version: str
