@@ -12,6 +12,7 @@ dependencies = [
     "langgraph",
     "openai>=1.40,<3",
     "psycopg[binary]>=3.2,<4",
+    "langgraph-checkpoint-postgres>=2,<4",
 ]
 
 [tool.uv]

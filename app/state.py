@@ -32,3 +32,9 @@ class AgentState(TypedDict, total=False):
     retry_count: int
     checkpoint_ref: str
     error: dict[str, Any]
+    # 강퇴 승인 Harness(#5). kick_review는 Backend가 정한 심사 요청(required, reviewId, basisCaseIds)이다.
+    kick_review: dict[str, Any]
+    kick_review_id: str
+    kick_decision_id: str
+    basis_case_ids: list[str]
+    kick_result: dict[str, Any]

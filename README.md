@@ -33,7 +33,7 @@ uv run python -m app.business_mcp
 
 ## RAG 정책 색인 (AI2, #3)
 
-운영정책 v3.0 원문(`app/rag_mcp/policies/policy-v3.0.md`, 노션 Export)을 조항 ID(`CP/SP/MP/MM-x.y`) 헤딩 단위로 나눠 OpenAI 임베딩과 함께 pgvector `rag.policy_chunks`에 넣는다. 장 제목 등 조항 밖 텍스트는 색인하지 않는다.
+운영정책 원문(`app/rag_mcp/policies/policy-v{version}.md`, 노션 Export, 기본 v3.1)을 조항 ID(`CP/SP/MP/MM-x.y`) 헤딩 단위로 나눠 OpenAI 임베딩과 함께 pgvector `rag.policy_chunks`에 넣는다. 장 제목 등 조항 밖 텍스트는 색인하지 않는다.
 
 ```bash
 cp .env.example .env   # RAG_DB_URL, OPENAI_API_KEY 입력. .env는 커밋하지 않는다.
@@ -53,6 +53,12 @@ uv run --env-file .env python -m app.rag_mcp   # http://127.0.0.1:8003/mcp
 
 `/health`는 색인된 policyVersion 목록과 준비 여부만 보고한다. 도구 입출력·오류 코드는 [docs/AI2-01-rag-mcp-contract.md](docs/AI2-01-rag-mcp-contract.md)를 따른다.
 
+## Harness: 강퇴 승인 interrupt/resume (AI2, #5)
+
+`verify_result` 뒤 `review_kick → execute_kick`이 Backend의 강퇴 심사 요청(`kick_review`)이 있을 때만 Graph를 멈추고(`interrupt`) Postgres checkpointer(`agent` 스키마, `AGENT_CHECKPOINT_DB_URL`)에 저장한다. 운영자 결정 후 `POST /agent/tasks/{taskId}/resume`(`reviewKind: KICK`)이 같은 `threadId`로 재개하고, Backend 재검증이 승인일 때만 `kick_user`를 호출한다. 중복 승인은 409로 막는다. 실행기 연결 전에는 `/resume`이 501이다.
+
+Postgres 재시작 복원 테스트는 `AGENT_TEST_CHECKPOINT_DB_URL`이 있을 때만 실행된다(임시 스키마 생성 후 삭제). 계약: [docs/AI2-02-harness-kick-approval-contract.md](docs/AI2-02-harness-kick-approval-contract.md)
+
 ## 파일과 다음 작업
 
 | 파일 | 역할 / 다음 작업 |
@@ -69,6 +75,7 @@ uv run --env-file .env python -m app.rag_mcp   # http://127.0.0.1:8003/mcp
 | app/check_rag.py | 제공자 준비 후 사용하는 실제 서버 연결·출처 검증 명령 |
 | app/business_mcp/ | BE2-01 Business MCP 도구, Backend API adapter 및 독립 실행 ASGI app |
 | app/rag_mcp/ | 운영정책 조항 파서·pgvector 색인, RAG MCP 서버(search_policy, get_policy_section, policy:// Resource) |
+| app/harness/ | Postgres checkpointer, 강퇴 승인 interrupt/resume 노드와 재개 함수 (#5) |
 | prompts/investigator.md | 조사 규칙 초안; 아직 모델에 연결되지 않음 |
 | tests/fixtures/agent-case-v0.5.json | 이번 조회 연결용 요청·응답 제안. 가상 정책 버전이며 활성 정책 아님 |
 | tests/fixtures/D01.json | 역사 자료인 v0.3 fixture. 현재 TaskEnvelope 입력과 호환되지 않음 |
