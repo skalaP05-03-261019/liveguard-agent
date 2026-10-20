@@ -13,9 +13,17 @@ import time
 from typing import Any
 
 from app.clients.business_mcp import AgentToolError
+from app.harness.observability import Observer, TraceRecorder, record_event
+from app.harness.safety import safe_presentation
 
 EXECUTION_LIMIT = "EXECUTION_LIMIT"
 MODEL = "model"
+_DEFAULT_RECORDER = TraceRecorder()
+
+
+def default_observer() -> Observer:
+    # 프로세스 공용 기록기. 이벤트는 JSON 로그로 남고 traceId로 모아 볼 수 있다.
+    return _DEFAULT_RECORDER
 
 
 @dataclass(frozen=True)
@@ -38,12 +46,14 @@ class HarnessGate:
         limits: ExecutionLimits = ExecutionLimits(),
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        observer: Observer | None = None,
     ) -> None:
         budget = budget or {}
         self.trace_id = trace_id
         self.limits = limits
         self._clock = clock
         self._sleep = sleep
+        self.observer = observer
         self.model_calls = int(budget.get("modelCalls", 0))
         self.tool_calls: dict[str, int] = dict(budget.get("toolCalls", {}))
         self.active_seconds = float(budget.get("activeSeconds", 0.0))
@@ -71,6 +81,12 @@ class HarnessGate:
                 "maxRetriesPerCall": self.limits.max_retries_per_call,
             },
         }
+
+    def _emit(self, event: str, **fields: Any) -> None:
+        record_event(self.observer, self.trace_id, event, **fields)
+
+    def _elapsed_ms(self, started: float) -> int:
+        return int((self._clock() - started) * 1000)
 
     def _limit(self, reason: str) -> AgentToolError:
         self.exhausted = reason
@@ -107,18 +123,33 @@ class HarnessGate:
     async def run(self, name: str, operation: Callable[[], Awaitable[Any]]) -> Any:
         retries = 0
         while True:
-            self._count_attempt(name)
             try:
-                return await self._timed(operation)
+                self._count_attempt(name)
+            except AgentToolError:
+                self._emit("limit", name=name, reason=self.exhausted)
+                raise
+            started = self._clock()
+            try:
+                result = await self._timed(operation)
             except AgentToolError as error:
+                self._emit("call", name=name, attempt=retries + 1, status="error", errorCode=error.code,
+                           retryable=error.retryable, latencyMs=self._elapsed_ms(started))
                 if error.code == EXECUTION_LIMIT:
+                    self._emit("limit", name=name, reason=self.exhausted)
                     raise
                 self.last_error = {"code": error.code, "operation": name, "retryable": error.retryable}
                 if not error.retryable or retries >= self.limits.max_retries_per_call:
                     raise
+            else:
+                usage = getattr(result, "usage", None) or {}
+                self._emit("call", name=name, attempt=retries + 1, status="ok",
+                           latencyMs=self._elapsed_ms(started),
+                           inputTokens=usage.get("inputTokens"), outputTokens=usage.get("outputTokens"))
+                return result
             retries += 1
             self.retry_count += 1
             delay = self.limits.backoff_seconds[min(retries, len(self.limits.backoff_seconds)) - 1]
+            self._emit("retry", name=name, attempt=retries + 1, delayMs=int(delay * 1000))
             started = self._clock()
             await self._sleep(delay)
             # 재시도 대기도 작업이 진행 중인 시간이므로 활성 시간에 포함한다.
@@ -145,19 +176,32 @@ async def run_guarded(
     try:
         patch = await step(active_gate)
     except AgentToolError as error:
+        outcome = task_outcome(error)
+        budget = active_gate.snapshot()
+        active_gate._emit("outcome", outcome=outcome, errorCode=error.code, **_budget_fields(budget))
         return {
-            "harness_budget": active_gate.snapshot(),
-            "task_outcome": task_outcome(error),
+            "harness_budget": budget,
+            "task_outcome": outcome,
             "error": {"code": error.code, "retryable": error.retryable, "traceId": error.trace_id},
         }
-    return {**patch, "harness_budget": active_gate.snapshot()}
+    budget = active_gate.snapshot()
+    active_gate._emit("outcome", outcome="SUCCEEDED", **_budget_fields(budget))
+    return {**patch, "harness_budget": budget}
 
 
-async def guarded_investigate(state: dict[str, Any], **deps: Any) -> dict[str, Any]:
-    """조사 노드(#9)를 공유 gate로 실행한다. Graph 연결(#10)은 nodes.investigate 대신 이 함수를 쓴다."""
+def _budget_fields(budget: dict[str, Any]) -> dict[str, Any]:
+    return {key: budget[key] for key in ("modelCalls", "toolCalls", "activeSeconds", "retryCount")}
+
+
+async def guarded_investigate(
+    state: dict[str, Any], *, observer: Observer | None = None, **deps: Any
+) -> dict[str, Any]:
+    """조사 노드(#9)를 공유 gate·안전장치·추적으로 실행한다. Graph 연결(#10)은 nodes.investigate 대신 이 함수를 쓴다."""
     from app import nodes
 
-    return await run_guarded(state, lambda gate: nodes.investigate(state, gate=gate, **deps))
+    deps.setdefault("present_data", safe_presentation)
+    gate = HarnessGate.from_state(state, observer=observer or default_observer())
+    return await run_guarded(state, lambda g: nodes.investigate(state, gate=g, **deps), gate=gate)
 
 
 async def resolve_unknown_action(
