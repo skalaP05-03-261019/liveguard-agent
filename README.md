@@ -160,7 +160,8 @@ fixture 전체는 HTTP 요청이 아니다. POST에는 새 fixture의 `task`만 
 MODEL_API_KEY가 따로 있으면 대화 모델 키는 그 값을 우선한다. 키 파일을 저장소에 복사하지 않는다.
 [연결 3건 → 평가 15건 실행법](docs/AI1-09-live-verification.md)을 따른다.
 실제 OpenAI·임베딩·pgvector가 준비되지 않으면 BLOCKED로 기록하며 대역으로 성공을 대신하지 않는다.
-이번 환경의 시도는 DB 접속 제한으로 BLOCKED다. 실제 모델 품질 검증 완료를 뜻하지 않는다.
+호스트 실행은 DB 접속 제한으로 BLOCKED였지만 Docker에서 실제 OpenAI·임베딩·DB 연결에 성공했다.
+연결 3/3, 마지막 평가 12/15로 판단 품질은 미완료다. [실제 평가 이력](docs/AI1-09-live-openai-results.md)을 참조한다.
 ## Harness: 실행 한도·오류 복구 (AI2, #6)
 
 `app/harness/execution.py`의 `HarnessGate`가 조사 루프(#9)의 `ExecutionGate`를 구현한다. 모델 8회·같은 도구 3회·활성 120초 한도, retryable 오류만 호출당 최대 2회 재시도(시도도 한도에 포함), 카운터는 State `harness_budget`에 저장해 재시작·재개 후에도 이어 센다. `guarded_investigate(state)`는 한도 초과 시 판정 없이 `task_outcome: NEEDS_REVIEW`, 최종 실패 시 `FAILED`와 오류를 patch로 남긴다. 결과 미확인 조치는 `resolve_unknown_action`으로 상태를 먼저 조회한다. 계약: [docs/AI2-03-harness-execution-contract.md](docs/AI2-03-harness-execution-contract.md)

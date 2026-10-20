@@ -17,7 +17,7 @@ from pydantic import Field, ValidationError
 
 from app.clients.business_mcp import AgentToolError
 from app.clients.rag_mcp import require_trace
-from app.policy_evidence import retrieve_policy_evidence
+from app.policy_evidence import retrieve_policy_evidence, retrieve_policy_section_evidence
 from app.schemas import Category, Contract, MessageFinding
 from app.investigation.model import InvestigationModel, ModelTurn
 from app.investigation.validation import validate_analysis
@@ -34,6 +34,10 @@ class SearchRequest(Contract):
     top_k: int = Field(default=2, ge=1, le=3, strict=True)
 
 
+class SectionRequest(Contract):
+    policy_id: str = Field(pattern=r"^(CP|SP|MP|MM)-\d+\.\d+$", strict=True)
+
+
 class FinishRequest(Contract):
     message_findings: list[MessageFinding] = Field(min_length=1, max_length=100)
 
@@ -47,6 +51,8 @@ def _function(name, description, schema):
 def tool_definitions():
     definitions = [_function("search_policy", "현재 사건과 같은 버전의 정책과 정상 예외를 검색하고 원문을 검증합니다.",
                              SearchRequest.model_json_schema(by_alias=True)),
+                   _function("get_policy_section", "알고 있는 정책 조항 ID의 정확한 원문과 Resource 검증. 정상 예외·보류 조항 확인에 사용.",
+                             SectionRequest.model_json_schema(by_alias=True)),
                    _function("finish_investigation", "각 TARGET의 최종 판정을 제출. 제재 기간·명령 금지.",
                              FinishRequest.model_json_schema(by_alias=True))]
     descriptions = {
@@ -195,13 +201,18 @@ async def run_investigation(state: dict, *, model: InvestigationModel, business,
                     "policy_evidence": working.get("policy_evidence", []),
                     "tool_observations": observations + usage, "turn_count": turns}
         # Validate allowlist/arguments before network. No prompt can grant extra tools.
-        if call.name not in BUSINESS_TOOLS | {"search_policy"}:
+        if call.name not in BUSINESS_TOOLS | {"search_policy", "get_policy_section"}:
             raise AgentToolError("FORBIDDEN", trace_id=trace_id)
         messages.append({"role": "assistant", "content": None, "tool_calls": [{
             "id": call.id, "type": "function", "function": {
                 "name": call.name, "arguments": json.dumps(call.arguments, ensure_ascii=False)}}]})
         try:
-            if call.name == "search_policy":
+            if call.name == "get_policy_section":
+                args = SectionRequest.model_validate(call.arguments)
+                working.update(await retrieve_policy_section_evidence(
+                    working, policy_id=args.policy_id, tools=policies))
+                body = {"policyEvidence": working["policy_evidence"]}
+            elif call.name == "search_policy":
                 args = SearchRequest.model_validate(call.arguments)
                 # Policy wrapper meters every actual search, section and Resource request.
                 working.update(await retrieve_policy_evidence(

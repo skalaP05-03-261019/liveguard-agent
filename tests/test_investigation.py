@@ -244,6 +244,35 @@ class InvestigationTests(unittest.IsolatedAsyncioTestCase):
         result = await self.run_model([search(), finish([finding(self.state, "NEEDS_REVIEW")])])
         self.assertEqual(result["message_findings"][0].verdict, "NEEDS_REVIEW")
 
+    async def test_exact_policy_section_is_verified_before_finishing(self):
+        result = await self.run_model([
+            ToolCall("section", "get_policy_section", {"policyId": "CP-2.1"}),
+            finish([finding(self.state)]),
+        ])
+        self.assertEqual([name for name, _ in self.policy.calls], ["get_policy_section", "resource"])
+        self.assertEqual(result["policy_evidence"][0]["policyId"], "CP-2.1")
+
+    async def test_exact_section_cannot_change_policy_version(self):
+        model = ScriptedModel([
+            ToolCall("section", "get_policy_section", {"policyId": "CP-2.1", "policyVersion": "wrong"}),
+            finish([{**finding(self.state, "NEEDS_REVIEW"), "policyIds": [], "evidenceMessageIds": []}]),
+        ])
+        await run_investigation(self.state, model=model, business=self.business, policy=self.policy)
+        self.assertEqual(self.policy.calls, [])
+        self.assertIn("INVALID_INPUT", model.inputs[1][0][-1]["content"])
+
+    async def test_exact_section_rejects_resource_disagreement(self):
+        original = self.policy.read_resource
+        async def wrong_resource(uri, **kwargs):
+            result = await original(uri, **kwargs)
+            result["data"]["text"] = "different text"
+            return result
+        self.policy.read_resource = wrong_resource
+        with self.assertRaises(AgentToolError) as raised:
+            await self.run_model([ToolCall("section", "get_policy_section", {"policyId": "CP-2.1"})])
+        self.assertEqual(raised.exception.code, "INVALID_POLICY_EVIDENCE")
+        self.assertNotIn("policy_evidence", self.state)
+
 
 class ConfigurationTests(unittest.TestCase):
     def test_no_implicit_provider_or_model(self):
@@ -255,7 +284,7 @@ class ConfigurationTests(unittest.TestCase):
     def test_advertised_tools_cannot_change_business_state(self):
         names = {t["function"]["name"] for t in tool_definitions()}
         self.assertNotIn("kick_user", names)
-        self.assertEqual(names, {"search_policy", "finish_investigation", "get_chat_context",
+        self.assertEqual(names, {"search_policy", "get_policy_section", "finish_investigation", "get_chat_context",
                                 "get_user_history", "get_stream_info", "get_official_links", "get_security_facts"})
 
     def test_basic_presentation_marks_truncation(self):
