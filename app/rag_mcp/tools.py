@@ -57,8 +57,9 @@ def _section(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def render_resource(row: dict[str, Any]) -> str:
-    # 근거 패널용 원문. 본문은 도구 결과의 text와 같은 값이다.
-    return f"## {row['policy_id']} {row['title']}\n\n{row['text']}\n"
+    # 근거 패널용 원문. Agent 소비자(AI1-08)가 도구의 text와 정확히 같은지 검사하므로
+    # 제목 등을 덧붙이지 않는다. 제목은 도구 결과의 title로 얻는다.
+    return row["text"]
 
 
 async def _require_version(
@@ -121,10 +122,8 @@ def register_tools(
         matches = [
             {**_section(row), "score": round(float(row["score"]), 4)} for row in rows
         ]
-        return {
-            "data": {"policyVersion": policyVersion, "matches": matches},
-            "traceId": trace_id,
-        }
+        # data에는 matches만 둔다. Agent 소비자(AI1-08)가 다른 최상위 필드를 거부한다.
+        return {"data": {"matches": matches}, "traceId": trace_id}
 
     @mcp.tool(annotations=_READ_ONLY)
     async def get_policy_section(

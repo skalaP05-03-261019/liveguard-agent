@@ -56,7 +56,6 @@ Agent의 `app/clients/business_mcp.py`와 같은 방식(Bearer 헤더 + `streama
 ```json
 {
   "data": {
-    "policyVersion": "3.0",
     "matches": [
       {
         "policyId": "MP-4.1",
@@ -73,6 +72,7 @@ Agent의 `app/clients/business_mcp.py`와 같은 방식(Bearer 헤더 + `streama
 }
 ```
 
+- `data`에는 `matches`만 있다(Agent 소비자가 다른 최상위 필드를 거부). 각 match의 `version`이 요청한 policyVersion이다.
 - `score`는 코사인 유사도(1에 가까울수록 유사). 절대 기준값으로 쓰지 말고 순위로만 쓴다.
 - `category: null`은 모든 유형에 적용되는 공통 조항(판단 원칙, 오탐 예외, 제재표, 강퇴 심사 등)이다.
 
@@ -92,9 +92,9 @@ Agent의 `app/clients/business_mcp.py`와 같은 방식(Bearer 헤더 + `streama
 
 | URI 템플릿 | MIME | 내용 |
 |---|---|---|
-| `policy://{version}/{documentId}/{sectionId}` | `text/markdown` | `## {policyId} {title}` + 조항 본문. 본문은 도구 결과의 `text`와 같은 DB 행이다 |
+| `policy://{version}/{documentId}/{sectionId}` | `text/markdown` | 단일 콘텐츠. 본문은 `get_policy_section`의 `text`와 **정확히 같은 문자열**(제목 미포함) |
 
-현재 `documentId`는 `operating-policy` 하나다. 운영자 화면의 근거 패널은 판단 결과의 `resourceUri`로 원문을 읽는다.
+현재 `documentId`는 `operating-policy` 하나다. 운영자 화면의 근거 패널은 판단 결과의 `resourceUri`로 원문을 읽고, 제목은 도구 결과의 `title`을 쓴다. Agent 소비자([AI1-08](AI1-08-rag-read-contract.md))는 URI 일치와 본문 완전 일치를 검사한다.
 
 ## 6. 조항과 위험 유형
 

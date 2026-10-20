@@ -125,8 +125,9 @@ class RagMcpToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result.is_error)
         data = result.structured_content["data"]
         self.assertEqual(result.structured_content["traceId"], TRACE_ID)
-        self.assertEqual(data["policyVersion"], VERSION)
+        self.assertEqual(set(data), {"matches"})
         self.assertEqual(len(data["matches"]), 2)
+        self.assertEqual({m["version"] for m in data["matches"]}, {VERSION})
         top = data["matches"][0]
         self.assertEqual(top["policyId"], "CP-2.1")
         self.assertEqual(top["category"], "PROFANITY")
@@ -198,12 +199,15 @@ class RagMcpToolTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(section["title"], "강퇴 심사")
         self.assertIn("24시간", section["text"])
+        self.assertEqual(len(resource.contents), 1)
+        self.assertEqual(str(resource.contents[0].uri), section["resourceUri"])
         self.assertEqual(resource.contents[0].mime_type, "text/markdown")
+        # Agent 소비자는 Resource 본문과 조항 text가 정확히 같아야 근거로 받아들인다.
+        self.assertEqual(resource.contents[0].text, section["text"])
         self.assertEqual(
-            resource.contents[0].text,
             render_resource(_row(next(c for c in CHUNKS if c.policy_id == "MP-4.1"))),
+            section["text"],
         )
-        self.assertIn(section["text"], resource.contents[0].text)
 
     async def test_missing_section_lists_existing_ids(self) -> None:
         async with Client(_server()) as client:
