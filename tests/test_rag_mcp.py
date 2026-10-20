@@ -48,33 +48,44 @@ class FakeEmbedder:
         return [0.0] * EMBEDDING_DIMENSIONS
 
 
+def _indexed_versions() -> dict[str, dict[str, dict[str, Any]]]:
+    # 실제 DB처럼 레포의 모든 정책 버전(v3.0, v3.1 …)을 색인된 상태로 둔다.
+    versions = {}
+    for path in sorted(POLICY_DIR.glob("policy-v*.md")):
+        version = path.stem.removeprefix("policy-v")
+        chunks = parse_policy(path.read_text(encoding="utf-8"), version=version)
+        versions[version] = {chunk.policy_id: _row(chunk) for chunk in chunks}
+    return versions
+
+
 class FakeRepository:
-    """색인된 v3.0 조항을 메모리에 두고, 질의에 조항 ID가 들어 있으면 그 조항을 1위로 돌려준다."""
+    """색인된 정책 버전을 메모리에 두고, preferred_id 조항을 1위로 돌려준다."""
 
     def __init__(self, embedding_model: str = "text-embedding-3-small") -> None:
         self.embedding_model = embedding_model
-        self.rows = {chunk.policy_id: _row(chunk) for chunk in CHUNKS}
+        self.by_version = _indexed_versions()
+        self.rows = self.by_version[VERSION]
         self.last_search: dict[str, Any] = {}
         self.preferred_id = "CP-2.1"
 
     async def list_versions(self) -> dict[str, str]:
-        return {VERSION: self.embedding_model}
+        return {version: self.embedding_model for version in self.by_version}
 
     async def list_policy_ids(self, version: str) -> list[str]:
-        return sorted(self.rows) if version == VERSION else []
+        return sorted(self.by_version.get(version, {}))
 
     async def search(self, query_vector, *, version, category, top_k):
         self.last_search = {"version": version, "category": category, "top_k": top_k}
         candidates = [
             row
-            for row in self.rows.values()
+            for row in self.by_version.get(version, {}).values()
             if category is None or row["category"] in (category.value, None)
         ]
         candidates.sort(key=lambda row: row["policy_id"] != self.preferred_id)
         return [{**row, "score": 0.9 - i * 0.1} for i, row in enumerate(candidates[:top_k])]
 
     async def get_section(self, policy_id: str, version: str):
-        return self.rows.get(policy_id) if version == VERSION else None
+        return self.by_version.get(version, {}).get(policy_id)
 
 
 class BrokenRepository(FakeRepository):
@@ -243,7 +254,7 @@ class RagMcpHttpTests(unittest.TestCase):
 
         self.assertEqual(
             health,
-            {"status": "ready", "readyForTasks": True, "indexedPolicyVersions": [VERSION]},
+            {"status": "ready", "readyForTasks": True, "indexedPolicyVersions": ["3.0", VERSION]},
         )
         self.assertEqual(unauthenticated.status_code, 401)
         self.assertEqual(wrong.status_code, 401)

@@ -33,7 +33,7 @@ uv run python -m app.business_mcp
 
 ## RAG 정책 색인 (AI2, #3)
 
-운영정책 v3.0 원문(`app/rag_mcp/policies/policy-v3.0.md`, 노션 Export)을 조항 ID(`CP/SP/MP/MM-x.y`) 헤딩 단위로 나눠 OpenAI 임베딩과 함께 pgvector `rag.policy_chunks`에 넣는다. 장 제목 등 조항 밖 텍스트는 색인하지 않는다.
+운영정책 원문(`app/rag_mcp/policies/policy-v{version}.md`, 노션 Export, 기본 v3.1)을 조항 ID(`CP/SP/MP/MM-x.y`) 헤딩 단위로 나눠 OpenAI 임베딩과 함께 pgvector `rag.policy_chunks`에 넣는다. 장 제목 등 조항 밖 텍스트는 색인하지 않는다.
 
 ```bash
 cp .env.example .env   # RAG_DB_URL, OPENAI_API_KEY 입력. .env는 커밋하지 않는다.
