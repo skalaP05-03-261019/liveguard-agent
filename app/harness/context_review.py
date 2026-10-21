@@ -58,7 +58,9 @@ def context_card(state: AgentState, review_id: str | None = None) -> dict[str, A
     )
     return {
         **card,
-        "handlingRoute": CONTEXT_ROUTE,
+        # PII NEEDS_REVIEW uses the same CONTEXT review, without rewriting the
+        # original case route (OpenAPI v1 A-16).
+        "handlingRoute": state.get("handling_route", CONTEXT_ROUTE),
         "snapshotId": state.get("snapshot_id"),
         "evidenceVersion": state.get("evidence_version"),
         "allowedDecisions": list(CONTEXT_DECISIONS),

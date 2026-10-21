@@ -5,6 +5,8 @@ Business/RAG MCP 조회와 실제 OpenAI 검증 결과는 각 이슈의 증거�
 
 ## #10 통합 진행
 
+2026-10-21 BE OpenAPI v1(A-9·A-16)에 따른 **PII NEEDS_REVIEW → 기존 CONTEXT 검토 interrupt**와 판정 제출 HTTP 어댑터는 [#46 변경·검증 범위](docs/AI1-46-openapi-v1-pii-context.md)를 참조한다. 판정 제출 어댑터와 전체 업무 Gateway 준비는 구분한다.
+
 최신 Notion 문맥 승인 정책과 AI2 PR #25를 연결한 별도 실행 Graph를
 `app.integration.workflow.build_moderation_graph`에 추가했다. CONTEXT 대기·보류·재개 후
 Backend 처리와 별도 KICK 대기를 연결하며 공유 실행 예산/마스킹을 사용한다.

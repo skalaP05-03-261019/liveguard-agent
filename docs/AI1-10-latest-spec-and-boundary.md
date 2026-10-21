@@ -1,5 +1,7 @@
 # AI1 #10 · 최신 명세 반영 및 문맥–강퇴 Graph 연결
 
+**2026-10-21 OpenAPI v1 후속:** BE PR #28(`882974d`)의 A-9/A-16에 따라 PII NEEDS_REVIEW는 기존 CONTEXT 검토로 interrupt하도록 갱신했다. 아래 문서의 해당 과거 설명보다 [#46 구현 범위와 잔여 계약](AI1-46-openapi-v1-pii-context.md)이 우선한다. PII 정상·위반은 필수 승인으로 확대하지 않는다. 나머지 TBD 제안의 확정 여부는 별도 유지한다.
+
 확인일: 2026-10-20. 정책 의미는 최신 팀 Notion, API의 구현 여부는 GitHub 소스를 구분한다.
 이 문서는 Backend 새 API의 팀 합의를 대신하지 않는다. Graph 연결과 실제 업무 DB 집행은 별도 완료 항목이다.
 
