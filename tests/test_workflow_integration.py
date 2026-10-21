@@ -98,6 +98,14 @@ class WorkflowTests(unittest.IsolatedAsyncioTestCase):
         return await resume_review(self.graph, review_kind=kind, thread_id=self.task.thread_id,
             review_id=UUID(review), decision_id=UUID(decision), case_id=self.task.case_id)
 
+    async def test_backend_confirmed_flood_routes_to_separate_kick_review_without_model(self):
+        await self.prepare(route="FLOOD_REVIEW",confirmationStatus="CONFIRMED_VIOLATION",
+                           kickReview={"required":True,"reviewId":KICK,"basisCaseIds":[REVIEW,DECISION,str(uuid4())]})
+        await self.start()
+        self.assertEqual((await pending_review(self.graph,self.task.thread_id))["reviewId"],KICK)
+        self.assertEqual(self.model.inputs,[])
+        self.assertEqual(self.backend.calls,[])
+
     async def test_all_model_verdicts_wait_for_context_decision_without_mutation(self):
         for verdict in ("NO_VIOLATION", "VIOLATION", "NEEDS_REVIEW"):
             await self.prepare(verdict=verdict)
