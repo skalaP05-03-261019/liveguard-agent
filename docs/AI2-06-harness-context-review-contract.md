@@ -27,7 +27,8 @@ AI 제안이 정상(NO_VIOLATION)이어도 문맥 경로에서는 공개 명령�
 | `apply_context_decision(state, gateway=)` | 새 `context_decision_id` | `gateway.get_decision(review_id=, decision_id=, trace_id=)` | `context_result` (아래 5) |
 | `route_context_decision(state)` | 조건 분기 | `DEFERRED`면 `"review_context"`, 아니면 `"done"` | – |
 
-- 비문맥 경로(`RULE_CONFIRMED`, `PII_INVESTIGATION` 등)는 세 노드 모두 그대로 통과한다.
+- 비문맥 경로(`RULE_CONFIRMED`, `PII_INVESTIGATION` 등)는 `request_context_review`를 그대로 통과한다.
+- 예외: 개인정보 조사 결과가 `NEEDS_REVIEW`면(팀 결정 A-16, #47) 통합 Graph의 `submit_pii`가 같은 CONTEXT 검토를 만들고 `context_review_id`를 넣은 뒤 `review_context`로 보낸다. 이후 대기·재개·보류는 문맥 경로와 같고, 카드의 `handlingRoute`는 원래 경로(`PII_INVESTIGATION`)를 유지한다.
 - 검토 요청 생성은 interrupt 노드와 분리돼 있어 재개·재시작 때 다시 호출되지 않는다.
 - 단독 실행·증거용 Graph: `app.harness.context_review.build_context_review_graph(gateway, checkpointer=…)`
 
