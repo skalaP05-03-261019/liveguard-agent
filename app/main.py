@@ -1,58 +1,99 @@
-"""API 경계만 제공한다. 작업 저장·실행 연결 전에는 202로 수락하지 않는다."""
-
+"""Authenticated durable HTTP task inbox. 202 means persisted, not executed."""
+import hmac
+import os
+import sqlite3
+from contextlib import asynccontextmanager
 from uuid import UUID
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.harness.resume import ResumeError, resume_review
+from app.runtime.bootstrap import configured_runtime
+from app.runtime.store import TaskConflict
 from app.schemas import TaskEnvelope
 
-app = FastAPI(title="LIVE:GUARD Agent", version="0.1.0")
+
+def create_app(*, runtime_factory=configured_runtime, service_token=None):
+    @asynccontextmanager
+    async def lifespan(application):
+        application.state.service_token = (service_token if service_token is not None
+                                           else os.getenv("AGENT_SERVICE_TOKEN", ""))
+        async with runtime_factory() as runtime:
+            application.state.runtime = runtime
+            if runtime and application.state.service_token.strip():
+                runtime.start()
+            try:
+                yield
+            finally:
+                if runtime:
+                    await runtime.close()
+                application.state.runtime = None
+
+    application = FastAPI(title="LIVE:GUARD Agent", version="0.2.0", lifespan=lifespan)
+
+    async def authenticate(authorization: str | None = Header(default=None)):
+        expected = getattr(application.state, "service_token", "")
+        if not expected or not expected.strip():
+            raise HTTPException(503, {"code": "SERVICE_AUTH_NOT_CONFIGURED"})
+        provided = authorization.removeprefix("Bearer ") if authorization else ""
+        if not authorization or not authorization.startswith("Bearer ") or not hmac.compare_digest(
+                provided.encode(), expected.encode()):
+            raise HTTPException(401, {"code": "UNAUTHENTICATED"}, headers={"WWW-Authenticate": "Bearer"})
+
+    def ready_runtime(*, require_worker=True):
+        runtime = getattr(application.state, "runtime", None)
+        if runtime is None or (require_worker and not runtime.ready):
+            raise HTTPException(503, {"code": "AGENT_RUNTIME_NOT_READY"})
+        return runtime
+
+    @application.get("/health")
+    async def health():
+        runtime = getattr(application.state, "runtime", None)
+        ready = bool(runtime and runtime.ready and getattr(application.state, "service_token", "").strip())
+        return {"status": "ready" if ready else "not_ready", "readyForTasks": ready}
+
+    async def accept(task_id, task, *, resume):
+        if task_id != task.task_id:
+            raise HTTPException(400, "URL taskId and body taskId must match")
+        if resume:
+            if task.kind != "RESUME_REVIEW" or task.review_kind is None or task.review_id is None:
+                raise HTTPException(400, "RESUME_REVIEW requires reviewKind and reviewId")
+        elif task.kind not in {"ANALYZE", "REANALYZE"}:
+            raise HTTPException(400, "Use /resume for reviews; RECONCILE is not implemented")
+        runtime = ready_runtime()
+        try:
+            record, created = runtime.store.accept(task)
+        except TaskConflict as error:
+            raise HTTPException(409, {"code": str(error)}) from None
+        except sqlite3.Error:
+            raise HTTPException(503, {"code": "TASK_STORE_UNAVAILABLE"}) from None
+        return JSONResponse(status_code=202 if created else 200,
+                            content={**record, "duplicate": not created})
+
+    @application.post("/agent/tasks/{task_id}/run", dependencies=[Depends(authenticate)])
+    async def run_task(task_id: UUID, task: TaskEnvelope):
+        return await accept(task_id, task, resume=False)
+
+    @application.post("/agent/tasks/{task_id}/resume", dependencies=[Depends(authenticate)])
+    async def resume_task(task_id: UUID, task: TaskEnvelope):
+        return await accept(task_id, task, resume=True)
+
+    @application.get("/agent/tasks/{task_id}", dependencies=[Depends(authenticate)])
+    async def get_task(task_id: UUID):
+        # Saved outcomes remain readable when the worker has stopped. Accepting
+        # new work still requires a live worker via ready_runtime above.
+        runtime = getattr(application.state, "runtime", None)
+        if runtime is None:
+            raise HTTPException(503, {"code": "AGENT_RUNTIME_NOT_READY"})
+        try:
+            record = runtime.store.get(task_id)
+        except sqlite3.Error:
+            raise HTTPException(503, {"code": "TASK_STORE_UNAVAILABLE"}) from None
+        if record is None:
+            raise HTTPException(404, {"code": "TASK_NOT_FOUND"})
+        return record
+
+    return application
 
 
-@app.get("/health")
-async def health():
-    return {"status": "scaffold", "readyForTasks": False}
-
-
-@app.post("/agent/tasks/{task_id}/run", responses={501: {"description": "Scaffold only"}})
-async def run_task(task_id: UUID, task: TaskEnvelope):
-    if task_id != task.task_id:
-        raise HTTPException(400, "URL taskId and body taskId must match")
-    if task.kind == "RESUME_REVIEW":
-        raise HTTPException(400, "Use /resume for RESUME_REVIEW")
-    # TODO: 서비스 인증·작업 영속화·중복 방지·실행기 연결 후에만 202 반환.
-    raise HTTPException(501, "Task persistence and Agent runner are not connected")
-
-
-@app.post(
-    "/agent/tasks/{task_id}/resume",
-    status_code=202,
-    responses={
-        404: {"description": "No checkpoint for threadId"},
-        409: {"description": "No pending review (already resumed), or review kind/case/review mismatch"},
-        501: {"description": "Checkpointed Agent graph is not configured"},
-    },
-)
-async def resume_task(task_id: UUID, task: TaskEnvelope):
-    if task_id != task.task_id:
-        raise HTTPException(400, "URL taskId and body taskId must match")
-    if task.kind != "RESUME_REVIEW":
-        raise HTTPException(400, "Expected RESUME_REVIEW")
-    # checkpointer가 붙은 Graph는 실행기 연결(#10)에서 app.state.agent_graph로 주입한다.
-    graph = getattr(app.state, "agent_graph", None)
-    if graph is None:
-        raise HTTPException(501, "Checkpointed Agent graph is not configured")
-    if task.review_kind is None or task.review_id is None:
-        raise HTTPException(400, "RESUME_REVIEW requires reviewKind (CONTEXT or KICK) and reviewId")
-    try:
-        # 결정 내용은 decisionId로만 받고, 결정·승인 여부는 Graph가 Backend 저장본으로 확인한다.
-        result = await resume_review(
-            graph, review_kind=task.review_kind, thread_id=task.thread_id,
-            review_id=task.review_id, decision_id=task.decision_id, case_id=task.case_id,
-        )
-    except ResumeError as error:
-        raise HTTPException(error.status_code, {"code": error.code}) from None
-    result_key = "kickResult" if task.review_kind == "KICK" else "contextResult"
-    return JSONResponse(status_code=202, content={"taskId": str(task_id), result_key: result})
+app = create_app()

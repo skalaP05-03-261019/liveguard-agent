@@ -2,6 +2,7 @@
 2건 미요청 / 3건 중단·재시작 후 대기 / 승인→강퇴·거절→미강퇴 / 중복 미가산·중복 승인 1회."""
 
 import os
+import tempfile
 import unittest
 import uuid
 from typing import Any
@@ -16,6 +17,7 @@ from app.harness.checkpoint import allowed_state_types, open_checkpointer
 from app.harness.kick_review import KICK_APPROVAL_REQUIRED, build_kick_review_graph
 from app.harness.resume import ResumeError, pending_kick_approval, resume_kick_review, thread_config
 from app.main import app as agent_app
+from runtime_support import AUTH, test_application, wait_for_task
 
 CASE_ID = "00000000-0000-4000-8000-0000000000c1"
 TASK_ID = "00000000-0000-4000-8000-0000000000a1"
@@ -202,28 +204,30 @@ class ResumeEndpointTests(unittest.IsolatedAsyncioTestCase):
         await graph.ainvoke({**case_state(required=True, basis=[C1, C2, C3]), "thread_id": thread},
                             thread_config(thread))
         agent_app.state.agent_graph = graph
-        with TestClient(agent_app) as client:
-            no_kind = client.post(f"/agent/tasks/{TASK_ID}/resume",
-                                  json=self.envelope(thread, review_kind=None))
-            context = client.post(f"/agent/tasks/{TASK_ID}/resume",
-                                  json=self.envelope(thread, review_kind="CONTEXT"))
-            first = client.post(f"/agent/tasks/{TASK_ID}/resume", json=self.envelope(thread))
-            second = client.post(f"/agent/tasks/{TASK_ID}/resume", json=self.envelope(thread))
+        origin = self.envelope(thread)
+        with tempfile.TemporaryDirectory() as directory:
+            application, _ = test_application(f"{directory}/tasks.db", graph, origin)
+            with TestClient(application) as client:
+                no_kind = client.post(f"/agent/tasks/{TASK_ID}/resume", headers=AUTH,
+                                      json={**origin, "reviewKind": None})
+                context = client.post(f"/agent/tasks/{TASK_ID}/resume", headers=AUTH,
+                                      json={**origin, "reviewKind": "CONTEXT", "decisionId": str(uuid.uuid4())})
+                self.assertEqual(context.status_code, 202)
+                self.assertEqual(wait_for_task(client, TASK_ID)["code"], "REVIEW_KIND_MISMATCH")
+                valid = origin
+                first = client.post(f"/agent/tasks/{TASK_ID}/resume", json=valid, headers=AUTH)
+                wait_for_task(client, TASK_ID)
+                second = client.post(f"/agent/tasks/{TASK_ID}/resume", json=valid, headers=AUTH)
         self.assertEqual(no_kind.status_code, 400)
-        # 강퇴 대기 thread를 문맥 결정으로 재개하지 않는다.
-        self.assertEqual(context.status_code, 409)
-        self.assertEqual(context.json()["detail"]["code"], "REVIEW_KIND_MISMATCH")
         self.assertEqual(first.status_code, 202)
-        self.assertEqual(first.json()["kickResult"]["status"], "APPLIED")
-        self.assertEqual(second.status_code, 409)
-        self.assertEqual(second.json()["detail"]["code"], "NO_PENDING_APPROVAL")
+        self.assertEqual(second.status_code, 200)
+        self.assertTrue(second.json()["duplicate"])
         self.assertEqual(len(gateway.kick_calls), 1)
 
-    async def test_resume_endpoint_is_501_without_configured_graph(self) -> None:
-        agent_app.state.agent_graph = None
+    async def test_resume_endpoint_requires_configured_service_auth(self) -> None:
         with TestClient(agent_app) as client:
             response = client.post(f"/agent/tasks/{TASK_ID}/resume", json=self.envelope("t"))
-        self.assertEqual(response.status_code, 501)
+        self.assertEqual(response.status_code, 503)
 
 
 @unittest.skipUnless(

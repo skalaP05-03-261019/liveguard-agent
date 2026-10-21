@@ -20,7 +20,7 @@ from app.business_mcp.config import Settings
 from app.business_mcp.main import create_app
 from app.business_mcp.schemas import BackendError
 from app.clients.business_mcp import AgentToolError, BusinessMcpReadClient, BusinessMcpSettings
-from app.main import app
+from app.main import create_app as create_agent_app
 from app.nodes import load_case
 from app.schemas import AnalysisResult, TaskEnvelope
 
@@ -108,11 +108,11 @@ class FixtureTools:
 
 
 class ContractTests(unittest.TestCase):
-    def test_new_input_and_unimplemented_api_status(self):
+    def test_new_input_and_fail_closed_api_status(self):
         task = FIXTURE["task"]
         self.assertEqual(TaskEnvelope.model_validate(task).snapshot_id, UUID(task["snapshotId"]))
-        with TestClient(app) as client:
-            self.assertEqual(client.post(f'/agent/tasks/{task["taskId"]}/run', json=task).status_code, 501)
+        with TestClient(create_agent_app(service_token="contract-test"), headers={"Authorization": "Bearer contract-test"}) as client:
+            self.assertEqual(client.post(f'/agent/tasks/{task["taskId"]}/run', json=task).status_code, 503)
             wrong_url = "00000000-0000-4000-8000-000000000099"
             self.assertEqual(client.post(f"/agent/tasks/{wrong_url}/run", json=task).status_code, 400)
             old = {**task, "expectedCaseVersion": 1}
@@ -122,7 +122,7 @@ class ContractTests(unittest.TestCase):
             review = {**task, "kind": "RESUME_REVIEW"}
             self.assertEqual(client.post(f'/agent/tasks/{task["taskId"]}/resume', json=review).status_code, 422)
             review["decisionId"] = wrong_url
-            self.assertEqual(client.post(f'/agent/tasks/{task["taskId"]}/resume', json=review).status_code, 501)
+            self.assertEqual(client.post(f'/agent/tasks/{task["taskId"]}/resume', json=review).status_code, 400)
             self.assertEqual(client.post(f'/agent/tasks/{task["taskId"]}/run', json=review).status_code, 400)
             self.assertEqual(client.post(f'/agent/tasks/{task["taskId"]}/resume', json=task).status_code, 400)
 
