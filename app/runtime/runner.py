@@ -3,6 +3,8 @@ import asyncio
 
 from app.harness.resume import ResumeError, resume_review, thread_config
 from app.schemas import TaskEnvelope
+from app.runtime.outcomes import checkpoint_outcome
+from app.runtime.store import MaintenanceBusy
 
 
 class TaskRunner:
@@ -38,6 +40,13 @@ class TaskRunner:
             self.failure = True
 
     async def run_one(self):
+        try:
+            with self.store.execution_lock():
+                return await self._run_one()
+        except MaintenanceBusy:
+            return False
+
+    async def _run_one(self):
         job = self.store.claim()
         if job is None:
             return False
@@ -55,10 +64,8 @@ class TaskRunner:
                     return True
                 await self.graph.ainvoke({"task": task}, thread_config(task.thread_id))
             state = await self.graph.aget_state(thread_config(task.thread_id))
-            status = "WAITING_REVIEW" if state.interrupts else state.values.get("task_outcome", "UNKNOWN")
-            if status not in {"WAITING_REVIEW", "SUCCEEDED", "FAILED", "UNKNOWN", "NEEDS_REVIEW"}:
-                status = "UNKNOWN"
-            self.store.finish(key, status)
+            status, code = checkpoint_outcome(state)
+            self.store.finish(key, status, code)
         except ResumeError as error:
             # No Command was applied. Keep the thread available for a corrected decision.
             state = await self.graph.aget_state(thread_config(task.thread_id))

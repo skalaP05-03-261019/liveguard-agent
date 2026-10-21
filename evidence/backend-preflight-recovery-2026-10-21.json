@@ -1,0 +1,31 @@
+{
+  "issue": 40,
+  "backendSourceMain": "9669c370cbb368530f1d4111070f9255051bd2a1",
+  "backendRunningRuntime": "71130fa5ea7e5b6c14a2f985f8fb9653570eaeb9",
+  "localASGI": {
+    "tests": 224,
+    "passed": 212,
+    "skipped": 12,
+    "seconds": 5.203,
+    "result": "OK",
+    "skipReason": "Postgres test DB URL unavailable; Docker socket and Python local TCP denied"
+  },
+  "realBackendObservation": {
+    "kind": "observed_read_only_http",
+    "method": "GET",
+    "path": "/internal/cases/7d754b4a-6f70-4262-9d89-0c323b15b73f",
+    "httpStatus": 409,
+    "code": "CASE_NOT_READY",
+    "retryable": false
+  },
+  "newPreflightWireTest": {
+    "kind": "controlled",
+    "backendResponse": "409 CASE_NOT_READY",
+    "adapter": "BackendApi + real MCP SDK/ASGI transport + inspect_task",
+    "noLivePreflightClaim": true
+  },
+  "realModelCalls": 0,
+  "actualSanctions": 0,
+  "localServicesRebuilt": false,
+  "ci": "pending"
+}
