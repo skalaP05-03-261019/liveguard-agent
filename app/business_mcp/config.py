@@ -2,6 +2,8 @@ from dataclasses import dataclass
 import os
 from urllib.parse import urlsplit
 
+DEFAULT_ALLOWED_HOSTS = ("business-mcp:*", "localhost:*", "127.0.0.1:*")
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -10,7 +12,7 @@ class Settings:
     agent_token: str
     host: str
     port: int
-    allowed_hosts: tuple[str, ...] = ("127.0.0.1:*", "localhost:*")
+    allowed_hosts: tuple[str, ...] = DEFAULT_ALLOWED_HOSTS
 
     def __post_init__(self) -> None:
         parsed_url = urlsplit(self.backend_base_url)
@@ -18,6 +20,8 @@ class Settings:
             raise ValueError("BUSINESS_BACKEND_BASE_URL must be an absolute HTTP URL")
         if not self.host:
             raise ValueError("BUSINESS_MCP_HOST cannot be empty")
+        if not self.allowed_hosts or any(not item.strip() or item == "*" for item in self.allowed_hosts):
+            raise ValueError("BUSINESS_MCP_ALLOWED_HOSTS requires explicit hosts, not an empty list or '*'")
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -38,7 +42,7 @@ class Settings:
             host=os.getenv("BUSINESS_MCP_HOST", "127.0.0.1"),
             port=port,
             allowed_hosts=tuple(host.strip() for host in os.getenv(
-                "BUSINESS_MCP_ALLOWED_HOSTS", "127.0.0.1:*,localhost:*"
+                "BUSINESS_MCP_ALLOWED_HOSTS", ",".join(DEFAULT_ALLOWED_HOSTS)
             ).split(",") if host.strip()),
         )
 
