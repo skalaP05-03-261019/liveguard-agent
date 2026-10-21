@@ -22,3 +22,22 @@
 이 PR은 운영자 근거/독립 진단 PR #36 위에 쌓았습니다. #36 병합 후 base를 main으로 조정해야 합니다. 전체 회귀 결과는 `evidence/backend-target-adapter-regression-2026-10-21.json`에 기록합니다.
 
 최종 회귀: 실제 격리 Postgres/pgvector를 둔 ASGI 206개(5.461초), TCP 206개(17.484초), skip 0, 모두 통과. 실제 영속 사건의 읽기 전용 HTTP/MCP 재조회는 `evidence/backend-readiness-recheck-2026-10-21.json`에 별도로 기록했습니다. context/channel-info 200과 case/user-history/security-facts/kick-eligibility 501을 다시 확인했으며, 재조회 중 메시지/판정/제재를 생성하지 않았습니다.
+
+## 후속 업데이트: BE PR #23 갱신과 신규 #24
+
+개발 중 PR #23이 `cceb2d57`로 갱신되며 TBD-08·정책 표기가 `v3.1`로 수정됐습니다. **미병합** 상태이며 main의 문서는 아직 이전 상태입니다. 원문 의미의 충돌을 풀려는 방향은 Agent 3.1과 일치하나 `v3.1`/`3.1`의 저장 ID 표기와 환경변수 통합은 별도 확인 대상입니다. 임의 정규화로 버전 불일치를 숨기지 않습니다.
+
+새 BE PR [#24](https://github.com/skalaP05-03-261019/liveguard-be/pull/24)의 head `9d498a82`를 별도 이미지와 전용 `liveguard_be24_probe` DB에서 실행했습니다. 기존 사용자 확인용 서버/DB를 이 미병합 브랜치로 교체하지 않았습니다.
+
+| 시험 | 결과 |
+| --- | --- |
+| 실제 API로 새 채팅→후보 저장→사건 조회 | 409 CASE_NOT_READY. liveId/policyVersion/handlingRoute가 아직 없음 |
+| Agent HTTP adapter로 같은 준비 미완료 사건 조회 | CASE_NOT_READY, retryable=false 그대로 보존 |
+| 격리 DB에 명시적 liveId/3.1/CONTEXT_REVIEW fixture를 설정 | 200. 실제 Spring의 targets[]와 추가된 targetMessageIds/targetVersions 모두 일치, CaseSnapshot 파싱 성공 |
+| 기간 1일을 명시한 이력 조회 | 200, 확정 위반 0. 시험용 기간이며 정책 승인 아님 |
+| 기간 없는 이력 조회 | 501, 기본 기간 추정 없음 |
+| 아직 필요한 메타데이터 | InternalCase userId, context caseId/snapshotId/evidenceVersion/visibility |
+
+PR #24가 구형 대상 필드도 함께 반환하므로 이 PR의 동시 표현 일치 검사도 의미가 있습니다. 그러나 case 응답의 userId를 별칭 U1에서 복원하거나, context의 snapshot 값을 다른 응답에서 추정해 채우지 않습니다. 승인/dispatch/API 계약은 아직 미연결입니다.
+
+이 시험은 **통제된 메타데이터 fixture를 사용한 실제 Spring/Postgres 조회 호환 검증**입니다. 실제 방송 lifecycle·전체 Agent 조사·운영자 승인 성공 증거가 아닙니다. 모델 호출과 제재는 0이며 [분리한 시험 결과](../evidence/backend-pr24-compatibility-2026-10-21.json)를 참조합니다. 시험 후 별도 서버는 중지하고 사용자 확인용 main 환경은 유지합니다.

@@ -1,0 +1,37 @@
+{
+  "backendPR": 24,
+  "backendHead": "9d498a8272a3ee7dd95f439e0dd730e3956d6969",
+  "kind": "controlled_metadata_fixture_on_real_isolated_spring_postgres",
+  "merged": false,
+  "realModelCalls": 0,
+  "actualSanctions": 0,
+  "checks": {
+    "realNewCandidate": {
+      "httpStatus": 409,
+      "code": "CASE_NOT_READY"
+    },
+    "adapterPreservesNotReady": true,
+    "explicitMetadataFixture": {
+      "httpStatus": 200,
+      "bothTargetFormatsAgree": true,
+      "missingUserIdNotInferred": true
+    },
+    "explicitOneDayHistory": {
+      "httpStatus": 200,
+      "violationCount": 0,
+      "policyWindowApproved": false
+    },
+    "noImplicitHistoryWindow": {
+      "httpStatus": 501
+    },
+    "contextStillMissingSnapshotMetadata": true,
+    "findingsUnchanged": 0
+  },
+  "status": "COMPATIBLE_READ_FOUNDATION_WITH_BLOCKERS",
+  "remaining": [
+    "real candidate liveId/policyVersion/handlingRoute assignment",
+    "case userId",
+    "context snapshot/version/visibility",
+    "CONTEXT/KICK review and dispatch"
+  ]
+}
