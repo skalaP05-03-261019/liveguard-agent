@@ -1,6 +1,6 @@
 # AI2-05 agent 레포 Docker 이미지와 compose 통합 안내
 
-> 상태: 2026-10-20, #22. compose 파일 통합은 Infra(강인서) 담당이다. 아래는 검증된 서비스 정의 예시다.
+> 상태: 2026-10-20, #22. 2026-10-21 갱신: Business MCP 허용 Host(#32), Agent 작업 접수 설정(#27). compose 파일 통합은 Infra(강인서) 담당이다. 아래는 서비스 정의 예시다.
 
 ## 1. 이미지
 
@@ -52,6 +52,7 @@ DB는 Backend compose의 `pgvector/pgvector:pg16`을 함께 쓴다. RAG는 `rag`
     environment:
       BUSINESS_MCP_HOST: 0.0.0.0
       BUSINESS_MCP_PORT: "8002"
+      BUSINESS_MCP_ALLOWED_HOSTS: business-mcp:*,localhost:*,127.0.0.1:*
       BUSINESS_BACKEND_BASE_URL: http://backend:8080
       BUSINESS_MCP_AGENT_TOKEN: ${BUSINESS_MCP_AGENT_TOKEN}
       BUSINESS_MCP_SERVICE_TOKEN: ${BUSINESS_MCP_SERVICE_TOKEN}
@@ -67,11 +68,21 @@ DB는 Backend compose의 `pgvector/pgvector:pg16`을 함께 쓴다. RAG는 `rag`
       MODEL_PROVIDER: openai
       MODEL_NAME: ${MODEL_NAME}
       MODEL_API_KEY: ${OPENAI_API_KEY}
+      AGENT_SERVICE_TOKEN: ${AGENT_SERVICE_TOKEN}     # Backend → Agent Bearer
+      AGENT_TASK_DB_PATH: /var/lib/liveguard-agent/tasks.sqlite3
+      AGENT_GATEWAY_FACTORY: ""                        # BE Gateway 구현 전에는 비워 둔다(readyForTasks=false)
+    volumes:
+      - agent-tasks:/var/lib/liveguard-agent             # 작업 저장소는 영속 볼륨 (uid 10001 쓰기 가능)
     depends_on: [rag-mcp, business-mcp]
+
+# compose 최상위
+volumes:
+  agent-tasks:
 ```
 
 - agent·MCP 서비스는 외부 공개 포트가 필요 없다(내부 네트워크). 로컬 확인용으로만 `ports`를 연다.
 - 비밀값(API 키, 토큰)은 compose `.env`로 주입하고 커밋하지 않는다.
+- Agent 작업 접수 API와 상태 값은 [AI1-10-task-runtime.md](AI1-10-task-runtime.md). `AGENT_GATEWAY_FACTORY`가 비어 있으면 `/health`는 `not_ready`이고 run/resume는 503이다.
 - 정책을 개정하면 `POLICY_VERSION`을 올리고 `rag-index`를 다시 실행한다. Backend의 사건 `policyVersion`도 같은 값이어야 한다.
 
 ## 3. 컨테이너 간 호출과 Host 검사
@@ -79,7 +90,7 @@ DB는 Backend compose의 `pgvector/pgvector:pg16`을 함께 쓴다. RAG는 `rag`
 MCP SDK 2.3의 Streamable HTTP는 DNS rebinding 방지를 위해 Host 헤더를 검사하며, 기본값은 `localhost`/`127.0.0.1`만 허용한다. compose에서 Agent는 `Host: rag-mcp:8003`처럼 서비스 이름으로 호출하므로 허용 목록에 서비스 이름을 넣어야 한다. 넣지 않으면 `421 Invalid Host header`로 실패한다.
 
 - RAG MCP: `RAG_MCP_ALLOWED_HOSTS`로 설정한다(이 PR).
-- Business MCP: 같은 문제가 있다(2026-10-20 컨테이너 검증에서 421 확인). `streamable_http_app(transport_security=TransportSecuritySettings(allowed_hosts=[...], allowed_origins=[...]))`로 같은 방식의 설정이 필요하다.
+- Business MCP: `BUSINESS_MCP_ALLOWED_HOSTS`로 설정한다(#32에서 해결). 10/20 검증 당시에는 421이었다.
 
 ## 4. 검증 기록 (2026-10-20, 임시 compose)
 
@@ -88,7 +99,7 @@ MCP SDK 2.3의 Streamable HTTP는 DNS rebinding 방지를 위해 Host 헤더를 
 | rag-index | `indexed policy v3.1: 29 sections (text-embedding-3-small)` |
 | rag-mcp `/health` | `ready`, `indexedPolicyVersions: ["3.1"]`, 토큰 없는 `/mcp` 401 |
 | business-mcp `/health` | `ready` |
-| agent `/health` | `scaffold` (실행기 연결 #10 전 정상) |
+| agent `/health` | `scaffold` (당시 결과. #27 이후는 `ready`/`not_ready`) |
 | agent 컨테이너 → rag-mcp (`app.check_rag`) | `verified_against_configured_rag_server` (SP-2.1, CP-5.1) |
-| agent 컨테이너 → business-mcp | `421 Invalid Host header` (위 3 참고) |
+| agent 컨테이너 → business-mcp | `421 Invalid Host header` (당시 결과. #32에서 허용 Host 설정 추가) |
 | DB 스키마 | `rag`(29행), checkpointer `agent` |
