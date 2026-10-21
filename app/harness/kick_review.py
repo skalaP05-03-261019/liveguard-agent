@@ -12,6 +12,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
 from app.state import AgentState
+from app.harness.safety import safe_presentation
 
 KICK_APPROVAL_REQUIRED = "KICK_APPROVAL_REQUIRED"
 REVIEW_KIND = "KICK"
@@ -55,13 +56,14 @@ def _basis_case_ids(kick_review: dict[str, Any]) -> list[str] | None:
     return ids
 
 
-def review_card(state: AgentState, *, card_type: str, review_kind: str, review_id: str) -> dict[str, Any]:
+def review_card(state: AgentState, *, card_type: str, review_kind: str, review_id: str | None) -> dict[str, Any]:
     """운영자 심사 카드 공통 부분(강퇴·문맥). 마스킹된 메시지와 판단 근거만 담고 기간·실행 명령은 넣지 않는다."""
     findings = [
         finding.model_dump(mode="json", by_alias=True) if hasattr(finding, "model_dump") else finding
         for finding in state.get("message_findings", [])
     ]
-    return {
+    message_keys = ("messageId", "authorAlias", "text", "sentAt", "visibility", "replyToId")
+    return safe_presentation({
         "type": card_type,
         "reviewKind": review_kind,
         "reviewId": review_id,
@@ -71,17 +73,24 @@ def review_card(state: AgentState, *, card_type: str, review_kind: str, review_i
         "threadId": state.get("thread_id"),
         "traceId": state.get("trace_id"),
         "policyVersion": state.get("policy_version"),
-        "targetMessages": state.get("target_messages", []),
-        "contextMessages": state.get("context_messages", []),
+        "snapshotId": state.get("snapshot_id"),
+        "evidenceVersion": state.get("evidence_version"),
+        "decisionAuthority": "OPERATOR",
+        "targetMessages": [{key: value for key, value in item.items() if key in message_keys}
+                           for item in state.get("target_messages", [])],
+        "contextMessages": [{key: value for key, value in item.items() if key in message_keys}
+                            for item in state.get("context_messages", [])],
         "findings": [
-            {key: finding.get(key) for key in ("messageId", "verdict", "categories", "policyIds", "reason")}
+            {**{key: finding.get(key) for key in ("messageId", "verdict", "categories", "policyIds", "reason")},
+             "evidenceMessageIds": finding.get("evidenceMessageIds", []),
+             "missingFacts": finding.get("missingFacts", [])}
             for finding in findings
         ],
         "policyEvidence": [
-            {key: item.get(key) for key in ("policyId", "title", "resourceUri")}
+            {key: item.get(key) for key in ("policyId", "version", "category", "title", "text", "resourceUri")}
             for item in state.get("policy_evidence", [])
         ],
-    }
+    })
 
 
 def approval_payload(state: AgentState, review_id: str, basis_case_ids: list[str]) -> dict[str, Any]:

@@ -1,0 +1,14 @@
+{
+  "baseCommit": "8b8e49c6f7cb396964f0e3f769ecaeb9ded8f8db",
+  "date": "2026-10-21",
+  "mergedExistingPRs": [27, 29, 32, 34],
+  "kind": "controlled_regression_with_real_postgres",
+  "asgi": {"tests": 199, "skipped": 0, "seconds": 5.543, "exitCode": 0},
+  "tcp": {"tests": 199, "skipped": 0, "seconds": 16.322, "exitCode": 0},
+  "finalDiagnosticFocusedRun": {"tests": 7, "seconds": 0.020, "exitCode": 0},
+  "actualPostgresAndPgvector": true,
+  "realModelCalls": 0,
+  "actualSanctions": 0,
+  "command": "python -m unittest discover -s tests -q (RAG_TEST_DB_URL, AGENT_TEST_CHECKPOINT_DB_URL configured; LIVEGUARD_TEST_TCP=1 for TCP)",
+  "scope": "operator evidence and independent read diagnostics; actual BE connection is recorded separately"
+}

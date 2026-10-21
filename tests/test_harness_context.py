@@ -109,6 +109,31 @@ class ContextReviewTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.gateway.create_calls), 1)
         self.assertNotIn("context_result", await self.values())
 
+    async def test_uncertain_card_keeps_evidence_and_missing_facts_without_leaking_raw_text(self) -> None:
+        from copy import deepcopy
+        state = context_state()
+        state["message_findings"][0].update({
+            "verdict": "NEEDS_REVIEW", "evidenceMessageIds": ["m-2", "m-3"],
+            "missingFacts": ["연락처 010-1234-5678의 소유자가 확인되지 않음"],
+        })
+        state["target_messages"][0].update(text="연락처 010-1234-5678", internalToken="never-present")
+        state["policy_evidence"] = [{"policyId": "CP-3.2", "version": "3.1", "title": "괴롭힘",
+                                    "text": "대상과 전후 맥락을 확인한다.", "category": "HARASSMENT",
+                                    "resourceUri": "policy://3.1/document/CP-3.2", "debug": "never-present"}]
+        original = deepcopy(state)
+        await self.start(state)
+        card = await pending_context_review(self.graph, self.thread)
+        self.assertEqual(card["findings"][0]["evidenceMessageIds"], ["m-2", "m-3"])
+        self.assertEqual(card["findings"][0]["missingFacts"], ["연락처 [PHONE]의 소유자가 확인되지 않음"])
+        self.assertEqual(card["policyEvidence"][0]["text"], "대상과 전후 맥락을 확인한다.")
+        self.assertEqual(card["policyEvidence"][0]["version"], "3.1")
+        self.assertEqual(card["decisionAuthority"], "OPERATOR")
+        self.assertNotIn("010-1234-5678", str(card))
+        self.assertNotIn("never-present", str(card))
+        self.assertEqual(state, original)
+        self.assertEqual(self.gateway.decision_calls, [])
+        self.assertNotIn("context_result", await self.values())
+
     async def test_confirm_normal_keeps_model_findings(self) -> None:
         await self.start(context_state())
         result = await self.resume(NORMAL)
