@@ -119,13 +119,44 @@ def build_moderation_graph(*, model, business, policy, backend: ModerationGatewa
         return "investigate"
 
     async def investigate(state):
-        return await guarded_investigate(state, model=model, business=business,
-                                         policy=policy, observer=observer)
+        import time
+        async def progress(event, payload):
+            publish = getattr(backend,"progress",None)
+            if publish:
+                try:
+                    await publish(case_id=state["case_id"],trace_id=state["trace_id"],event=event,payload=payload)
+                except AgentToolError:
+                    pass  # A status notification cannot authorize or repeat a mutation.
+        started=time.monotonic()
+        await progress("TOOL_START",{"tool":"investigate","callId":state["task_id"]})
+        result = await guarded_investigate(state, model=model, business=business,
+                                           policy=policy, observer=observer)
+        await progress("TOOL_END",{"tool":"investigate","callId":state["task_id"],
+                       "status":result.get("task_outcome") or "COMPLETED",
+                       "elapsedMs":int((time.monotonic()-started)*1000)})
+        return result
 
     def after_investigation(state):
+        if (state.get("task_outcome") == "NEEDS_REVIEW"
+                and (state.get("error") or {}).get("code") == "EXECUTION_LIMIT"):
+            return "manual_review"
         if state.get("task_outcome"):
             return "finish"
         return "validate"
+
+    async def manual_review(state):
+        # A bounded investigation may stop without a verdict. Keep HELD and
+        # expose the limitation to the operator; do not invent policy evidence.
+        from app.schemas import MessageFinding
+        return {"task_outcome": None, "error": None,
+                "investigation_error": state.get("error"),
+                "message_findings": [MessageFinding.model_validate({
+                    "messageId": message["messageId"], "verdict": "NEEDS_REVIEW",
+                    "categories": [], "policyIds": [],
+                    "evidenceMessageIds": [message["messageId"]],
+                    "reason": "AI 조사 실행 한도에 도달해 판단을 완료하지 못했습니다.",
+                    "missingFacts": ["정책과 문맥을 운영자가 직접 확인해야 합니다. (EXECUTION_LIMIT)"]})
+                    for message in state["target_messages"]]}
 
     async def validate(state):
         try:
@@ -227,6 +258,9 @@ def build_moderation_graph(*, model, business, policy, backend: ModerationGatewa
                             or validated.policy_version != state["policy_version"]
                             or validated.expected_evidence_version != state["evidence_version"]):
                         return {"status": "INVALID"}
+                    if validated.live_id is not None and (str(validated.live_id) != state["live_id"]
+                            or str(validated.review_id) != review_id):
+                        return {"status":"INVALID"}
                 return result
 
             async def kick(self, action_command, *, trace_id):
@@ -258,10 +292,12 @@ def build_moderation_graph(*, model, business, policy, backend: ModerationGatewa
                      "submit_pii": submit_pii, "review_kick": kick_wait, "execute_kick": kick,
                      "flood_pending": flood_pending, "finish": finish}.items():
         graph.add_node(name, fn)
+    graph.add_node("manual_review", manual_review)
+    graph.add_edge("manual_review", "validate")
     graph.add_edge(START, "load_case")
     for source, router, destinations in [
         ("load_case", after_load, ["finish", "review_kick", "flood_pending", "investigate"]),
-        ("investigate", after_investigation, ["finish", "validate"]),
+        ("investigate", after_investigation, ["finish", "validate", "manual_review"]),
         ("validate", after_validation, ["finish", "request_context_review", "submit_pii"]),
         ("apply_context_decision", after_decision, ["review_context", "apply_context", "finish"]),
         ("apply_context", after_backend, ["finish", "review_kick"]),
