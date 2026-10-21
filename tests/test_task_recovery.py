@@ -17,7 +17,7 @@ from app.runtime.recovery import reconcile_task
 from app.runtime.runner import TaskRunner
 from app.runtime.store import MaintenanceBusy, TaskStore
 import test_workflow_integration as workflow
-from test_workflow_integration import REVIEW, DECISION
+from test_workflow_integration import REVIEW, DECISION, KICK, USER
 
 
 class RecoveryTests(unittest.IsolatedAsyncioTestCase):
@@ -75,6 +75,25 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
         report = await reconcile_task(self.store, self.graph, self.task.task_id, apply=True)
         self.assertEqual(report["proposedStatus"], "WAITING_REVIEW")
         self.assertNotIn("apply", [call[0] for call in self.backend.calls])
+
+    async def test_context_completion_restores_separate_kick_wait_without_authorizing_kick(self):
+        await TaskRunner(self.store, self.graph).run_one()
+        resume = self.decision()
+        self.backend.decision = "CONFIRM_VIOLATION"
+        self.backend.require_kick = True
+        self.store.accept(resume)
+        self.store.claim()
+        await resume_review(self.graph, review_kind="CONTEXT", thread_id=resume.thread_id,
+                            review_id=resume.review_id, decision_id=resume.decision_id, case_id=resume.case_id)
+        report = await reconcile_task(self.store, self.graph, self.task.task_id, apply=True)
+        self.assertEqual(report["proposedStatus"], "WAITING_REVIEW")
+        kick = resume.model_copy(update={"review_kind": "KICK", "review_id": UUID(KICK),
+                                         "decision_id": UUID(USER)})
+        self.store.accept(kick)
+        await TaskRunner(self.store, self.graph).run_one()
+        self.assertEqual(self.store.get(self.task.task_id)["status"], "SUCCEEDED")
+        self.assertNotIn("kick", [call[0] for call in self.backend.calls])
+        self.assertEqual(sum(call[0] == "apply" for call in self.backend.calls), 1)
 
     async def test_failed_read_checkpoint_can_restore_failure_code(self):
         async def unavailable(name, args):
