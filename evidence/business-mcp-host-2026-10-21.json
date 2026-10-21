@@ -1,0 +1,26 @@
+{
+  "issue": 44,
+  "pullRequest": 45,
+  "codeCommit": "8fbed45b10e663618cebb2cf899657edef6cedbe",
+  "baseMain": "8b8e49c6f7cb396964f0e3f769ecaeb9ded8f8db",
+  "existingTransportSecurityPR": 32,
+  "defaultAllowedHosts": ["business-mcp:*", "localhost:*", "127.0.0.1:*"],
+  "hostValidationEnabled": true,
+  "tokenAuthenticationPreserved": true,
+  "localRelatedTests": {"tests": 16, "skipped": 0, "seconds": 0.166, "result": "success"},
+  "ci": {
+    "runId": 39533908663,
+    "asgi": {"tests": 196, "skipped": 0, "seconds": 12.199, "result": "success"},
+    "tcp": {"tests": 196, "skipped": 0, "seconds": 21.495, "result": "success"},
+    "realPostgres": true,
+    "composeHostToolCallOnRealSdkTransport": "passed",
+    "unexpectedHost421": "passed",
+    "wrongBearer401": "passed",
+    "explicitAllowlistReplacement": "passed"
+  },
+  "backendResponses": "controlled fixtures",
+  "dockerDnsVerified": false,
+  "containersRebuilt": false,
+  "limitation": "Docker socket denied in current environment; Infra rebuild and container Tool test remain",
+  "actualSanctions": 0
+}

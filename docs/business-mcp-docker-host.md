@@ -28,3 +28,5 @@ docker compose -f compose.yaml -f compose.full.yaml up -d --build --no-deps busi
 4. Tool에서 BE `CASE_NOT_READY`/`NOT_IMPLEMENTED`가 돌아오면 Host 통신과 BE 업무 준비 상태를 구분한다. 421 해결이 전체 Agent 승인 E2E 성공을 뜻하지 않는다.
 
 테스트는 실제 MCP SDK와 ASGI/TCP transport에서 Docker Host 헤더의 initialize·Tool 호출, 외부 Host 거부, 잘못된 토큰 거부, 환경변수 대체를 검사한다. Backend 응답은 통제 fixture이며 Docker DNS/실제 BE 연결은 Infra가 컨테이너 재빌드 후 확인한다. 이 환경에서는 Docker socket 접근이 거부돼 재빌드 완료를 주장하지 않는다.
+
+검증 완료: 코드 `8fbed45`, CI run `39533908663`에서 실제 Postgres 포함 ASGI 196개(12.199초), TCP 196개(21.495초), skip 0 모두 통과. 상세 근거는 `evidence/business-mcp-host-2026-10-21.json`.
