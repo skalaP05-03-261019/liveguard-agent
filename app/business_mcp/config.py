@@ -10,6 +10,7 @@ class Settings:
     agent_token: str
     host: str
     port: int
+    allowed_hosts: tuple[str, ...] = ("127.0.0.1:*", "localhost:*")
 
     def __post_init__(self) -> None:
         parsed_url = urlsplit(self.backend_base_url)
@@ -36,6 +37,9 @@ class Settings:
             agent_token=os.getenv("BUSINESS_MCP_AGENT_TOKEN", ""),
             host=os.getenv("BUSINESS_MCP_HOST", "127.0.0.1"),
             port=port,
+            allowed_hosts=tuple(host.strip() for host in os.getenv(
+                "BUSINESS_MCP_ALLOWED_HOSTS", "127.0.0.1:*,localhost:*"
+            ).split(",") if host.strip()),
         )
 
     @property

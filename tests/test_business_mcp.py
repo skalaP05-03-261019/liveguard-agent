@@ -304,12 +304,34 @@ class BusinessMcpTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(requests[0].url.path, f"/internal/cases/{CASE_ID}/context")
         self.assertEqual(
             dict(requests[0].url.params),
-            {"view": "chatContext", "before": "4", "after": "2"},
+            {"before": "4", "after": "2"},
         )
         self.assertEqual(
             requests[0].headers["x-service-token"], "service-token"
         )
         self.assertEqual(requests[0].headers["x-trace-id"], str(TRACE_ID))
+
+    async def test_backend_uses_dedicated_case_routes_and_preserves_501(self) -> None:
+        requests = []
+        async def handler(request):
+            requests.append(request)
+            return httpx.Response(501, json={"error": {"code": "NOT_IMPLEMENTED", "retryable": False}})
+        settings = Settings("http://backend.test", "service-token", "agent-token", "127.0.0.1", 8002)
+        async with httpx.AsyncClient(base_url=settings.backend_base_url, transport=httpx.MockTransport(handler)) as client:
+            backend = BackendApi(settings, client)
+            for view, suffix in (("moderationCase", ""), ("streamInfo", "/channel-info"),
+                                 ("officialLinks", "/channel-info"), ("securityFacts", "/security-facts")):
+                with self.subTest(view=view):
+                    with self.assertRaises(BackendError) as raised:
+                        await backend.get_case_context(CASE_ID, view=view, trace_id=str(TRACE_ID))
+                    self.assertEqual(raised.exception.code, "NOT_IMPLEMENTED")
+                    self.assertFalse(raised.exception.retryable)
+                    self.assertEqual(requests[-1].url.path, f"/internal/cases/{CASE_ID}{suffix}")
+                    self.assertEqual(dict(requests[-1].url.params), {})
+            count = len(requests)
+            with self.assertRaises(BackendError):
+                await backend.get_case_context(CASE_ID, view="untrusted", trace_id=str(TRACE_ID))
+            self.assertEqual(len(requests), count)
 
     async def test_backend_history_omits_optional_days_when_unspecified(self) -> None:
         requests: list[httpx.Request] = []
@@ -336,7 +358,7 @@ class BusinessMcpTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result, {"violationCount": 0})
         self.assertEqual(
-            requests[0].url.path, f"/internal/cases/{CASE_ID}/history"
+            requests[0].url.path, f"/internal/cases/{CASE_ID}/user-history"
         )
         self.assertEqual(dict(requests[0].url.params), {})
 
@@ -358,6 +380,22 @@ class BusinessMcpTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             json.loads(raised.exception.as_tool_error())["traceId"], str(TRACE_ID)
         )
+
+    def test_container_host_requires_explicit_allowlist(self) -> None:
+        from dataclasses import replace
+        settings = Settings("http://backend.test", "service-token", "agent-token", "127.0.0.1", 8002)
+        headers = {"Authorization": "Bearer agent-token", "Host": "business-mcp:8002",
+                   "Accept": "application/json, text/event-stream"}
+        body = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+            "protocolVersion": "2025-11-25", "capabilities": {},
+            "clientInfo": {"name": "compose-regression", "version": "1"}}}
+        with TestClient(create_app(settings, backend=FakeBackend())) as client:
+            self.assertEqual(client.post("/mcp", json=body, headers=headers).status_code, 421)
+        allowed = replace(settings, allowed_hosts=("business-mcp:*", "localhost:*"))
+        with TestClient(create_app(allowed, backend=FakeBackend())) as client:
+            self.assertEqual(client.post("/mcp", json=body, headers=headers).status_code, 200)
+            self.assertEqual(client.post("/mcp", json=body, headers={**headers, "Host": "untrusted:8002"}).status_code, 421)
+            self.assertEqual(client.post("/mcp", json=body, headers={**headers, "Authorization": "Bearer wrong"}).status_code, 401)
 
     def test_http_endpoint_requires_agent_token(self) -> None:
         settings = Settings(

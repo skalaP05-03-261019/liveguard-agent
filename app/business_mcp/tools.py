@@ -76,7 +76,7 @@ def register_tools(
         """Get the moderation snapshot, evidence version, policy version, and targets."""
         trace_id = _trace_id(traceId)
         try:
-            # view 값은 내부 API 초안이므로 실제 BE 경로·요청 규격과 맞춰야 한다.
+            # The HTTP adapter maps this internal selector to the dedicated BE route.
             data = await get_backend().get_case_context(
                 caseId,
                 view="moderationCase",

@@ -6,6 +6,7 @@ import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from mcp.server import MCPServer
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.types import ASGIApp
 
 from app.business_mcp.backend import BackendApi
@@ -79,7 +80,12 @@ def create_app(
         return current_backend
 
     register_tools(mcp, get_backend)
-    mcp_http_app: ASGIApp = mcp.streamable_http_app()
+    security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=list(resolved_settings.allowed_hosts),
+        allowed_origins=[f"http://{host}" for host in resolved_settings.allowed_hosts],
+    )
+    mcp_http_app: ASGIApp = mcp.streamable_http_app(transport_security=security)
     app.mount("/", mcp_http_app)
     return app
 

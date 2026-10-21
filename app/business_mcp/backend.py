@@ -23,12 +23,17 @@ class BackendApi:
         trace_id: str,
         params: dict[str, int] | None = None,
     ) -> dict[str, Any]:
-        query = {"view": view, **(params or {})}
+        paths = {"moderationCase": "", "chatContext": "/context",
+                 "streamInfo": "/channel-info", "officialLinks": "/channel-info",
+                 "securityFacts": "/security-facts"}
+        if view not in paths or (params and view != "chatContext"):
+            raise BackendError("INVALID_INPUT", "Unsupported context view or parameters",
+                               retryable=False, trace_id=trace_id)
         return await self._request(
             "GET",
-            f"/internal/cases/{case_id}/context",
+            f"/internal/cases/{case_id}{paths[view]}",
             trace_id=trace_id,
-            params=query,
+            params=params,
         )
 
     async def get_user_history(
@@ -36,7 +41,7 @@ class BackendApi:
     ) -> dict[str, Any]:
         return await self._request(
             "GET",
-            f"/internal/cases/{case_id}/history",
+            f"/internal/cases/{case_id}/user-history",
             trace_id=trace_id,
             params={"days": days} if days is not None else None,
         )
