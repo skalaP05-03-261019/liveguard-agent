@@ -3,10 +3,16 @@ import os
 from pathlib import Path
 
 POLICY_DIR = Path(__file__).parent / "policies"
-DEFAULT_POLICY_VERSION = "3.1"
+# 활성 정책 버전 이름표. BE 계약(OpenAPI v1.0 policyVersion const, TBD-08)과 같아야 한다.
+DEFAULT_POLICY_VERSION = "v3.1"
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 # 테이블의 vector 차원과 같아야 한다. 모델을 바꾸면 스키마도 함께 바꾼다.
 EMBEDDING_DIMENSIONS = 1536
+
+
+def policy_file_for(version: str) -> Path:
+    """버전 이름표의 원문 파일. 이름표 `v3.1`과 `3.1`은 같은 원문 policy-v3.1.md를 쓴다."""
+    return POLICY_DIR / f"policy-v{version.removeprefix('v')}.md"
 
 
 @dataclass(frozen=True)
@@ -26,7 +32,7 @@ class IndexSettings:
 
     @property
     def policy_file(self) -> Path:
-        return POLICY_DIR / f"policy-v{self.policy_version}.md"
+        return policy_file_for(self.policy_version)
 
     @classmethod
     def from_env(cls) -> "IndexSettings":
@@ -35,7 +41,9 @@ class IndexSettings:
             db_url=os.getenv("RAG_DB_URL", ""),
             openai_api_key=os.getenv("OPENAI_API_KEY", ""),
             embedding_model=os.getenv("EMBEDDING_MODEL") or DEFAULT_EMBEDDING_MODEL,
-            policy_version=os.getenv("POLICY_VERSION") or DEFAULT_POLICY_VERSION,
+            # TBD-08: BE·Agent·RAG가 같이 읽는 LIVEGUARD_POLICY_VERSION도 받는다. POLICY_VERSION이 우선.
+            policy_version=(os.getenv("POLICY_VERSION") or os.getenv("LIVEGUARD_POLICY_VERSION")
+                            or DEFAULT_POLICY_VERSION),
         )
 
 

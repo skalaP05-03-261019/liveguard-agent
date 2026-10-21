@@ -1,17 +1,20 @@
 import os
 import unittest
+import unittest.mock
 import uuid
 from dataclasses import replace
 
 import psycopg
 
 from app.rag_mcp import store
-from app.rag_mcp.config import DEFAULT_POLICY_VERSION, EMBEDDING_DIMENSIONS, POLICY_DIR, IndexSettings
+from app.rag_mcp.config import (
+    DEFAULT_POLICY_VERSION, EMBEDDING_DIMENSIONS, POLICY_DIR, IndexSettings, policy_file_for,
+)
 from app.rag_mcp.index import build_index
 from app.rag_mcp.policy import DOCUMENT_ID, parse_policy
 from app.schemas import Category
 
-POLICY_FILE = POLICY_DIR / f"policy-v{DEFAULT_POLICY_VERSION}.md"
+POLICY_FILE = policy_file_for(DEFAULT_POLICY_VERSION)
 
 EXPECTED_POLICY_IDS = [
     "CP-1.1", "CP-1.2", "CP-2.1", "CP-2.2", "CP-3.1", "CP-3.2", "CP-4.1",
@@ -164,6 +167,28 @@ class IndexDatabaseTest(unittest.TestCase):
             self.skipTest("실제 기본 버전 색인이 있어 덮어쓰지 않는다")
         self.assertEqual(build_index(self.settings, embedder), len(EXPECTED_POLICY_IDS))
         self.assertEqual(len(embedder.calls), 1)
+
+
+class PolicyVersionLabelTests(unittest.TestCase):
+    """#49: BE 계약의 활성 이름표 v3.1은 같은 원문 policy-v3.1.md를 쓴다."""
+
+    def test_v_prefixed_label_uses_same_source_file(self) -> None:
+        self.assertEqual(DEFAULT_POLICY_VERSION, "v3.1")
+        self.assertEqual(policy_file_for("v3.1"), policy_file_for("3.1"))
+        self.assertTrue(policy_file_for(DEFAULT_POLICY_VERSION).is_file())
+        chunk = parse_policy(policy_file_for("v3.1").read_text(encoding="utf-8"), version="v3.1")[0]
+        self.assertEqual((chunk.version, chunk.resource_uri.split("/")[2]), ("v3.1", "v3.1"))
+
+    def test_index_version_reads_shared_env_with_policy_version_first(self) -> None:
+        base = {"RAG_DB_URL": "postgresql://x", "OPENAI_API_KEY": "k"}
+        cases = [
+            ({}, DEFAULT_POLICY_VERSION),
+            ({"LIVEGUARD_POLICY_VERSION": "v3.1"}, "v3.1"),
+            ({"LIVEGUARD_POLICY_VERSION": "v3.1", "POLICY_VERSION": "3.0"}, "3.0"),
+        ]
+        for extra, expected in cases:
+            with self.subTest(env=extra), unittest.mock.patch.dict(os.environ, {**base, **extra}, clear=True):
+                self.assertEqual(IndexSettings.from_env().policy_version, expected)
 
 
 if __name__ == "__main__":

@@ -96,7 +96,7 @@ async def evaluate(
 
 
 def _print_report(report: dict[str, Any]) -> None:
-    print(f"policy v{report['policyVersion']} · {report['embeddingModel']} · "
+    print(f"policy {report['policyVersion']} · {report['embeddingModel']} · "
           f"{report['metrics']['unfiltered']['cases']} questions · topK {report['topK']}")
     print(f"{'mode':<12}{'hit@1':>8}{'hit@' + str(report['topK']):>8}{'MRR':>8}")
     for mode in MODES:
@@ -121,7 +121,7 @@ async def _run(evalset: Path, out: Path | None) -> dict[str, Any]:
     repository = PgPolicyRepository(settings.db_url)
     indexed = await repository.list_versions()
     if version not in indexed:
-        raise SystemExit(f"policy v{version} is not indexed (indexed: {sorted(indexed)})")
+        raise SystemExit(f"policy {version} is not indexed (indexed: {sorted(indexed)})")
     report = await evaluate(cases, version=version, embed=embedder.embed_query,
                             search=repository.search)
     report = {
