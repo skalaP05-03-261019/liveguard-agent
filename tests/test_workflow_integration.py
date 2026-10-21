@@ -101,8 +101,29 @@ class WorkflowTests(unittest.IsolatedAsyncioTestCase):
     async def test_backend_confirmed_flood_routes_to_separate_kick_review_without_model(self):
         await self.prepare(route="FLOOD_REVIEW",confirmationStatus="CONFIRMED_VIOLATION",
                            kickReview={"required":True,"reviewId":KICK,"basisCaseIds":[REVIEW,DECISION,str(uuid4())]})
+        case=self.business.fixture["case"]
+        case["targets"]=[{"messageId":mid,"visibility":"HIDDEN","version":case["targetVersions"][mid]} for mid in case["targetMessageIds"]]
+        for message in self.business.fixture["context"]["messages"]:
+            if message["messageId"] in case["targetMessageIds"]:
+                message["visibility"]="HIDDEN"
         await self.start()
         self.assertEqual((await pending_review(self.graph,self.task.thread_id))["reviewId"],KICK)
+        self.assertEqual(self.model.inputs,[])
+        self.assertEqual(self.backend.calls,[])
+
+    async def test_confirmed_flood_public_target_is_rejected_before_model_or_review(self):
+        await self.prepare(route="FLOOD_REVIEW",confirmationStatus="CONFIRMED_VIOLATION")
+        self.business.fixture["context"]["messages"][0]["visibility"]="PUBLIC"
+        result=await self.start()
+        self.assertEqual(result["error"]["code"],"INVALID_CONFIRMED_TARGET")
+        self.assertEqual(self.model.inputs,[])
+        self.assertEqual(self.backend.calls,[])
+
+    async def test_hidden_unconfirmed_flood_cannot_bypass_context_review(self):
+        await self.prepare(route="FLOOD_REVIEW",confirmationStatus="PENDING")
+        self.business.fixture["context"]["messages"][0]["visibility"]="HIDDEN"
+        result=await self.start()
+        self.assertEqual(result["error"]["code"],"EXPECTED_HELD_TARGET")
         self.assertEqual(self.model.inputs,[])
         self.assertEqual(self.backend.calls,[])
 

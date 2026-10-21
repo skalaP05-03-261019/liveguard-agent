@@ -1,0 +1,81 @@
+{
+  "status": "READ_CONTRACT_READY",
+  "traceId": "39960a54-086b-4892-bc4b-b0cfc27b5fce",
+  "caseId": "5fa5ac58-d709-483a-843c-19a1228ba771",
+  "backendHttpObserved": true,
+  "mutationExecuted": false,
+  "checks": {
+    "withoutServiceToken": 403,
+    "bearerOnly": 403,
+    "authBoundaryReady": true,
+    "httpReads": {
+      "securityFacts": {
+        "httpStatus": 200
+      },
+      "case": {
+        "httpStatus": 200
+      },
+      "context": {
+        "httpStatus": 200
+      },
+      "userHistory": {
+        "httpStatus": 200
+      },
+      "kickEligibility": {
+        "httpStatus": 501
+      },
+      "channelInfo": {
+        "httpStatus": 200
+      }
+    },
+    "rawCaseSchemaGaps": [],
+    "contextMessageCount": 11,
+    "rawContextSchemaGaps": [],
+    "contextWithServiceToken": 200,
+    "caseEndpoint": 200,
+    "channelInfo": 200,
+    "documentedB2Routes": {
+      "case": true,
+      "judgment": true,
+      "actionExecution": true,
+      "contextDecision": true,
+      "kickDecision": true
+    },
+    "mcpReads": {
+      "get_security_facts": {
+        "status": "CONNECTED"
+      },
+      "get_chat_context": {
+        "status": "CONNECTED"
+      },
+      "get_stream_info": {
+        "status": "CONNECTED"
+      },
+      "get_moderation_case": {
+        "status": "CONNECTED"
+      },
+      "get_user_history": {
+        "status": "CONNECTED"
+      },
+      "get_official_links": {
+        "status": "CONNECTED"
+      }
+    },
+    "mcpToSpringContext": "CONNECTED",
+    "mcpContextSchemaGaps": [],
+    "mcpCaseSchemaGaps": [],
+    "workflowScopeMissing": [],
+    "evidenceBindingReady": true,
+    "transportBindingReady": true
+  },
+  "readContractReady": true,
+  "workflowPreflightReady": true,
+  "executionAuthorized": false,
+  "blockers": [
+    {
+      "stage": "kickEligibility",
+      "httpStatus": 501
+    }
+  ],
+  "notice": "Connectivity inspection, not moderation/approval/kick execution proof"
+}

@@ -16,7 +16,7 @@ from uuid import UUID, uuid4
 import httpx
 from pydantic import ValidationError
 
-from app.case_loader import CaseSnapshot, ChatContext, load_case_data
+from app.case_loader import CaseSnapshot, ChatContext, load_case_data, require_executable_case
 from app.clients.business_mcp import BusinessMcpReadClient, BusinessMcpSettings, AgentToolError
 from app.integration.backend_events import BackendEvents
 from app.schemas import TaskEnvelope
@@ -38,9 +38,10 @@ async def inspect_connection(case_id: str, *, publish_test_event=False):
         return {"status": "BLOCKED", "errorCode": "BACKEND_NOT_CONFIGURED"}
     report = {"status": "PARTIAL", "traceId": trace_id, "caseId": case_id,
               "backendHttpObserved": False, "mutationExecuted": False, "checks": {},
-              "readContractReady": False, "blockers": [],
+              "readContractReady": False, "workflowPreflightReady": False, "executionAuthorized": False, "blockers": [],
               "notice": "Connectivity inspection, not moderation/approval/kick execution proof"}
     checks = report["checks"]
+    http_payloads = {}
     headers = {"X-Service-Token": token, "X-Trace-Id": trace_id}
     try:
         async with httpx.AsyncClient(base_url=base, timeout=10) as client:
@@ -66,6 +67,7 @@ async def inspect_connection(case_id: str, *, publish_test_event=False):
                     data = payload.get("data") if isinstance(payload, dict) else None
                     if not isinstance(data, dict):
                         raise ValueError("Invalid envelope")
+                    http_payloads[name] = data
                     if name == "context":
                         checks["contextMessageCount"] = len(data.get("messages", []))
                         checks["rawContextSchemaGaps"] = missing(ChatContext, data)
@@ -148,17 +150,38 @@ async def inspect_connection(case_id: str, *, publish_test_event=False):
                     async def call(self, name, arguments):
                         return payloads[name]
                 try:
-                    await load_case_data(task, RecordedReads())
+                    loaded = await load_case_data(task, RecordedReads())
                     checks["evidenceBindingReady"] = True
+                    try:
+                        require_executable_case(loaded)
+                        report["workflowPreflightReady"] = True
+                    except AgentToolError as error:
+                        report["blockers"].append({"stage": "workflowPreflight", "errorCode": error.code})
                 except AgentToolError as error:
                     checks["evidenceBindingReady"] = False
                     report["blockers"].append({"stage": "evidenceBinding", "errorCode": error.code})
+                # A successful MCP read must match the direct HTTP read from the same
+                # Backend. Never reconcile two competing evidence sources in the Agent.
+                checks["transportBindingReady"] = False
+                if "case" in http_payloads and "context" in http_payloads:
+                    try:
+                        http_case = CaseSnapshot.model_validate(http_payloads["case"])
+                        mcp_case = CaseSnapshot.model_validate(case["data"])
+                        http_context = ChatContext.model_validate(http_payloads["context"])
+                        mcp_context = ChatContext.model_validate(context["data"])
+                        checks["transportBindingReady"] = (http_case == mcp_case and http_context == mcp_context)
+                    except ValidationError:
+                        pass
+                    if not checks["transportBindingReady"]:
+                        report["blockers"].append({"stage": "transportBinding", "errorCode": "BACKEND_READ_DIVERGED"})
                 report["readContractReady"] = bool(checks.get("evidenceBindingReady")
+                                                    and checks.get("transportBindingReady")
                                                     and checks.get("authBoundaryReady")
                                                     and checks.get("caseEndpoint") == 200
                                                     and checks.get("contextWithServiceToken") == 200)
     except (ValueError, TypeError, AttributeError):
         report["blockers"].append({"stage": "mcp", "errorCode": "MCP_NOT_CONFIGURED"})
+    report["workflowPreflightReady"] = bool(report["workflowPreflightReady"] and report["readContractReady"])
     report["status"] = ("READ_CONTRACT_READY" if report["readContractReady"] else
                         "PARTIAL" if report["backendHttpObserved"] else "BLOCKED")
     return report
@@ -170,12 +193,14 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--publish-test-event", action="store_true")
     parser.add_argument("--require-ready", action="store_true", help="Exit 2 unless read contract and auth are verified")
+    parser.add_argument("--require-workflow-ready", action="store_true", help="Exit 2 unless read parity and workflow preflight pass; does not authorize execution")
     args = parser.parse_args()
     report = asyncio.run(inspect_connection(str(args.case_id), publish_test_event=args.publish_test_event))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps(report, ensure_ascii=False))
-    if report["status"] == "BLOCKED" or (args.require_ready and not report.get("readContractReady")):
+    if (report["status"] == "BLOCKED" or (args.require_ready and not report.get("readContractReady"))
+            or (args.require_workflow_ready and not report.get("workflowPreflightReady"))):
         raise SystemExit(2)
 
 
