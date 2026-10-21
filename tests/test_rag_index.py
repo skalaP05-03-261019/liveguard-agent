@@ -179,16 +179,20 @@ class PolicyVersionLabelTests(unittest.TestCase):
         chunk = parse_policy(policy_file_for("v3.1").read_text(encoding="utf-8"), version="v3.1")[0]
         self.assertEqual((chunk.version, chunk.resource_uri.split("/")[2]), ("v3.1", "v3.1"))
 
-    def test_index_version_reads_shared_env_with_policy_version_first(self) -> None:
+    def test_index_version_reads_shared_env_and_rejects_conflicts(self) -> None:
         base = {"RAG_DB_URL": "postgresql://x", "OPENAI_API_KEY": "k"}
         cases = [
             ({}, DEFAULT_POLICY_VERSION),
             ({"LIVEGUARD_POLICY_VERSION": "v3.1"}, "v3.1"),
-            ({"LIVEGUARD_POLICY_VERSION": "v3.1", "POLICY_VERSION": "3.0"}, "3.0"),
+            ({"LIVEGUARD_POLICY_VERSION": "v3.1", "POLICY_VERSION": "v3.1"}, "v3.1"),
         ]
         for extra, expected in cases:
             with self.subTest(env=extra), unittest.mock.patch.dict(os.environ, {**base, **extra}, clear=True):
                 self.assertEqual(IndexSettings.from_env().policy_version, expected)
+
+        with unittest.mock.patch.dict(os.environ, {**base, "LIVEGUARD_POLICY_VERSION": "v3.1", "POLICY_VERSION": "3.0"}, clear=True):
+            with self.assertRaisesRegex(ValueError, "conflict"):
+                IndexSettings.from_env()
 
 
 if __name__ == "__main__":

@@ -31,6 +31,11 @@ class ActionCommand(Contract):
     duration_seconds: int | None = Field(default=None, ge=1)
     decision_id: UUID | None = None
     violation_ids: list[UUID] = Field(default_factory=list)
+    live_id: UUID | None = None
+    review_id: UUID | None = None
+    basis_snapshot_id: UUID | None = None
+    validation_ref: UUID | None = None
+    basis_case_ids: list[UUID] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_duration(self) -> "ActionCommand":
@@ -42,7 +47,11 @@ class ActionCommand(Contract):
         if self.type == "KICK":
             if self.decision_id is None:
                 raise ValueError("KICK requires an approved decisionId")
-            if len(set(self.violation_ids)) < 3:
+            if self.live_id is not None:
+                if (not all((self.review_id,self.basis_snapshot_id,self.validation_ref))
+                        or len(set(self.basis_case_ids)) < 3 or self.violation_ids):
+                    raise ValueError("KICK requires the Backend v1 review validation and basis")
+            elif len(set(self.violation_ids)) < 3:
                 raise ValueError("KICK requires at least three distinct violationIds")
         elif self.decision_id is not None or self.violation_ids:
             raise ValueError("decisionId and violationIds are only valid for KICK")
@@ -66,7 +75,7 @@ class KickCommand(ActionCommand):
     # 승인된 운영자 결정과 누적 위반 참조를 포함한 Backend 발급 명령만 받는다.
     type: Literal["KICK"]
     decision_id: UUID
-    violation_ids: list[UUID] = Field(min_length=3)
+    violation_ids: list[UUID] = Field(default_factory=list)
 
 
 class BackendError(Exception):

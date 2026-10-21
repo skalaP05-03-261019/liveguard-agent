@@ -10,7 +10,7 @@ Business/RAG MCP 조회와 실제 OpenAI 검증 결과는 각 이슈의 증거�
 최신 Notion 문맥 승인 정책과 AI2 PR #25를 연결한 별도 실행 Graph를
 `app.integration.workflow.build_moderation_graph`에 추가했다. CONTEXT 대기·보류·재개 후
 Backend 처리와 별도 KICK 대기를 연결하며 공유 실행 예산/마스킹을 사용한다.
-HTTP 실행기·영속 inbox·서비스 인증은 [#10 실행기 문서](docs/AI1-10-task-runtime.md)에 구현했다. 실제 Backend 업무 Gateway는 연동 대기다.
+HTTP 실행기·영속 inbox·서비스 인증은 [#10 실행기 문서](docs/AI1-10-task-runtime.md)에 구현했다. 실제 HTTP Gateway의 구현·설정·검증 범위는 [#48](docs/AI1-48-http-gateway.md)을 참조한다. 기본 배포에서는 명시적으로 활성화해야 한다.
 최신 BE 사건 입력 사전검사와 중단 작업 복구는 [#40 운영 준비 문서](docs/AI1-40-backend-preflight-recovery.md)를 참조한다. 사전검사는 모델·Gateway 없이도 가능하며 실행 승인을 대신하지 않는다.
 실제 B1 진행 이벤트 계약용 `BackendEvents` HTTP 어댑터는 추가했으며, 전체 Spring 집행 시험과 구분한다.
 [최신 명세 출처·Backend 잔여 계약](docs/AI1-10-latest-spec-and-boundary.md)을 먼저 확인한다.
@@ -47,7 +47,7 @@ uv run python -m app.business_mcp
 
 운영정책 원문(`app/rag_mcp/policies/policy-v{version}.md`, 노션 Export, 기본 v3.1)을 조항 ID(`CP/SP/MP/MM-x.y`) 헤딩 단위로 나눠 OpenAI 임베딩과 함께 pgvector `rag.policy_chunks`에 넣는다. 장 제목 등 조항 밖 텍스트는 색인하지 않는다.
 
-색인 설정의 `POLICY_VERSION`이 미설정이거나 빈 문자열이면 `app/rag_mcp/config.py`의 `LIVEGUARD_POLICY_VERSION`(TBD-08 공유 변수), 그다음 `app/rag_mcp/config.py`의 `DEFAULT_POLICY_VERSION`(현재 `v3.1`, BE OpenAPI v1.0 `policyVersion`과 같은 이름표)을 사용하고, 명시한 값은 그대로 사용한다. 이 기본값이 배포 활성 정책을 확정하지는 않는다. Agent 조회·판정은 Backend 사건 응답의 `policyVersion`을 따르므로 해당 버전이 실제로 색인되어 있어야 한다. 통합 배포에서는 팀이 정한 버전을 명시하고 사건 버전·색인 버전의 일치를 확인한다.
+두 버전 환경변수를 명시하면 정확히 일치해야 하며 다르면 시작을 거부한다. 색인 설정의 `POLICY_VERSION`이 미설정이거나 빈 문자열이면 `app/rag_mcp/config.py`의 `LIVEGUARD_POLICY_VERSION`(TBD-08 공유 변수), 그다음 `app/rag_mcp/config.py`의 `DEFAULT_POLICY_VERSION`(현재 `v3.1`, BE OpenAPI v1.0 `policyVersion`과 같은 이름표)을 사용하고, 명시한 값은 그대로 사용한다. 이 기본값이 배포 활성 정책을 확정하지는 않는다. Agent 조회·판정은 Backend 사건 응답의 `policyVersion`을 따르므로 해당 버전이 실제로 색인되어 있어야 한다. 통합 배포에서는 팀이 정한 버전을 명시하고 사건 버전·색인 버전의 일치를 확인한다.
 
 ```bash
 cp .env.example .env   # RAG_DB_URL, OPENAI_API_KEY 입력. .env는 커밋하지 않는다.
@@ -111,7 +111,7 @@ LIVEGUARD_TEST_TCP=1 uv run --locked python -m unittest discover -s tests -v
 ```
 
 기본 테스트는 실제 Business MCP ASGI app·인증·MCP SDK/HTTP 직렬화를 사용하며 Backend만 가상이다. TCP 모드는 Uvicorn을 임시 로컬 포트에 띄운다. 테스트 범위와 결과는 [검증 기록](evidence/agent-read-check.json)에 구분한다.
-`load_case`와 통합 Graph는 HTTP 실행기에서 조립한다. 기본 배포의 실제 Backend Gateway 연결은 아직 남아 있다.
+`load_case`와 통합 Graph는 HTTP 실행기에서 조립한다. 실제 Gateway는 [#48](docs/AI1-48-http-gateway.md)에 구현했으며 기본 배포에서는 비활성이다.
 조회 시 `BUSINESS_MCP_URL`, `BUSINESS_MCP_AGENT_TOKEN`을 process environment에서 읽는다. `.env` 자동 로드는 하지 않는다.
 
 ## RAG 소비자 연결 (#8)

@@ -48,3 +48,4 @@ class AgentState(TypedDict, total=False):
     live_id: str
     user_id: str
     backend_result: dict[str, Any]
+    investigation_error: dict[str, Any]

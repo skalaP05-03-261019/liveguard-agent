@@ -36,14 +36,16 @@ class IndexSettings:
 
     @classmethod
     def from_env(cls) -> "IndexSettings":
+        shared = os.getenv("LIVEGUARD_POLICY_VERSION")
+        legacy = os.getenv("POLICY_VERSION")
+        if shared and legacy and shared != legacy:
+            raise ValueError("Shared and legacy policy versions conflict")
         # .env.example의 빈 값(KEY=)도 미설정으로 보고 기본값을 쓴다.
         return cls(
             db_url=os.getenv("RAG_DB_URL", ""),
             openai_api_key=os.getenv("OPENAI_API_KEY", ""),
             embedding_model=os.getenv("EMBEDDING_MODEL") or DEFAULT_EMBEDDING_MODEL,
-            # TBD-08: BE·Agent·RAG가 같이 읽는 LIVEGUARD_POLICY_VERSION도 받는다. POLICY_VERSION이 우선.
-            policy_version=(os.getenv("POLICY_VERSION") or os.getenv("LIVEGUARD_POLICY_VERSION")
-                            or DEFAULT_POLICY_VERSION),
+            policy_version=shared or legacy or DEFAULT_POLICY_VERSION,
         )
 
 

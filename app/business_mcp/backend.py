@@ -56,11 +56,18 @@ class BackendApi:
     async def execute_action(
         self, command: ActionCommand, *, trace_id: str
     ) -> dict[str, Any]:
+        payload = command.model_dump(mode="json", by_alias=True)
+        if command.live_id is not None:
+            payload.pop("violationIds", None)
+            payload = {k:v for k,v in payload.items() if v is not None}
+        else:
+            for key in ("liveId","reviewId","basisSnapshotId","validationRef","basisCaseIds"):
+                payload.pop(key,None)
         return await self._request(
             "POST",
             f"/internal/actions/{command.action_id}/execute",
             trace_id=trace_id,
-            json=command.model_dump(mode="json", by_alias=True),
+            json=payload,
         )
 
     async def reconcile_review(
@@ -105,6 +112,12 @@ class BackendApi:
                     "X-Trace-Id": trace_id,
                 },
             )
+        except httpx.ReadTimeout as error:
+            if method == "POST":
+                raise BackendError("ACTION_OUTCOME_UNKNOWN", "Mutation response was lost",
+                                   retryable=False, trace_id=trace_id) from None
+            raise BackendError("TEMPORARY_UNAVAILABLE", "Backend read timed out",
+                               retryable=True, trace_id=trace_id) from None
         except httpx.RequestError as error:
             raise BackendError(
                 "TEMPORARY_UNAVAILABLE",
