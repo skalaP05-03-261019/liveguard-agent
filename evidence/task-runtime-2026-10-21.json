@@ -1,0 +1,88 @@
+{
+  "observed_at": "2026-10-21T00:10:11.656161+00:00",
+  "kind": "controlled",
+  "scope": "Agent durable HTTP inbox, inbound auth, existing Graph dispatch and resume; controlled Backend/model",
+  "issue": "https://github.com/skalaP05-03-261019/liveguard-agent/issues/10",
+  "base": "cd86bc8c55fece99fadedbb16c899b88600e05b4",
+  "backend_source": "a8d3ce724576bfc086322815c80fce206540d521",
+  "verification": [
+    {
+      "transport": "asgi",
+      "tests": 186,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 5.236
+    },
+    {
+      "transport": "tcp",
+      "tests": 186,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 18.048
+    }
+  ],
+  "environment": {
+    "image": "liveguard-agent-runtime:test",
+    "build": "docker build -t liveguard-agent-runtime:test liveguard-agent",
+    "database": "pgvector/pgvector:pg16, temporary database ragtest on host port 55439",
+    "mounts": "Current app and tests mounted read-only into /app; locked dependency image",
+    "command": "python -m unittest discover -s tests -q",
+    "variables": [
+      "LIVEGUARD_TEST_TCP=1 for TCP, unset for ASGI",
+      "AGENT_TEST_CHECKPOINT_DB_URL and RAG_TEST_DB_URL point to temporary Postgres"
+    ]
+  },
+  "observed_scenarios": [
+    "Unauthenticated/wrong token requests cannot persist work or inspect tasks",
+    "Empty service token does not start worker or execute a queued task",
+    "Atomic duplicate deliveries across 20 concurrent submissions create one operation",
+    "Queued task retained on inbox reopen; RUNNING is not automatically reclaimed",
+    "Changed payload or wrong case/task/thread/snapshot/evidence binding rejected",
+    "HTTP persist-then-202, status polling, duplicate-200, unavailable-store-503",
+    "CONTEXT waits before any apply; wrong review kind and DEFER preserve waiting",
+    "CONTEXT decision then separate KICK rejection, no duplicate apply or kick",
+    "New Postgres saver/Graph/inbox after all connections close restores and resumes waiting task",
+    "Execution error/cancellation records UNKNOWN and is not retried",
+    "Saved task status remains readable with stopped worker; new work rejected"
+  ],
+  "not_verified": [
+    "Actual OpenAI invocation in this change",
+    "Actual Spring mutation/recovery",
+    "Latest Spring main boot / duplicate route reproduction",
+    "Backend task caller integration",
+    "UI SSE reception",
+    "Multiple-host inbox deployment",
+    "Automatic RUNNING/UNKNOWN reconciliation"
+  ],
+  "course_mapping": [
+    {
+      "id": "AGT-04",
+      "scope": "partial: Graph/checkpoint resume through task runner"
+    },
+    {
+      "id": "HAR-05",
+      "scope": "partial: persistent thread waiting and reconnect"
+    },
+    {
+      "id": "HAR-08",
+      "scope": "partial: unknown execution does not replay; automatic recovery pending"
+    }
+  ],
+  "limitations": [
+    "SQLite inbox is a local persistent-volume choice; not RabbitMQ bonus",
+    "Service Bearer authentication does not prove end-user AUTH-01 or Backend operator authorization",
+    "Checkpoint reconnection tested; no claim of full service kill/restart with real Backend execution",
+    "Hard-killed RUNNING stays blocked until offline reconciliation",
+    "Gateway is explicitly injected; default production readiness remains false until real adapter is supplied"
+  ],
+  "artifact_sha256": {
+    "app/main.py": "4ff45dcb05b79be0c9d375904f08f78aa03f2b2f7bcb3ae4bb58f38acd37484b",
+    "app/runtime/__init__.py": "1234a7cbf3160b469f8f4ce3f111ba7f8537ce910653e0b326bc71f3beb600a3",
+    "app/runtime/bootstrap.py": "d672359a4a1f0ab7d32509dcf3774314f9f2c509ac99ca4e5478f9540dae1001",
+    "app/runtime/runner.py": "dfbc633e2a3b4f159b900fd69bdb1f4817370dfcb9c3368fa66553e3ee958cc2",
+    "app/runtime/store.py": "e14b15dea6440af34dcc3d59325990d57daaa8ce35410a6c8762153015b792e2",
+    "tests/test_task_runtime.py": "e58e3cbe4e59c8252a1ad22d5bc5015c8961d27aab28148f91a0fdfb713d5588"
+  }
+}

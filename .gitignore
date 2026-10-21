@@ -3,4 +3,6 @@ __pycache__/
 *.pyc
 .env
 .pytest_cache/
-.venv/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm

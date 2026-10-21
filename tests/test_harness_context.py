@@ -2,6 +2,7 @@
 정상 확정 / 위반 확정 / 보류 후 재결정 / 중복·종류 불일치 거부 / 재시작 후 대기 복원."""
 
 import os
+import tempfile
 import unittest
 import uuid
 from typing import Any
@@ -20,6 +21,7 @@ from app.harness.resume import (
     resume_kick_review, thread_config,
 )
 from app.main import app as agent_app
+from runtime_support import AUTH, test_application, wait_for_task
 
 CASE_ID = "00000000-0000-4000-8000-0000000000c1"
 TASK_ID = "00000000-0000-4000-8000-0000000000a1"
@@ -183,12 +185,18 @@ class ContextResumeEndpointTests(unittest.IsolatedAsyncioTestCase):
             "threadId": thread, "snapshotId": str(uuid.uuid4()), "expectedEvidenceVersion": 1,
             "decisionId": str(NORMAL), "traceId": TRACE_ID,
         }
-        with TestClient(agent_app) as client:
-            first = client.post(f"/agent/tasks/{TASK_ID}/resume", json=body)
-            second = client.post(f"/agent/tasks/{TASK_ID}/resume", json=body)
+        with tempfile.TemporaryDirectory() as directory:
+            application, _ = test_application(f"{directory}/tasks.db", graph, body)
+            with TestClient(application) as client:
+                first = client.post(f"/agent/tasks/{TASK_ID}/resume", json=body, headers=AUTH)
+                wait_for_task(client, TASK_ID)
+                second = client.post(f"/agent/tasks/{TASK_ID}/resume", json=body, headers=AUTH)
         self.assertEqual(first.status_code, 202)
-        self.assertEqual(first.json()["contextResult"]["decision"], "CONFIRM_NORMAL")
-        self.assertEqual(second.status_code, 409)
+        values = (await graph.aget_state(thread_config(thread))).values
+        self.assertEqual(values["context_result"]["decision"], "CONFIRM_NORMAL")
+        self.assertEqual(second.status_code, 200)
+        self.assertTrue(second.json()["duplicate"])
+
 
 
 @unittest.skipUnless(

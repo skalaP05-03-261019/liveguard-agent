@@ -8,7 +8,7 @@ Business/RAG MCP 조회와 실제 OpenAI 검증 결과는 각 이슈의 증거�
 최신 Notion 문맥 승인 정책과 AI2 PR #25를 연결한 별도 실행 Graph를
 `app.integration.workflow.build_moderation_graph`에 추가했다. CONTEXT 대기·보류·재개 후
 Backend 처리와 별도 KICK 대기를 연결하며 공유 실행 예산/마스킹을 사용한다.
-실제 Backend 업무 Gateway와 작업 dispatcher 연결은 아직 남아 `/run`은 501을 유지한다.
+HTTP 실행기·영속 inbox·서비스 인증은 [#10 실행기 문서](docs/AI1-10-task-runtime.md)에 구현했다. 실제 Backend 업무 Gateway는 연동 대기다.
 실제 B1 진행 이벤트 계약용 `BackendEvents` HTTP 어댑터는 추가했으며, 전체 Spring 집행 시험과 구분한다.
 [최신 명세 출처·Backend 잔여 계약](docs/AI1-10-latest-spec-and-boundary.md)을 먼저 확인한다.
 
@@ -21,7 +21,7 @@ uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
 ```
 
 `http://127.0.0.1:8001/docs`에서 입력 형식을 확인한다. `/health`는 `readyForTasks: false`다.
-run/resume는 유효한 요청에도 **501**을 반환한다. 작업을 저장하지 않으므로 접수 완료 202를 반환하지 않는다.
+기본 구성에서는 Gateway/인증 설정이 없어 run/resume는 **503**으로 차단한다. 실제 Gateway가 주입된 runtime은 Bearer 인증 후 작업을 영속 저장하고 202를 반환한다. 결과는 GET `/agent/tasks/{taskId}`로 조회한다.
 현재 인증이 없으므로 로컬 개발 주소만 사용한다.
 
 ## Business MCP 개발 서버 (BE2-01)
@@ -62,13 +62,13 @@ uv run --env-file .env python -m app.rag_mcp   # http://127.0.0.1:8003/mcp
 
 ## Harness: 강퇴 승인 interrupt/resume (AI2, #5)
 
-`verify_result` 뒤 `review_kick → execute_kick`이 Backend의 강퇴 심사 요청(`kick_review`)이 있을 때만 Graph를 멈추고(`interrupt`) Postgres checkpointer(`agent` 스키마, `AGENT_CHECKPOINT_DB_URL`)에 저장한다. 운영자 결정 후 `POST /agent/tasks/{taskId}/resume`(`reviewKind: KICK`)이 같은 `threadId`로 재개하고, Backend 재검증이 승인일 때만 `kick_user`를 호출한다. 중복 승인은 409로 막는다. 실행기 연결 전에는 `/resume`이 501이다.
+`verify_result` 뒤 `review_kick → execute_kick`이 Backend의 강퇴 심사 요청(`kick_review`)이 있을 때만 Graph를 멈추고(`interrupt`) Postgres checkpointer(`agent` 스키마, `AGENT_CHECKPOINT_DB_URL`)에 저장한다. 운영자 결정 후 `POST /agent/tasks/{taskId}/resume`(`reviewKind: KICK`)이 같은 `threadId`로 재개하고, Backend 재검증이 승인일 때만 `kick_user`를 호출한다. HTTP 재개는 저장 후 비동기 실행한다. 같은 decisionId의 동일 전달은 200/duplicate로 중복 실행하지 않고, 다른 입력은 409다. Graph 자체의 중복 재개 거부도 유지한다.
 
 Postgres 재시작 복원 테스트는 `AGENT_TEST_CHECKPOINT_DB_URL`이 있을 때만 실행된다(임시 스키마 생성 후 삭제). 계약: [docs/AI2-02-harness-kick-approval-contract.md](docs/AI2-02-harness-kick-approval-contract.md)
 
 ## Harness: 문맥 검토 interrupt/resume (AI2, #24)
 
-`handling_route`가 `CONTEXT_REVIEW`면 `request_context_review → review_context → apply_context_decision`이 Backend에 검토 요청(reviewId)을 만들고, AI 제안이 정상이어도 운영자 결정 전까지 멈춘다. `/resume`(`reviewKind: CONTEXT`)으로 같은 `threadId`를 재개하면 Backend 저장본의 결정(CONFIRM_NORMAL / CONFIRM_VIOLATION / DEFER)을 `context_result`에 남기고, 보류면 다시 기다린다. 대기 중인 심사와 종류가 다른 재개는 409 `REVIEW_KIND_MISMATCH`다. Graph 연결과 결정 후 처리는 #10. 계약: [docs/AI2-06-harness-context-review-contract.md](docs/AI2-06-harness-context-review-contract.md)
+`handling_route`가 `CONTEXT_REVIEW`면 `request_context_review → review_context → apply_context_decision`이 Backend에 검토 요청(reviewId)을 만들고, AI 제안이 정상이어도 운영자 결정 전까지 멈춘다. `/resume`(`reviewKind: CONTEXT`)으로 같은 `threadId`를 재개하면 Backend 저장본의 결정(CONFIRM_NORMAL / CONFIRM_VIOLATION / DEFER)을 `context_result`에 남기고, 보류면 다시 기다린다. 심사 종류가 다른 재개는 비동기 실행 중 `REVIEW_KIND_MISMATCH`로 거부하고 WAITING_REVIEW를 유지한다. Graph 연결과 결정 후 처리는 #10. 계약: [docs/AI2-06-harness-context-review-contract.md](docs/AI2-06-harness-context-review-contract.md)
 
 ## 파일과 다음 작업
 
@@ -102,7 +102,7 @@ LIVEGUARD_TEST_TCP=1 uv run --locked python -m unittest discover -s tests -v
 ```
 
 기본 테스트는 실제 Business MCP ASGI app·인증·MCP SDK/HTTP 직렬화를 사용하며 Backend만 가상이다. TCP 모드는 Uvicorn을 임시 로컬 포트에 띄운다. 테스트 범위와 결과는 [검증 기록](evidence/agent-read-check.json)에 구분한다.
-`load_case`는 Graph 노드와 직접 호출로 연결했지만 `/run`에는 전체 실행기가 아직 연결되지 않았다.
+`load_case`와 통합 Graph는 HTTP 실행기에서 조립한다. 기본 배포의 실제 Backend Gateway 연결은 아직 남아 있다.
 조회 시 `BUSINESS_MCP_URL`, `BUSINESS_MCP_AGENT_TOKEN`을 process environment에서 읽는다. `.env` 자동 로드는 하지 않는다.
 
 ## RAG 소비자 연결 (#8)
