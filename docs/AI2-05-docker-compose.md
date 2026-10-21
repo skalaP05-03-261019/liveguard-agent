@@ -28,7 +28,7 @@ DB는 Backend compose의 `pgvector/pgvector:pg16`을 함께 쓴다. RAG는 `rag`
     environment:
       RAG_DB_URL: postgresql://<user>:<password>@db:5432/<db>
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      POLICY_VERSION: "3.1"
+      POLICY_VERSION: "v3.1"   # BE OpenAPI policyVersion과 같은 이름표 (#49)
     depends_on:
       db: {condition: service_healthy}
     restart: "no"
@@ -96,7 +96,7 @@ MCP SDK 2.3의 Streamable HTTP는 DNS rebinding 방지를 위해 Host 헤더를 
 
 | 확인 | 결과 |
 |---|---|
-| rag-index | `indexed policy v3.1: 29 sections (text-embedding-3-small)` |
+| rag-index | `indexed policy v3.1: 29 sections (text-embedding-3-small)` (당시 이름표 3.1) |
 | rag-mcp `/health` | `ready`, `indexedPolicyVersions: ["3.1"]`, 토큰 없는 `/mcp` 401 |
 | business-mcp `/health` | `ready` |
 | agent `/health` | `scaffold` (당시 결과. #27 이후는 `ready`/`not_ready`) |

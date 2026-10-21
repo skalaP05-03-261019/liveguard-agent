@@ -144,7 +144,7 @@ def register_tools(
                 ids = ", ".join(await repository.list_policy_ids(policyVersion))
                 raise RagError(
                     "POLICY_SECTION_NOT_FOUND",
-                    f"'{policyId}' 조항이 v{policyVersion}에 없다. 있는 조항: {ids}",
+                    f"'{policyId}' 조항이 버전 {policyVersion}에 없다. 있는 조항: {ids}",
                     retryable=False,
                 )
         except RagError as error:
@@ -167,5 +167,5 @@ def register_tools(
             raise ResourceError(f"unknown policy document '{document_id}'")
         row = await get_repository().get_section(section_id, version)
         if row is None:
-            raise ResourceError(f"policy section '{section_id}' not found in v{version}")
+            raise ResourceError(f"policy section '{section_id}' not found in version {version}")
         return render_resource(row)

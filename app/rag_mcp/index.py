@@ -25,7 +25,7 @@ def main() -> None:
     embedder = OpenAIEmbedder(settings.openai_api_key, settings.embedding_model)
     count = build_index(settings, embedder)
     print(
-        f"indexed policy v{settings.policy_version}: {count} sections "
+        f"indexed policy {settings.policy_version}: {count} sections "
         f"({settings.embedding_model})"
     )
 

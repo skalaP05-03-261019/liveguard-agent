@@ -12,7 +12,9 @@ from mcp import Client
 from mcp.server import MCPServer
 
 from app.rag_mcp import store
-from app.rag_mcp.config import DEFAULT_POLICY_VERSION, EMBEDDING_DIMENSIONS, POLICY_DIR, ServerSettings
+from app.rag_mcp.config import (
+    DEFAULT_POLICY_VERSION, EMBEDDING_DIMENSIONS, POLICY_DIR, ServerSettings, policy_file_for,
+)
 from app.rag_mcp.main import create_app
 from app.rag_mcp.policy import DOCUMENT_ID, PolicyChunk, parse_policy
 from app.rag_mcp.repository import PgPolicyRepository
@@ -22,7 +24,7 @@ from app.schemas import Category
 TRACE_ID = "00000000-0000-4000-8000-000000000002"
 VERSION = DEFAULT_POLICY_VERSION
 CHUNKS = parse_policy(
-    (POLICY_DIR / f"policy-v{VERSION}.md").read_text(encoding="utf-8"), version=VERSION
+    policy_file_for(VERSION).read_text(encoding="utf-8"), version=VERSION
 )
 
 
@@ -50,10 +52,11 @@ class FakeEmbedder:
 
 def _indexed_versions() -> dict[str, dict[str, dict[str, Any]]]:
     # 실제 DB처럼 레포의 모든 정책 버전(v3.0, v3.1 …)을 색인된 상태로 둔다.
+    # 활성 이름표(v3.1)도 실제 DB처럼 같은 원문으로 색인돼 있다.
+    labels = [path.stem.removeprefix("policy-v") for path in sorted(POLICY_DIR.glob("policy-v*.md"))]
     versions = {}
-    for path in sorted(POLICY_DIR.glob("policy-v*.md")):
-        version = path.stem.removeprefix("policy-v")
-        chunks = parse_policy(path.read_text(encoding="utf-8"), version=version)
+    for version in sorted({*labels, DEFAULT_POLICY_VERSION}):
+        chunks = parse_policy(policy_file_for(version).read_text(encoding="utf-8"), version=version)
         versions[version] = {chunk.policy_id: _row(chunk) for chunk in chunks}
     return versions
 
@@ -254,7 +257,7 @@ class RagMcpHttpTests(unittest.TestCase):
 
         self.assertEqual(
             health,
-            {"status": "ready", "readyForTasks": True, "indexedPolicyVersions": ["3.0", VERSION]},
+            {"status": "ready", "readyForTasks": True, "indexedPolicyVersions": ["3.0", "3.1", VERSION]},
         )
         self.assertEqual(unauthenticated.status_code, 401)
         self.assertEqual(wrong.status_code, 401)

@@ -1,6 +1,6 @@
 # AI2-01 Agent ↔ RAG MCP 정책 검색 계약
 
-> 상태: 구현 기준 (2026-10-20, #4, #15). 활성 색인은 운영정책 v3.1(팀 POLICY 개정 반영), v3.0은 과거 판단 근거로 유지한다. 도구 이름·입출력이 바뀌면 이 문서와 테스트를 함께 고친다.
+> 상태: 구현 기준 (2026-10-20, #4, #15). 2026-10-21 활성 이름표 `v3.1`(#49). 활성 색인은 운영정책 v3.1(팀 POLICY 개정 반영), v3.0은 과거 판단 근거로 유지한다. 도구 이름·입출력이 바뀌면 이 문서와 테스트를 함께 고친다.
 
 ## 1. 목적과 책임 경계
 
@@ -61,9 +61,9 @@ Agent의 `app/clients/business_mcp.py`와 같은 방식(Bearer 헤더 + `streama
         "policyId": "MP-4.1",
         "title": "강퇴 심사",
         "text": "- **집계 대상:** ...",
-        "version": "3.1",
+        "version": "v3.1",
         "category": null,
-        "resourceUri": "policy://3.1/operating-policy/MP-4.1",
+        "resourceUri": "policy://v3.1/operating-policy/MP-4.1",
         "score": 0.4189
       }
     ]
@@ -115,7 +115,8 @@ v3.1 기준 29개 조항. v3.0(23개)에는 CP-4.2, CP-5.2, MP-1.3, MP-1.4, MP-4
 - 임베딩: OpenAI `text-embedding-3-small`, 1536차원. 색인과 질의 모델이 다르면 `POLICY_INDEX_MISMATCH`.
 - 정책 개정: 노션 수정 → 버전 올림 → 새 파일 추가 → 재색인. 이전 버전 행은 남아 과거 판단의 근거를 다시 볼 수 있다.
 
-- 활성 버전 값은 Backend·Agent·RAG가 같아야 한다(팀 TBD-08). 현재 RAG 기본 색인은 `3.1`이며, `get_moderation_case`의 `policyVersion`이 `3.1`이어야 v3.1 조항을 검색한다.
+- 활성 버전 값은 Backend·Agent·RAG가 같아야 한다(팀 TBD-08). BE OpenAPI v1.0이 `policyVersion: v3.1`(const)로 고정해, RAG 기본 색인 이름표도 `v3.1`이다(#49). 이름표 `v3.1`과 `3.1`은 같은 원문 `policy-v3.1.md`를 쓰며, 검색은 이름표가 정확히 같은 행만 찾는다.
+- 색인 버전은 `LIVEGUARD_POLICY_VERSION` → `POLICY_VERSION` → 기본값 `v3.1` 순으로 정한다. 두 환경변수를 명시하면 정확히 같아야 하며, 다르면 시작을 거부한다. 10/20~21 로컬·캡처에 남은 `3.1` 행은 이름표만 다른 같은 원문이다.
 
 ## 8. 확인된 동작 (2026-10-20, v3.1 실제 임베딩)
 
@@ -130,7 +131,7 @@ v3.1 기준 29개 조항. v3.0(23개)에는 CP-4.2, CP-5.2, MP-1.3, MP-1.4, MP-4
 
 공통 조항이 유형 조항보다 위에 올 수 있으므로, Agent는 `topK` 결과 전체를 근거 후보로 보고 `category`가 일치하는 조항을 우선 인용한다.
 
-## 9. 검색 정확도 평가 (#28, 2026-10-21)
+## 9. 검색 정확도 평가 (#28, 2026-10-21. #49 이름표 v3.1로 재측정, 결과 동일)
 
 `uv run --env-file .env python -m app.rag_mcp.evaluate --out evidence/rag-retrieval-eval-v3.1.json`
 

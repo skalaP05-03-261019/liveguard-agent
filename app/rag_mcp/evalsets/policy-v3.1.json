@@ -1,5 +1,5 @@
 {
-  "policyVersion": "3.1",
+  "policyVersion": "v3.1",
   "description": "운영정책 v3.1 검색 평가셋. expected는 정답으로 인정하는 조항 ID(첫 번째가 주 정답). category는 조사 중 Agent가 넘길 법한 유형이며 공통 조항 질문은 null.",
   "cases": [
     {"id": "Q01", "query": "채팅에 사전에 등록된 욕설이 들어 있으면 인용한 경우에도 위반인가", "category": "PROFANITY", "expected": ["CP-2.1"]},
