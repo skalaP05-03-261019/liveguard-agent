@@ -11,6 +11,13 @@ from app.schemas import Contract, TaskEnvelope
 from app.state import AgentState
 
 
+class SnapshotTarget(Contract):
+    """Explicit target metadata from the BE InternalCase DTO; never inferred from context."""
+    message_id: UUID
+    visibility: Literal["PUBLIC", "HELD", "HIDDEN"]
+    version: int = Field(ge=1, strict=True)
+
+
 class CaseSnapshot(Contract):
     # BE may add fields; only these fields are consumed by this implementation proposal.
     model_config = ConfigDict(alias_generator=Contract.model_config["alias_generator"],
@@ -21,6 +28,7 @@ class CaseSnapshot(Contract):
     policy_version: str = Field(min_length=1)
     target_message_ids: list[UUID] = Field(min_length=1)
     target_versions: dict[UUID, Annotated[int, Field(ge=1)]]
+    targets: list[SnapshotTarget] | None = None
     # New team contract fields; older read-only callers remain compatible.
     # The integrated workflow requires these explicitly and never substitutes channelId.
     live_id: UUID | None = None
@@ -30,12 +38,33 @@ class CaseSnapshot(Contract):
     kick_review: dict | None = None
     confirmation_status: Literal["CONFIRMED", "UNCONFIRMED"] | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def adapt_backend_targets(cls, data):
+        if not isinstance(data, dict) or data.get("targets") is None:
+            return data
+        raw = data["targets"]
+        if not isinstance(raw, list) or not raw:
+            raise ValueError("targets must be a non-empty array")
+        targets = [SnapshotTarget.model_validate(item) for item in raw]
+        adapted = dict(data)
+        if not any(key in data for key in ("targetMessageIds", "target_message_ids")):
+            adapted["targetMessageIds"] = [target.message_id for target in targets]
+        if not any(key in data for key in ("targetVersions", "target_versions")):
+            adapted["targetVersions"] = {target.message_id: target.version for target in targets}
+        return adapted
+
     @model_validator(mode="after")
     def validate_targets(self):
         if len(self.target_message_ids) != len(set(self.target_message_ids)):
             raise ValueError("targetMessageIds must be unique")
         if not set(self.target_message_ids) <= self.target_versions.keys():
             raise ValueError("Every target requires a target version")
+        if self.targets is not None:
+            ids = [target.message_id for target in self.targets]
+            if (len(ids) != len(set(ids)) or set(ids) != set(self.target_message_ids)
+                    or self.target_versions != {target.message_id: target.version for target in self.targets}):
+                raise ValueError("Backend targets conflict with target IDs or versions")
         return self
 
 
@@ -85,6 +114,10 @@ async def load_case_data(task: TaskEnvelope, tools: ReadTools) -> AgentState:
     ids = [message.message_id for message in context.messages]
     if len(ids) != len(set(ids)) or not set(snapshot.target_message_ids) <= set(ids):
         raise AgentToolError("INVALID_EVIDENCE", trace_id=trace_id)
+    if snapshot.targets is not None:
+        visible = {message.message_id: message.visibility for message in context.messages}
+        if any(visible[target.message_id] != target.visibility for target in snapshot.targets):
+            raise AgentToolError("STALE_EVIDENCE", trace_id=trace_id)
 
     messages = [message.model_dump(mode="json", by_alias=True) for message in context.messages]
     targets = {str(message_id) for message_id in snapshot.target_message_ids}
