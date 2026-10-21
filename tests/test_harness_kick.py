@@ -105,6 +105,21 @@ class KickReviewTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("durationSeconds", str(payload))
         self.assertEqual(self.gateway.kick_calls, [])
 
+    async def test_kick_card_retains_snapshot_and_typed_finding_evidence(self) -> None:
+        from app.schemas import MessageFinding
+        state = case_state(required=True, basis=[C1, C2, C3])
+        state.update(snapshot_id=CASE_ID, evidence_version=4)
+        state["message_findings"] = [MessageFinding(
+            message_id=uuid.UUID(CASE_ID), verdict="VIOLATION", categories=["HARASSMENT"],
+            policy_ids=["CP-3.2"], evidence_message_ids=[uuid.UUID(CASE_ID)], reason="반복적인 표적 괴롭힘")]
+        await self.start(state)
+        card = await pending_kick_approval(self.graph, self.thread)
+        self.assertEqual((card["snapshotId"], card["evidenceVersion"]), (CASE_ID, 4))
+        self.assertEqual(card["findings"][0]["evidenceMessageIds"], [CASE_ID])
+        self.assertEqual(card["findings"][0]["missingFacts"], [])
+        self.assertEqual(card["basisCaseIds"], [C1, C2, C3])
+        self.assertEqual(self.gateway.kick_calls, [])
+
     async def test_ac14_approval_kicks_after_revalidation(self) -> None:
         await self.start(case_state(required=True, basis=[C1, C2, C3]))
         kick_result = await self.resume(APPROVE)

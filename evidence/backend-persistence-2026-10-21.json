@@ -1,0 +1,122 @@
+{
+  "status": "PARTIAL",
+  "traceId": "13a36d7c-695f-4013-b1f4-82c34f4b2185",
+  "caseId": "7d754b4a-6f70-4262-9d89-0c323b15b73f",
+  "backendHttpObserved": true,
+  "mutationExecuted": false,
+  "checks": {
+    "withoutServiceToken": 403,
+    "bearerOnly": 403,
+    "authBoundaryReady": true,
+    "httpReads": {
+      "userHistory": {
+        "httpStatus": 501
+      },
+      "case": {
+        "httpStatus": 501
+      },
+      "kickEligibility": {
+        "httpStatus": 501
+      },
+      "securityFacts": {
+        "httpStatus": 501
+      },
+      "channelInfo": {
+        "httpStatus": 200
+      },
+      "context": {
+        "httpStatus": 200
+      }
+    },
+    "contextMessageCount": 1,
+    "rawContextSchemaGaps": [
+      "caseId",
+      "snapshotId",
+      "evidenceVersion",
+      "messages.0.visibility"
+    ],
+    "contextWithServiceToken": 200,
+    "caseEndpoint": 501,
+    "channelInfo": 200,
+    "documentedB2Routes": {
+      "case": true,
+      "judgment": false,
+      "actionExecution": true,
+      "contextDecision": false,
+      "kickDecision": false
+    },
+    "mcpReads": {
+      "get_security_facts": {
+        "errorCode": "NOT_IMPLEMENTED",
+        "retryable": false
+      },
+      "get_moderation_case": {
+        "errorCode": "NOT_IMPLEMENTED",
+        "retryable": false
+      },
+      "get_user_history": {
+        "errorCode": "NOT_IMPLEMENTED",
+        "retryable": false
+      },
+      "get_official_links": {
+        "status": "CONNECTED"
+      },
+      "get_stream_info": {
+        "status": "CONNECTED"
+      },
+      "get_chat_context": {
+        "status": "CONNECTED"
+      }
+    },
+    "mcpToSpringContext": "CONNECTED",
+    "mcpContextSchemaGaps": [
+      "caseId",
+      "snapshotId",
+      "evidenceVersion",
+      "messages.0.visibility"
+    ]
+  },
+  "readContractReady": false,
+  "blockers": [
+    {
+      "stage": "userHistory",
+      "httpStatus": 501
+    },
+    {
+      "stage": "case",
+      "httpStatus": 501
+    },
+    {
+      "stage": "kickEligibility",
+      "httpStatus": 501
+    },
+    {
+      "stage": "securityFacts",
+      "httpStatus": 501
+    },
+    {
+      "stage": "get_security_facts",
+      "errorCode": "NOT_IMPLEMENTED"
+    },
+    {
+      "stage": "get_moderation_case",
+      "errorCode": "NOT_IMPLEMENTED"
+    },
+    {
+      "stage": "get_user_history",
+      "errorCode": "NOT_IMPLEMENTED"
+    }
+  ],
+  "notice": "Connectivity inspection, not moderation/approval/kick execution proof",
+  "verification": {
+    "backendCommit": "184f2a3f2209d7ca55a04939ffbd50e84f6ef926",
+    "actualHttpAndMcp": true,
+    "testInputCreated": true,
+    "messageId": "4ced2aea-d558-4494-b860-f13494292c54",
+    "persistedCaseId": "7d754b4a-6f70-4262-9d89-0c323b15b73f",
+    "persistedSnapshotId": "28fa7003-c7ec-4d6d-8bf3-152cb0233c32",
+    "persistedEvidenceVersion": 1,
+    "confirmedOrProposedFindingsCreated": 0,
+    "realModelCalls": 0
+  }
+}

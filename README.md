@@ -40,6 +40,8 @@ uv run python -m app.business_mcp
 
 ## RAG 정책 색인 (AI2, #3)
 
+최신 BE 영속 사건 연결 점검과 운영자 카드 근거 필드는 [연동 진단·검토 근거](docs/AI1-35-operator-evidence-backend-readiness.md)를 참조한다. 조회 연결 성공과 전체 Agent 승인/집행 준비는 구분한다.
+
 운영정책 원문(`app/rag_mcp/policies/policy-v{version}.md`, 노션 Export, 기본 v3.1)을 조항 ID(`CP/SP/MP/MM-x.y`) 헤딩 단위로 나눠 OpenAI 임베딩과 함께 pgvector `rag.policy_chunks`에 넣는다. 장 제목 등 조항 밖 텍스트는 색인하지 않는다.
 
 색인 설정의 `POLICY_VERSION`이 미설정이거나 빈 문자열이면 `app/rag_mcp/config.py`의 `DEFAULT_POLICY_VERSION`(현재 `3.1`)을 사용하고, 명시한 값은 그대로 사용한다. 이 기본값이 배포 활성 정책을 확정하지는 않는다. Agent 조회·판정은 Backend 사건 응답의 `policyVersion`을 따르므로 해당 버전이 실제로 색인되어 있어야 한다. 통합 배포에서는 팀이 정한 버전을 명시하고 사건 버전·색인 버전의 일치를 확인한다.
