@@ -111,4 +111,3 @@ class JudgmentHttpTests(unittest.IsolatedAsyncioTestCase):
         payload["handlingRoute"] = "RULE_CONFIRMED"
         with self.assertRaises(ValueError):
             judgment_body(payload)
-
