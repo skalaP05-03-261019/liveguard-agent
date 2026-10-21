@@ -9,6 +9,7 @@ Business/RAG MCP 조회와 실제 OpenAI 검증 결과는 각 이슈의 증거�
 `app.integration.workflow.build_moderation_graph`에 추가했다. CONTEXT 대기·보류·재개 후
 Backend 처리와 별도 KICK 대기를 연결하며 공유 실행 예산/마스킹을 사용한다.
 HTTP 실행기·영속 inbox·서비스 인증은 [#10 실행기 문서](docs/AI1-10-task-runtime.md)에 구현했다. 실제 Backend 업무 Gateway는 연동 대기다.
+최신 BE 사건 입력 사전검사와 중단 작업 복구는 [#40 운영 준비 문서](docs/AI1-40-backend-preflight-recovery.md)를 참조한다. 사전검사는 모델·Gateway 없이도 가능하며 실행 승인을 대신하지 않는다.
 실제 B1 진행 이벤트 계약용 `BackendEvents` HTTP 어댑터는 추가했으며, 전체 Spring 집행 시험과 구분한다.
 [최신 명세 출처·Backend 잔여 계약](docs/AI1-10-latest-spec-and-boundary.md)을 먼저 확인한다.
 
@@ -22,7 +23,7 @@ uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
 
 `http://127.0.0.1:8001/docs`에서 입력 형식을 확인한다. `/health`는 `readyForTasks: false`다.
 기본 구성에서는 Gateway/인증 설정이 없어 run/resume는 **503**으로 차단한다. 실제 Gateway가 주입된 runtime은 Bearer 인증 후 작업을 영속 저장하고 202를 반환한다. 결과는 GET `/agent/tasks/{taskId}`로 조회한다.
-현재 인증이 없으므로 로컬 개발 주소만 사용한다.
+Agent는 BE 전용 Bearer 인증을 사용하며 브라우저 로그인과 구분한다. 내부 서비스 주소로만 노출한다.
 
 ## Business MCP 개발 서버 (BE2-01)
 

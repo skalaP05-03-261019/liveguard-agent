@@ -4,6 +4,7 @@ SQLite is a local-volume deployment choice for the HTTP-first runner. Atomic cla
 and per-thread exclusion work across workers sharing the SAME database file.
 """
 import hashlib
+import fcntl
 import json
 import sqlite3
 from contextlib import contextmanager
@@ -13,6 +14,10 @@ from app.schemas import TaskEnvelope
 
 
 class TaskConflict(Exception):
+    pass
+
+
+class MaintenanceBusy(Exception):
     pass
 
 
@@ -54,6 +59,23 @@ class TaskStore:
             if db.in_transaction:
                 db.rollback()
             db.close()
+
+    @contextmanager
+    def execution_lock(self, *, maintenance=False):
+        """Same-host advisory lock: shared workers, exclusive offline reconciliation.
+
+        A crashed process releases its lock via the OS. Never steal a timed lease
+        while another worker could still be executing a business mutation.
+        """
+        with open(self.path + ".recovery.lock", "a") as lock:
+            try:
+                fcntl.flock(lock, (fcntl.LOCK_EX if maintenance else fcntl.LOCK_SH) | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise MaintenanceBusy("RECOVERY_WORKER_ACTIVE") from None
+            try:
+                yield
+            finally:
+                fcntl.flock(lock, fcntl.LOCK_UN)
 
     def accept(self, task: TaskEnvelope):
         payload = task.model_dump(mode="json", by_alias=True)
@@ -109,10 +131,23 @@ class TaskStore:
                        (status, code, key))
 
     def get(self, task_id):
+        row = self.recovery_candidate(task_id)
+        return self.public(row) if row else None
+
+    def recovery_candidate(self, task_id):
+        """Private envelope for reconciliation; never expose through status API."""
         with self.connection() as db:
             row = db.execute("""SELECT j.* FROM jobs j JOIN threads t ON t.thread_id=j.thread_id
                 WHERE t.task_id=? ORDER BY j.rowid DESC LIMIT 1""", (str(task_id),)).fetchone()
-            return self.public(row) if row else None
+            return dict(row) if row else None
+
+    def recover(self, key, expected_status, status, code):
+        with self.connection() as db:
+            updated = db.execute("""UPDATE jobs SET status=?,code=?,updated_at=CURRENT_TIMESTAMP
+                WHERE operation_id=? AND status=? AND status IN ('RUNNING','UNKNOWN')""",
+                (status, code, key, expected_status))
+            if updated.rowcount != 1:
+                raise TaskConflict("RECOVERY_STATUS_CHANGED")
 
     @staticmethod
     def public(row):

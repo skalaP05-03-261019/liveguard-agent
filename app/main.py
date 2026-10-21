@@ -9,11 +9,13 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.runtime.bootstrap import configured_runtime
+from app.integration.preflight import configured_read_tools, inspect_task
 from app.runtime.store import TaskConflict
 from app.schemas import TaskEnvelope
 
 
-def create_app(*, runtime_factory=configured_runtime, service_token=None):
+def create_app(*, runtime_factory=configured_runtime, service_token=None,
+               preflight_tools_factory=configured_read_tools):
     @asynccontextmanager
     async def lifespan(application):
         application.state.service_token = (service_token if service_token is not None
@@ -73,6 +75,20 @@ def create_app(*, runtime_factory=configured_runtime, service_token=None):
     @application.post("/agent/tasks/{task_id}/run", dependencies=[Depends(authenticate)])
     async def run_task(task_id: UUID, task: TaskEnvelope):
         return await accept(task_id, task, resume=False)
+
+    @application.post("/agent/tasks/{task_id}/preflight", dependencies=[Depends(authenticate)])
+    async def preflight(task_id: UUID, task: TaskEnvelope):
+        # Available without model/Gateway; never accepts a job or resumes a decision.
+        if task_id != task.task_id or task.kind not in {"ANALYZE", "REANALYZE"}:
+            raise HTTPException(400, {"code": "INVALID_PREFLIGHT_TASK"})
+        try:
+            tools = preflight_tools_factory()
+        except (ValueError, TypeError):
+            raise HTTPException(503, {"code": "BUSINESS_MCP_NOT_CONFIGURED"}) from None
+        try:
+            return await inspect_task(task, tools)
+        except Exception:
+            raise HTTPException(503, {"code": "PREFLIGHT_UNAVAILABLE"}) from None
 
     @application.post("/agent/tasks/{task_id}/resume", dependencies=[Depends(authenticate)])
     async def resume_task(task_id: UUID, task: TaskEnvelope):

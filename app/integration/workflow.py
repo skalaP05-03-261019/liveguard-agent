@@ -10,6 +10,7 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import ValidationError
 
 from app import nodes
+from app.case_loader import require_executable_case
 from app.clients.business_mcp import AgentToolError
 from app.business_mcp.schemas import KickCommand
 from app.harness.context_review import (
@@ -97,17 +98,11 @@ def build_moderation_graph(*, model, business, policy, backend: ModerationGatewa
             return _error(state, "INVALID_TASK_KIND")
         try:
             loaded = await nodes.load_case(state, tools=business)
+            require_executable_case(loaded)
         except AgentToolError as error:
-            return _error({"trace_id": str(task.trace_id)}, error.code)
-        if not all(loaded.get(k) for k in ("live_id", "user_id", "handling_route")):
-            return {**loaded, **_error(loaded, "BACKEND_CONTRACT_INCOMPLETE")}
-        route = loaded["handling_route"]
-        if route == "RULE_CONFIRMED" and loaded["case_snapshot"].get("confirmationStatus") != "CONFIRMED":
-            return {**loaded, **_error(loaded, "UNCONFIRMED_RULE_CASE")}
-        if route in {"CONTEXT_REVIEW", "PII_INVESTIGATION", "FLOOD_REVIEW"} and any(
-            m["visibility"] != "HELD" for m in loaded["target_messages"]
-        ):
-            return {**loaded, **_error(loaded, "EXPECTED_HELD_TARGET")}
+            patch = _error({"trace_id": str(task.trace_id)}, error.code)
+            patch["error"]["retryable"] = error.retryable
+            return patch
         return loaded
 
     def after_load(state):

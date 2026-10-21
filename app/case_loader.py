@@ -86,6 +86,20 @@ class ChatContext(Contract):
     messages: list[ChatMessage]
 
 
+def require_executable_case(loaded: AgentState) -> None:
+    """Shared preflight/Graph checks; absent live/user scope is never inferred."""
+    trace_id = loaded.get("trace_id", "")
+    if not all(loaded.get(k) for k in ("live_id", "user_id", "handling_route")):
+        raise AgentToolError("BACKEND_CONTRACT_INCOMPLETE", trace_id=trace_id)
+    route = loaded["handling_route"]
+    if route == "RULE_CONFIRMED" and loaded["case_snapshot"].get("confirmationStatus") != "CONFIRMED":
+        raise AgentToolError("UNCONFIRMED_RULE_CASE", trace_id=trace_id)
+    if route in {"CONTEXT_REVIEW", "PII_INVESTIGATION", "FLOOD_REVIEW"} and any(
+        m["visibility"] != "HELD" for m in loaded["target_messages"]
+    ):
+        raise AgentToolError("EXPECTED_HELD_TARGET", trace_id=trace_id)
+
+
 async def load_case_data(task: TaskEnvelope, tools: ReadTools) -> AgentState:
     trace_id = str(task.trace_id)
     args = {"caseId": str(task.case_id), "traceId": trace_id}
