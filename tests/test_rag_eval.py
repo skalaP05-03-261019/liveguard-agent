@@ -2,7 +2,7 @@
 
 import unittest
 
-from app.rag_mcp.config import POLICY_DIR
+from app.rag_mcp.config import policy_file_for
 from app.rag_mcp.evaluate import (
     EVALSET_DIR, EvalCase, evaluate, first_hit_rank, load_evalset, summarize,
 )
@@ -13,7 +13,7 @@ from app.schemas import Category
 class EvalsetTests(unittest.TestCase):
     def test_expected_sections_exist_in_policy_text(self) -> None:
         version, cases = load_evalset(EVALSET_DIR / "policy-v3.1.json")
-        markdown = (POLICY_DIR / f"policy-v{version}.md").read_text(encoding="utf-8")
+        markdown = policy_file_for(version).read_text(encoding="utf-8")
         section_ids = {chunk.policy_id for chunk in parse_policy(markdown, version=version)}
         self.assertGreaterEqual(len(cases), 20)
         self.assertEqual(len({case.id for case in cases}), len(cases))
@@ -54,7 +54,7 @@ class MetricTests(unittest.IsolatedAsyncioTestCase):
             return [{"policy_id": pid, "score": 0.9 - i / 10} for i, pid in enumerate(ids)]
 
         cases = [EvalCase("Q1", "조롱", Category.HARASSMENT, ("CP-3.2",))]
-        report = await evaluate(cases, version="3.1", embed=embed, search=search)
+        report = await evaluate(cases, version="v3.1", embed=embed, search=search)
         self.assertEqual(embedded, ["조롱"])
         self.assertEqual(searched, [(None, 4), ("HARASSMENT", 4)])
         self.assertEqual(report["results"][0]["unfiltered"]["rank"], 2)

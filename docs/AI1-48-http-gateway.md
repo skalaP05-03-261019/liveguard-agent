@@ -8,7 +8,7 @@ BE OpenAPI v1과 후속 계약 DTO PR #32를 기준으로 판정 제출, 저장�
 
 `AGENT_GATEWAY_FACTORY=app.integration.http_gateway:configured_gateway`, `BACKEND_BASE_URL`, `BACKEND_SERVICE_TOKEN`과 기존 모델·MCP·Postgres 설정을 명시한다. 기본 factory는 비어 있으며 자동으로 활성화하지 않는다. 내부 결정 조회/적용 경로는 BE #29 통합 제안이며 기본 v1 계약 전체의 구현 완료를 의미하지 않는다.
 
-색인은 `LIVEGUARD_POLICY_VERSION`을 우선 사용하며 `POLICY_VERSION`도 함께 지정했다면 정확히 일치해야 한다. `v3.1`은 저장·조회 버전으로 그대로 유지한다. 기존 원문 파일 `policy-v3.1.md`를 찾을 때만 접두어를 처리한다. 빈 레거시 버전의 기본값은 여전히 3.1이며 배포 정책 승인을 뜻하지 않는다.
+색인은 `LIVEGUARD_POLICY_VERSION`을 우선 사용하며 `POLICY_VERSION`도 함께 지정했다면 정확히 일치해야 한다. `v3.1`은 저장·조회 버전으로 그대로 유지한다. 기존 원문 파일 `policy-v3.1.md`를 찾을 때만 접두어를 처리한다. 빈 레거시 버전의 기본값은 v3.1이며 배포 정책 승인을 뜻하지 않는다.
 
 ## 실패와 승인
 
