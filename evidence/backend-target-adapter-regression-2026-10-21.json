@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-21",
+  "parentCommit": "2e515ef",
+  "kind": "controlled_backend_with_real_mcp_and_postgres",
+  "backendContractSource": "liveguard-be main 3a33ee8: InternalCase.java targets[] (case endpoint still 501)",
+  "unmergedDesignReviewed": "BE PR #23 df53ccda, documentation only",
+  "asgi": {"tests": 206, "skipped": 0, "seconds": 5.461, "exitCode": 0},
+  "tcp": {"tests": 206, "skipped": 0, "seconds": 17.484, "exitCode": 0},
+  "realModelCalls": 0,
+  "actualSanctions": 0,
+  "coverage": [
+    "explicit targets[] over actual ASGI/TCP MCP transport",
+    "legacy/BE equivalent formats and nonmutating normalization",
+    "duplicate/missing/conflicting target metadata rejected",
+    "visibility mismatch rejected as STALE_EVIDENCE",
+    "context snapshot/case/version/visibility not inferred",
+    "original task/snapshot binding precedes context read",
+    "connection diagnostic uses actual loader for targets[]"
+  ],
+  "actualBackendReadEvidence": "backend-readiness-recheck-2026-10-21.json",
+  "limit": "Fixture case contract verification is not actual BE case 200 or full moderation/approval E2E"
+}

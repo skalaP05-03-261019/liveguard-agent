@@ -15,11 +15,16 @@ TOKEN = "fixture-service-token"
 
 
 class BackendCheckTests(unittest.IsolatedAsyncioTestCase):
-    async def run_probe(self, *, incomplete=False, stale=False, open_auth=False, http_case_status=200):
+    async def run_probe(self, *, incomplete=False, stale=False, open_auth=False, http_case_status=200,
+                        backend_targets=False):
         snapshot = "30000000-0000-4000-8000-000000000004"
         case = {"caseId": CASE, "snapshotId": snapshot, "evidenceVersion": 2, "policyVersion": "3.1",
                 "targetMessageIds": [CASE], "targetVersions": {CASE: 1}, "liveId": snapshot,
                 "userId": snapshot, "handlingRoute": "CONTEXT_REVIEW"}
+        if backend_targets:
+            del case["targetMessageIds"]
+            del case["targetVersions"]
+            case["targets"] = [{"messageId": CASE, "visibility": "HELD", "version": 1}]
         context = {"caseId": CASE, "snapshotId": snapshot, "evidenceVersion": 1 if stale else 2,
                    "messages": [{"messageId": CASE, "authorAlias": "masked", "text": "private raw chat",
                                  "sentAt": "2026-10-21T00:00:00Z", "visibility": "HELD"}]}
@@ -84,6 +89,11 @@ class BackendCheckTests(unittest.IsolatedAsyncioTestCase):
         report, _ = await self.run_probe(stale=True)
         self.assertFalse(report["readContractReady"])
         self.assertIn({"stage": "evidenceBinding", "errorCode": "STALE_EVIDENCE"}, report["blockers"])
+
+    async def test_backend_target_format_passes_real_loader_binding(self):
+        report, _ = await self.run_probe(backend_targets=True)
+        self.assertTrue(report["readContractReady"])
+        self.assertTrue(report["checks"]["evidenceBindingReady"])
 
     async def test_missing_auth_enforcement_is_not_ready(self):
         report, _ = await self.run_probe(open_auth=True)
