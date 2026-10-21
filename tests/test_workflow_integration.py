@@ -62,6 +62,8 @@ class Backend:
 
     async def submit_analysis(self, *, analysis, trace_id):
         self.calls.append(("submit", deepcopy(analysis)))
+        if any(f["verdict"] == "NEEDS_REVIEW" for f in analysis["messageFindings"]):
+            return {"confirmationStatus": "PENDING", "reviewId": REVIEW, "reviewKind": "CONTEXT"}
         return self.result()
 
     async def revalidate(self, **kwargs):
@@ -162,13 +164,73 @@ class WorkflowTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(state["task_outcome"], "FAILED")
         self.assertNotIn("apply", [c[0] for c in self.backend.calls])
 
-    async def test_pii_route_does_not_create_context_approval(self):
+    async def test_pii_needs_review_waits_on_backend_review_without_second_creation(self):
         await self.prepare(route="PII_INVESTIGATION", verdict="NEEDS_REVIEW")
-        self.backend.status = "NEEDS_REVIEW"
         state = await self.start()
         self.assertEqual([c[0] for c in self.backend.calls], ["submit"])
-        self.assertEqual(state["task_outcome"], "NEEDS_REVIEW")
-        self.assertIsNone(await pending_review(self.graph, self.task.thread_id))
+        self.assertNotIn("task_outcome", state)
+        pending = await pending_review(self.graph, self.task.thread_id)
+        self.assertEqual(pending["reviewId"], REVIEW)
+        self.assertEqual(pending["reviewKind"], "CONTEXT")
+        self.assertEqual(pending["handlingRoute"], "PII_INVESTIGATION")
+        await self.resume()
+        final = (await self.graph.aget_state(self.config)).values
+        self.assertEqual(final["task_outcome"], "SUCCEEDED")
+        self.assertEqual([c[0] for c in self.backend.calls], ["submit", "decision", "apply"])
+
+    async def test_pii_normal_and_violation_do_not_gain_mandatory_approval(self):
+        for verdict in ("NO_VIOLATION", "VIOLATION"):
+            await self.prepare(route="PII_INVESTIGATION", verdict=verdict)
+            state = await self.start()
+            self.assertEqual(state["task_outcome"], "SUCCEEDED")
+            self.assertEqual([c[0] for c in self.backend.calls], ["submit"])
+            self.assertIsNone(await pending_review(self.graph, self.task.thread_id))
+
+    async def test_pii_one_uncertain_finding_in_mixed_targets_waits_for_context(self):
+        await self.prepare(route="PII_INVESTIGATION")
+        second = self.business.fixture["context"]["messages"][1]
+        second["authorAlias"] = "U1"
+        second_id = second["messageId"]
+        self.business.fixture["case"]["targetMessageIds"].append(second_id)
+        self.business.fixture["case"]["targetVersions"][second_id] = 1
+        normal = finding(self.state, "NO_VIOLATION")
+        uncertain = {**finding(self.state, "NEEDS_REVIEW"), "messageId": second_id,
+                     "evidenceMessageIds": [second_id]}
+        self.model.calls = [search(), finish([normal, uncertain])]
+        state = await self.start()
+        self.assertNotIn("task_outcome", state)
+        self.assertEqual((await pending_review(self.graph, self.task.thread_id))["reviewId"], REVIEW)
+        self.assertEqual([c[0] for c in self.backend.calls], ["submit"])
+
+    async def test_pii_needs_review_rejects_invalid_backend_review(self):
+        for result in ({"confirmationStatus": "PENDING", "reviewId": REVIEW, "reviewKind": "KICK"},
+                       {"confirmationStatus": "CONFIRMED_NORMAL", "reviewId": REVIEW, "reviewKind": "CONTEXT"},
+                       {"confirmationStatus": "PENDING", "reviewId": "bad", "reviewKind": "CONTEXT"},
+                       {"confirmationStatus": "PENDING", "reviewId": REVIEW, "reviewKind": "CONTEXT", "liveId": USER},
+                       {"status": "NEEDS_REVIEW"}, None):
+            await self.prepare(route="PII_INVESTIGATION", verdict="NEEDS_REVIEW")
+            async def submit(**kwargs):
+                return result
+            self.backend.submit_analysis = submit
+            state = await self.start()
+            self.assertEqual(state["error"]["code"], "INVALID_BACKEND_RESULT")
+            self.assertIsNone(await pending_review(self.graph, self.task.thread_id))
+            self.assertEqual(self.backend.calls, [])
+
+    async def test_pii_defer_then_violation_preserves_same_review_and_proposal(self):
+        await self.prepare(route="PII_INVESTIGATION", verdict="NEEDS_REVIEW")
+        await self.start()
+        self.backend.decision = "DEFER"
+        await self.resume()
+        self.assertEqual((await pending_review(self.graph, self.task.thread_id))["reviewId"], REVIEW)
+        self.assertEqual([c[0] for c in self.backend.calls], ["submit", "decision"])
+        self.backend.decision = "CONFIRM_VIOLATION"
+        await self.resume(decision=USER)
+        final = (await self.graph.aget_state(self.config)).values
+        self.assertEqual(final["message_findings"][0].verdict, "NEEDS_REVIEW")
+        self.assertEqual(final["context_result"]["decision"], "CONFIRM_VIOLATION")
+        self.assertEqual(sum(c[0] == "submit" for c in self.backend.calls), 1)
+        self.assertEqual(sum(c[0] == "apply" for c in self.backend.calls), 1)
 
     async def test_flood_policy_pending_and_pass_skip_model(self):
         for route, expected in (("FLOOD_REVIEW", "NEEDS_REVIEW"), ("PASS", "SUCCEEDED")):
@@ -217,6 +279,19 @@ class WorkflowTests(unittest.IsolatedAsyncioTestCase):
         result = await self.start()
         self.assertEqual(result["error"]["code"], "UNCONFIRMED_RULE_CASE")
         self.assertIsNone(await pending_review(self.graph, self.task.thread_id))
+
+    async def test_v1_confirmation_status_preserves_rule_gate(self):
+        for status in ("PENDING", "CONFIRMED_NORMAL", "CANCELLED"):
+            await self.prepare(route="RULE_CONFIRMED", confirmationStatus=status)
+            state = await self.start()
+            self.assertEqual(state["error"]["code"], "UNCONFIRMED_RULE_CASE")
+            self.assertEqual(self.backend.calls, [])
+        await self.prepare(route="RULE_CONFIRMED", confirmationStatus="CONFIRMED_VIOLATION",
+                           kickReview={"required": True, "reviewId": KICK,
+                                       "basisCaseIds": [REVIEW, DECISION, FIXTURE["task"]["caseId"]]})
+        await self.start()
+        self.assertEqual((await pending_review(self.graph, self.task.thread_id))["reviewKind"], "KICK")
+        self.assertEqual(self.model.inputs, [])
 
     async def test_human_card_masks_text_and_preserves_evidence_ids(self):
         await self.prepare()
@@ -317,6 +392,39 @@ class WorkflowRestartTests(unittest.IsolatedAsyncioTestCase):
     prepare = WorkflowTests.prepare
     start = WorkflowTests.start
     resume = WorkflowTests.resume
+
+    async def test_pii_context_defer_survives_restarts_without_resubmission(self):
+        import psycopg
+        from psycopg import sql
+        await self.prepare(route="PII_INVESTIGATION", verdict="NEEDS_REVIEW")
+        url = os.environ["AGENT_TEST_CHECKPOINT_DB_URL"]
+        schema = "agent_pii_" + uuid4().hex[:10]
+        def graph(saver):
+            return build_moderation_graph(model=self.model, business=self.business, policy=Policies(),
+                                          backend=self.backend, checkpointer=saver)
+        try:
+            async with open_checkpointer(url, schema=schema) as saver:
+                self.graph = graph(saver)
+                await self.start()
+                self.assertEqual((await pending_review(self.graph, self.task.thread_id))["reviewId"], REVIEW)
+            self.backend.decision = "DEFER"
+            async with open_checkpointer(url, schema=schema) as saver:
+                self.graph = graph(saver)
+                await self.resume()
+                self.assertEqual((await pending_review(self.graph, self.task.thread_id))["reviewId"], REVIEW)
+            self.backend.decision = "CONFIRM_NORMAL"
+            async with open_checkpointer(url, schema=schema) as saver:
+                self.graph = graph(saver)
+                await self.resume(decision=USER)
+                final = (await self.graph.aget_state(self.config)).values
+                self.assertEqual(final["task_outcome"], "SUCCEEDED")
+                self.assertEqual(final["handling_route"], "PII_INVESTIGATION")
+            self.assertEqual([c[0] for c in self.backend.calls], ["submit", "decision", "decision", "apply"])
+            self.assertEqual(len(self.model.inputs), 2)
+        finally:
+            with psycopg.connect(url, autocommit=True) as conn:
+                conn.execute(sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(sql.Identifier(schema)))
+
     async def test_integrated_context_then_kick_survives_two_restarts(self):
         import psycopg
         from psycopg import sql

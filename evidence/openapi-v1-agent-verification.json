@@ -1,0 +1,38 @@
+{
+  "observedOn": "2026-10-21",
+  "issue": "https://github.com/skalaP05-03-261019/liveguard-agent/issues/46",
+  "backendContractCommit": "882974d",
+  "agentBaseCommit": "6f453201f577d0e407ee6d866c88f81e0b9c937c",
+  "kind": "controlled",
+  "environment": "Python 3.11 in liveguard-agent:integration; separate pgvector/pgvector:pg16 test database; source mounted read-only at /work",
+  "command": "/app/.venv/bin/python -m unittest discover -s tests -v",
+  "runs": [
+    {"transport": "asgi", "tests": 243, "seconds": 5.827, "skipped": 0, "exitCode": 0, "result": "OK"},
+    {"transport": "tcp", "tests": 243, "seconds": 18.906, "skipped": 0, "exitCode": 0, "result": "OK"}
+  ],
+  "verified": [
+    "PII NEEDS_REVIEW, including one uncertain finding among multiple targets, interrupts on the Backend reviewId",
+    "No second review creation or repeated investigation/submission during DEFER and resume",
+    "Postgres checkpoint connection close/reopen twice preserves the same review and thread",
+    "PII NO_VIOLATION/VIOLATION does not gain mandatory CONTEXT approval",
+    "Cross-live or invalid review responses fail closed",
+    "v1 ConfirmationStatus preserves rule confirmation gate",
+    "Judgment HTTP wire includes only contracted fields and masked reason with evidence UUIDs",
+    "Wrong trace, 501, 409, 403, redirect and lost response are not accepted as success"
+  ],
+  "notVerified": [
+    "Actual Spring v1 judgment/decision/action execution",
+    "Live model classification quality",
+    "Browser end-to-end approval",
+    "RAG 3.1 to v3.1 deployment migration",
+    "Complete production ModerationGateway readiness"
+  ],
+  "sourceSha256": {
+    "app/case_loader.py": "279e0cb1e8fdb6502608320a36d7706739c6632c9f075efe022dea399a220dbe",
+    "app/harness/context_review.py": "26faa0d84ddfd5409c7d8df431aa315ab40cb3f4a4997d5b26ff4eb7ef1daa22",
+    "app/integration/workflow.py": "561899e8b1c0a2a83edeea16eff3b3e963a0b6276db7fde22e71662312a8fe24",
+    "app/integration/judgment_http.py": "6253a0b57900233b4c7454b133043126981daf28f39204b125ea58992a652034",
+    "tests/test_workflow_integration.py": "4a122e3606dec78f68db5059880bf9cd0cbdac7c7781884389de4920314c813f",
+    "tests/test_judgment_http.py": "3ef559679d8452a59b7a1b93e5c1e6548e0de73a45c2af02cee5cec8e25cb777"
+  }
+}

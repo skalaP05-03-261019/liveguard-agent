@@ -18,6 +18,7 @@ from app.harness.context_review import (
 )
 from app.harness.execution import guarded_investigate
 from app.harness.kick_review import execute_kick, review_kick
+from app.harness.kick_review import _uuid
 from app.harness.safety import safe_presentation
 from app.schemas import AnalysisResult
 from app.state import AgentState
@@ -183,7 +184,23 @@ def build_moderation_graph(*, model, business, policy, backend: ModerationGatewa
             "messageFindings": [f.model_dump(mode="json", by_alias=True) for f in state["message_findings"]]})
         payload = {**analysis.model_dump(mode="json", by_alias=True), "liveId": state["live_id"],
                    "handlingRoute": state["handling_route"], "taskId": state["task_id"]}
-        return _result_patch(state, await backend.submit_analysis(analysis=payload, trace_id=state["trace_id"]))
+        result = await backend.submit_analysis(analysis=payload, trace_id=state["trace_id"])
+        if any(f.verdict == "NEEDS_REVIEW" for f in analysis.message_findings):
+            # OpenAPI v1 A-16: judgment itself creates the CONTEXT review. Do not
+            # submit the same analysis through create_review or invent a review ID.
+            review_id = _uuid(result.get("reviewId")) if isinstance(result, dict) else None
+            if (review_id is None or result.get("reviewKind") != "CONTEXT"
+                    or result.get("confirmationStatus") != "PENDING"
+                    or any(k in result and result[k] != v for k, v in _refs(state).items())):
+                return _error(state, "INVALID_BACKEND_RESULT")
+            return {"backend_result": result, "review_kind": "CONTEXT",
+                    "context_review_id": review_id}
+        return _result_patch(state, result)
+
+    def after_pii(state):
+        if state.get("task_outcome"):
+            return "finish"
+        return "review_context" if state.get("context_review_id") else "review_kick"
 
     def after_backend(state):
         return "finish" if state.get("task_outcome") else "review_kick"
@@ -248,7 +265,7 @@ def build_moderation_graph(*, model, business, policy, backend: ModerationGatewa
         ("validate", after_validation, ["finish", "request_context_review", "submit_pii"]),
         ("apply_context_decision", after_decision, ["review_context", "apply_context", "finish"]),
         ("apply_context", after_backend, ["finish", "review_kick"]),
-        ("submit_pii", after_backend, ["finish", "review_kick"]),
+        ("submit_pii", after_pii, ["finish", "review_context", "review_kick"]),
     ]:
         graph.add_conditional_edges(source, router, {name: name for name in destinations})
     graph.add_edge("request_context_review", "review_context")

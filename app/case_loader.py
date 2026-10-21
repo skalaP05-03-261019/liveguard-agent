@@ -36,7 +36,8 @@ class CaseSnapshot(Contract):
     handling_route: Literal["PASS", "RULE_CONFIRMED", "CONTEXT_REVIEW",
                             "PII_INVESTIGATION", "FLOOD_REVIEW"] | None = None
     kick_review: dict | None = None
-    confirmation_status: Literal["CONFIRMED", "UNCONFIRMED"] | None = None
+    confirmation_status: Literal["CONFIRMED", "UNCONFIRMED", "PENDING",
+                                 "CONFIRMED_VIOLATION", "CONFIRMED_NORMAL", "CANCELLED"] | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -92,7 +93,9 @@ def require_executable_case(loaded: AgentState) -> None:
     if not all(loaded.get(k) for k in ("live_id", "user_id", "handling_route")):
         raise AgentToolError("BACKEND_CONTRACT_INCOMPLETE", trace_id=trace_id)
     route = loaded["handling_route"]
-    if route == "RULE_CONFIRMED" and loaded["case_snapshot"].get("confirmationStatus") != "CONFIRMED":
+    if route == "RULE_CONFIRMED" and loaded["case_snapshot"].get("confirmationStatus") not in {
+        "CONFIRMED", "CONFIRMED_VIOLATION"
+    }:
         raise AgentToolError("UNCONFIRMED_RULE_CASE", trace_id=trace_id)
     if route in {"CONTEXT_REVIEW", "PII_INVESTIGATION", "FLOOD_REVIEW"} and any(
         m["visibility"] != "HELD" for m in loaded["target_messages"]
