@@ -1,0 +1,30 @@
+{
+  "policyVersion": "3.1",
+  "description": "운영정책 v3.1 검색 평가셋. expected는 정답으로 인정하는 조항 ID(첫 번째가 주 정답). category는 조사 중 Agent가 넘길 법한 유형이며 공통 조항 질문은 null.",
+  "cases": [
+    {"id": "Q01", "query": "채팅에 사전에 등록된 욕설이 들어 있으면 인용한 경우에도 위반인가", "category": "PROFANITY", "expected": ["CP-2.1"]},
+    {"id": "Q02", "query": "게임 속 보스를 공격해서 처치하자는 말도 위반으로 봐야 하나", "category": null, "expected": ["CP-2.2"]},
+    {"id": "Q03", "query": "특정 시청자 닉네임을 부르며 가치 없는 인간이라고 반복해서 조롱한다", "category": "HARASSMENT", "expected": ["CP-3.2", "CP-3.1"]},
+    {"id": "Q04", "query": "방송 내용에 대한 부정적인 의견이 인신공격인지 단순 비판인지 구분하는 기준", "category": "HARASSMENT", "expected": ["CP-3.1", "CP-2.2"]},
+    {"id": "Q05", "query": "같은 사용자가 10초 안에 같은 문장을 세 번 보냈다", "category": "FLOOD", "expected": ["CP-4.1"]},
+    {"id": "Q06", "query": "도배로 안내를 받은 사용자가 같은 문장을 하루 안에 다시 한 번 보냈다", "category": "FLOOD", "expected": ["CP-4.2"]},
+    {"id": "Q07", "query": "채팅에 공식 사이트 URL 링크를 붙여 보냈는데 이것도 막히나", "category": "PHISHING", "expected": ["CP-5.1", "SP-2.1"]},
+    {"id": "Q08", "query": "운영자인 척 공지를 올리면서 시청자에게 계정 비밀번호를 보내라고 한다", "category": "PHISHING", "expected": ["CP-5.2"]},
+    {"id": "Q09", "query": "다른 사람의 실명과 전화번호, 집 주소를 채팅에 올렸다", "category": "PII_EXPOSURE", "expected": ["SP-3.1"]},
+    {"id": "Q10", "query": "숫자만 길게 나열된 메시지를 개인정보 노출로 확정해도 되나", "category": "PII_EXPOSURE", "expected": ["SP-3.1"]},
+    {"id": "Q11", "query": "혐오 차별 발언이나 성희롱, 신체적 위협처럼 다섯 유형에 없는 위험한 메시지", "category": null, "expected": ["CP-6.1"]},
+    {"id": "Q12", "query": "AI가 정상이라고 판단한 문맥 의심 메시지를 운영자 확인 없이 바로 공개해도 되나", "category": null, "expected": ["MP-1.3", "CP-1.2"]},
+    {"id": "Q13", "query": "임시로 가려진 HELD 메시지는 작성자와 다른 시청자, 운영자 중 누가 볼 수 있나", "category": null, "expected": ["MP-1.2"]},
+    {"id": "Q14", "query": "이미 링크 금지로 숨겨진 메시지를 문맥 검토에서 정상으로 결정하면 공개되나", "category": null, "expected": ["MP-1.4"]},
+    {"id": "Q15", "query": "괴롭힘으로 이전에 한 번 확정된 사용자가 또 괴롭힘을 하면 채팅 제한은 몇 초인가", "category": "HARASSMENT", "expected": ["MP-2.1"]},
+    {"id": "Q16", "query": "한 메시지가 욕설과 괴롭힘에 동시에 해당하면 숨김과 채팅 제한을 어떻게 적용하나", "category": null, "expected": ["MP-2.2", "CP-1.2"]},
+    {"id": "Q17", "query": "제재 기간과 강퇴 여부는 Agent와 Backend 중 누가 정하나", "category": null, "expected": ["MP-2.3"]},
+    {"id": "Q18", "query": "채팅 제한 시간이 끝나면 이전 위반 이력도 사라지나", "category": null, "expected": ["MP-3.1"]},
+    {"id": "Q19", "query": "위반이 몇 건 쌓이면 운영자에게 강퇴 승인을 요청하나", "category": null, "expected": ["MP-4.1"]},
+    {"id": "Q20", "query": "운영자가 강퇴를 거절하면 심사에 쓰인 기준 사건은 어떻게 되나", "category": null, "expected": ["MP-4.2"]},
+    {"id": "Q21", "query": "강퇴당한 사용자는 언제 다시 방송에 들어와 채팅할 수 있나", "category": null, "expected": ["MP-4.3", "MP-3.2"]},
+    {"id": "Q22", "query": "운영자 화면이나 모델 입력에 전화번호 원문을 그대로 보여줘도 되나", "category": "PII_EXPOSURE", "expected": ["SP-4.1"]},
+    {"id": "Q23", "query": "오판으로 위반이 취소되면 숨김과 채팅 제한은 어떻게 복구하나", "category": null, "expected": ["MM-2.1"]},
+    {"id": "Q24", "query": "작성자에게 제재 사유를 안내할 때 무엇을 알려주고 판단 기록에는 무엇을 남기나", "category": null, "expected": ["MM-1.1"]}
+  ]
+}
