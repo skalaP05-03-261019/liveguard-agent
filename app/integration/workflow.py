@@ -110,7 +110,7 @@ def build_moderation_graph(*, model, business, policy, backend: ModerationGatewa
         if state.get("task_outcome"):
             return "finish"
         route = state["handling_route"]
-        if route == "RULE_CONFIRMED":
+        if route == "RULE_CONFIRMED" or (route == "FLOOD_REVIEW" and state["case_snapshot"].get("confirmationStatus") == "CONFIRMED_VIOLATION"):
             return "review_kick"
         if route == "PASS":
             return "finish"
