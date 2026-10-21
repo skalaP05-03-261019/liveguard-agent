@@ -381,7 +381,7 @@ class BusinessMcpTests(unittest.IsolatedAsyncioTestCase):
             json.loads(raised.exception.as_tool_error())["traceId"], str(TRACE_ID)
         )
 
-    def test_container_host_requires_explicit_allowlist(self) -> None:
+    def test_container_host_allowed_by_default_and_explicit_override_remains_enforced(self) -> None:
         from dataclasses import replace
         settings = Settings("http://backend.test", "service-token", "agent-token", "127.0.0.1", 8002)
         headers = {"Authorization": "Bearer agent-token", "Host": "business-mcp:8002",
@@ -390,12 +390,12 @@ class BusinessMcpTests(unittest.IsolatedAsyncioTestCase):
             "protocolVersion": "2025-11-25", "capabilities": {},
             "clientInfo": {"name": "compose-regression", "version": "1"}}}
         with TestClient(create_app(settings, backend=FakeBackend())) as client:
-            self.assertEqual(client.post("/mcp", json=body, headers=headers).status_code, 421)
-        allowed = replace(settings, allowed_hosts=("business-mcp:*", "localhost:*"))
-        with TestClient(create_app(allowed, backend=FakeBackend())) as client:
             self.assertEqual(client.post("/mcp", json=body, headers=headers).status_code, 200)
             self.assertEqual(client.post("/mcp", json=body, headers={**headers, "Host": "untrusted:8002"}).status_code, 421)
             self.assertEqual(client.post("/mcp", json=body, headers={**headers, "Authorization": "Bearer wrong"}).status_code, 401)
+        restricted = replace(settings, allowed_hosts=("localhost:*", "127.0.0.1:*"))
+        with TestClient(create_app(restricted, backend=FakeBackend())) as client:
+            self.assertEqual(client.post("/mcp", json=body, headers=headers).status_code, 421)
 
     def test_http_endpoint_requires_agent_token(self) -> None:
         settings = Settings(
