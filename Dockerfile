@@ -23,7 +23,9 @@ RUN uv sync --locked --no-install-project
 COPY app ./app
 COPY prompts ./prompts
 
-RUN useradd --create-home --uid 10001 liveguard && chown -R liveguard /app
+RUN useradd --create-home --uid 10001 liveguard && chown -R liveguard /app \
+    # Agent 작업 저장소(AGENT_TASK_DB_PATH) 위치. 새 named volume이 이 소유권을 이어받아 non-root가 쓸 수 있다.
+ && mkdir -p /var/lib/liveguard-agent && chown liveguard /var/lib/liveguard-agent
 USER liveguard
 
 EXPOSE 8001 8002 8003

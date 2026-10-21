@@ -1,6 +1,6 @@
 # AI2-06 Harness 문맥 검토(CONTEXT) interrupt/resume 계약
 
-> 상태: 구현 기준 (2026-10-20, #24). 팀 문서 CONTRACTS §2·§5·§8·§11, ARCHITECTURE §3 기준. Graph 전체 연결·Backend 처리·후속 KICK 연결은 #10(AI1).
+> 상태: 구현 기준 (2026-10-20, #24). 2026-10-21 HTTP 재개 방식 갱신(#27 비동기 접수). 팀 문서 CONTRACTS §2·§5·§8·§11, ARCHITECTURE §3 기준. Graph 전체 연결·Backend 처리·후속 KICK 연결은 #10(AI1).
 
 ## 1. 책임 경계
 
@@ -85,15 +85,22 @@ async def get_decision(*, review_id, decision_id, trace_id) -> dict
 {"kind": "RESUME_REVIEW", "reviewKind": "CONTEXT", "reviewId": "…", "decisionId": "…", "threadId": "<중단 당시와 동일>", "caseId": "…", "…": "…"}
 ```
 
-| 응답 | 의미 |
+#27 이후 HTTP 재개는 **저장 후 비동기 실행**이다. 전체 HTTP 계약은 [AI1-10-task-runtime.md](AI1-10-task-runtime.md).
+
+| 단계 | 응답 |
 |---|---|
-| 202 `{taskId, contextResult}` | 재개 완료 (KICK이면 `kickResult`) |
-| 400 | `reviewKind` 또는 `reviewId` 없음 |
-| 404 `THREAD_NOT_FOUND` | 해당 threadId checkpoint 없음 |
-| 409 `NO_PENDING_APPROVAL` | 대기 중인 심사 없음(이미 결정됨). 중복 결정 반영 안 함 |
-| 409 `REVIEW_KIND_MISMATCH` | 대기 중인 심사 종류가 다름. 문맥 결정으로 강퇴를 재개하거나 그 반대가 되지 않음 |
-| 409 `CASE_MISMATCH` / `REVIEW_MISMATCH` | 대기 중인 사건·심사와 불일치 |
-| 501 | checkpointer가 붙은 Graph가 `app.state.agent_graph`에 없음 (#10에서 주입) |
+| 접수 | 202: 작업을 저장만 하고 실행은 worker가 한다. 같은 decisionId 재전송은 200 `duplicate: true`(다시 실행 안 함), 같은 키의 다른 입력은 409 |
+| 접수 거부 | 400 `reviewKind`·`reviewId` 없음, 401 Bearer(`AGENT_SERVICE_TOKEN`) 불일치, 503 실행기·인증 미구성 |
+| 결과 조회 | GET `/agent/tasks/{taskId}`: 상태(WAITING_REVIEW / SUCCEEDED / FAILED / NEEDS_REVIEW / UNKNOWN)와 오류 코드 |
+
+worker는 아래 `resume_review`로 Graph를 재개한다. 검증에 걸리면 Graph를 바꾸지 않고, 대기가 남아 있으면 작업을 WAITING_REVIEW로 둔 채 오류 코드를 남긴다(대기가 없으면 FAILED). 올바른 결정은 새 decisionId로 다시 보낸다.
+
+| `ResumeError` 코드 | 의미 |
+|---|---|
+| `THREAD_NOT_FOUND` | 해당 threadId checkpoint 없음 |
+| `NO_PENDING_APPROVAL` | 대기 중인 심사 없음(이미 결정됨). 중복 결정으로 실행을 반복하지 않음 |
+| `REVIEW_KIND_MISMATCH` | 대기 중인 심사 종류가 다름. 문맥 결정으로 강퇴를 재개하거나 그 반대가 되지 않음 |
+| `CASE_MISMATCH` / `REVIEW_MISMATCH` | 대기 중인 사건·심사와 불일치 |
 
 Python: `resume_review(graph, review_kind=, thread_id=, review_id=, decision_id=, case_id=)`, `resume_context_review(...)`, 기존 `resume_kick_review(...)` 유지.
 
