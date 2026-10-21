@@ -27,5 +27,13 @@
   "realModelCalls": 0,
   "actualSanctions": 0,
   "localServicesRebuilt": false,
-  "ci": "pending"
+  "ci": {
+    "kind": "controlled_workflow_with_real_postgres_and_mcp_transport",
+    "codeCommit": "702e284",
+    "runId": 39533450449,
+    "asgi": {"tests": 225, "passed": 225, "skipped": 0, "seconds": 13.527, "result": "success"},
+    "tcp": {"tests": 225, "passed": 225, "skipped": 0, "seconds": 24.819, "result": "success"},
+    "postgresRecoveryAfterClosedConnections": "passed",
+    "actualSpringMutationOrModelProof": false
+  }
 }

@@ -48,6 +48,8 @@ uv run --env-file .env python -m app.recover_tasks --task-id UUID --apply
 
 배포된 worker와 같은 `AGENT_TASK_DB_PATH` 볼륨, `AGENT_CHECKPOINT_DB_URL`, Graph 코드 버전을 사용한다. 새 잠금 프로토콜을 모르는 구버전 worker는 먼저 중지한다. 이 도구는 기존 체크포인트 테이블만 읽으며 스키마 생성/마이그레이션 setup을 실행하지 않는다. 업무 DB나 체크포인트를 수정하지 않는다.
 
+팀원 PR #42의 named volume uid 10001 쓰기 권한 보강과 병행한다. recovery lock 파일도 같은 task 볼륨에 생성되므로 동일 사용자 권한이 필요하다. #42의 Dockerfile·Harness 문서는 이번 PR에서 수정하거나 병합하지 않는다.
+
 | 관측한 상태 | 제안하는 inbox 상태 |
 | --- | --- |
 | task/case/thread/snapshot/evidence와 승인 카드가 일치하는 human interrupt | WAITING_REVIEW |
@@ -65,7 +67,7 @@ RESUME_REVIEW는 해당 reviewId/decisionId가 체크포인트 결과에 반영�
 
 새 테스트는 인증·readiness/실행 승인 구분·실제 형태의 409를 HTTP 어댑터/MCP wire로 전달·증거 불일치·오류 마스킹·dry-run·worker 상호 배제·자식 프로세스 강제 종료·DEFER/완료 복구·미확인 변경의 재실행 금지를 검사한다. 실제 Postgres 연결을 닫고 읽기 전용으로 재접속하는 복구 검사는 CI DB 환경에서 실행한다. 모델과 BE 변경 응답은 통제 fixture이며 실제 제재가 아니다.
 
-이번 환경에서는 Docker socket과 Python의 로컬 TCP 연결 접근이 거부돼 기존 사용자 서비스 재빌드와 로컬 DB/TCP 시험을 실행할 수 없다. 실행 중인 Spring은 허용된 curl 읽기로 재확인했다. GitHub CI의 ASGI/TCP + Postgres 검사 결과는 후속 evidence에 기록한다. 실제 BE 관측과 오프라인 통제 응답 시험을 구분한다.
+이번 환경에서는 Docker socket과 Python의 로컬 TCP 연결 접근이 거부돼 기존 사용자 서비스 재빌드와 로컬 DB/TCP 시험을 실행할 수 없다. 실행 중인 Spring은 허용된 curl 읽기로 재확인했다. GitHub CI run `39533450449`, 코드 `702e284`에서 ASGI 225개(13.527초), TCP 225개(24.819초), skip 0으로 모두 통과했다. 실제 Postgres 연결 종료/재접속 복구도 통과했다. 실제 BE 관측과 통제 응답 시험을 구분하며 모델/실제 제재 성공을 의미하지 않는다.
 
 수업 근거: PDF 실제 61쪽(비동기 task 상태), 72쪽(Guardrails 승인 중단·State/Memory 재개). 이번 범위는 그중 상태·복구 경계를 보강하며 전체 Harness 준수 판정을 대신하지 않는다.
 
