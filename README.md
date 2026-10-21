@@ -51,6 +51,8 @@ uv run --env-file .env python -m app.rag_mcp.index
 
 같은 `POLICY_VERSION`으로 다시 실행하면 해당 버전 행을 한 트랜잭션으로 교체한다. 정책을 고칠 때는 노션 수정 → 버전 올림 → Export한 파일을 `policy-v{version}.md`로 추가 → 재색인한다. pgvector 통합 테스트는 `RAG_TEST_DB_URL`이 있을 때만 실행되며 임시 버전으로 색인한 뒤 지운다.
 
+검색 정확도 평가(#28): `uv run --env-file .env python -m app.rag_mcp.evaluate`. v3.1 질문 24개 기준 정답 조항 4위 안 적중 92%(유형 지정 96%), 1위 적중 58%. 결과와 해석은 [docs/AI2-01-rag-mcp-contract.md](docs/AI2-01-rag-mcp-contract.md) 9절, 원자료는 `evidence/rag-retrieval-eval-v3.1.json`.
+
 ## RAG MCP 서버 (AI2, #4)
 
 Business MCP와 같은 구조(FastAPI `/mcp`, Streamable HTTP, Bearer 토큰)로 `search_policy`, `get_policy_section` 도구와 조항 원문 Resource `policy://{version}/{documentId}/{sectionId}`를 제공한다. 모두 조회 전용이다.
