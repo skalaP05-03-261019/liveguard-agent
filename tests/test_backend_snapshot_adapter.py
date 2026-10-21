@@ -39,6 +39,17 @@ class BackendSnapshotAdapterTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("user_id", state)
         self.assertNotIn("handling_route", state)
 
+    async def test_backend_provenance_is_preserved_without_fabricating_missing_fields(self):
+        fixture=backend_fixture()
+        fixture["case"].update(ruleId="BACKEND_RULE",filterVersion="backend-filter-7",matchingTags=["LINK"])
+        state=await load_case_data(TaskEnvelope.model_validate(fixture["task"]),FixtureTools(fixture))
+        self.assertEqual(state["case_snapshot"]["ruleId"],"BACKEND_RULE")
+        self.assertEqual(state["case_snapshot"]["filterVersion"],"backend-filter-7")
+        self.assertEqual(state["case_snapshot"]["matchingTags"],["LINK"])
+        state=await load_case_data(TaskEnvelope.model_validate(FIXTURE["task"]),FixtureTools(FIXTURE))
+        self.assertIsNone(state["case_snapshot"]["ruleId"])
+        self.assertIsNone(state["case_snapshot"]["filterVersion"])
+
     async def test_equivalent_dual_formats_are_accepted_without_changing_input(self):
         fixture = backend_fixture()
         fixture["case"].update({key: deepcopy(FIXTURE["case"][key])

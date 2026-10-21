@@ -16,11 +16,14 @@ TOKEN = "fixture-service-token"
 
 class BackendCheckTests(unittest.IsolatedAsyncioTestCase):
     async def run_probe(self, *, incomplete=False, stale=False, open_auth=False, http_case_status=200,
-                        backend_targets=False):
+                        backend_targets=False, http_case_change=None, http_context_change=None,
+                        confirmed_flood=False, public_target=False):
         snapshot = "30000000-0000-4000-8000-000000000004"
         case = {"caseId": CASE, "snapshotId": snapshot, "evidenceVersion": 2, "policyVersion": "3.1",
                 "targetMessageIds": [CASE], "targetVersions": {CASE: 1}, "liveId": snapshot,
                 "userId": snapshot, "handlingRoute": "CONTEXT_REVIEW"}
+        if confirmed_flood:
+            case.update(handlingRoute="FLOOD_REVIEW",confirmationStatus="CONFIRMED_VIOLATION")
         if backend_targets:
             del case["targetMessageIds"]
             del case["targetVersions"]
@@ -28,6 +31,8 @@ class BackendCheckTests(unittest.IsolatedAsyncioTestCase):
         context = {"caseId": CASE, "snapshotId": snapshot, "evidenceVersion": 1 if stale else 2,
                    "messages": [{"messageId": CASE, "authorAlias": "masked", "text": "private raw chat",
                                  "sentAt": "2026-10-21T00:00:00Z", "visibility": "HELD"}]}
+        if confirmed_flood: context["messages"][0]["visibility"]="HIDDEN"
+        if public_target: context["messages"][0]["visibility"]="PUBLIC"
         requests = []
         def handler(request):
             requests.append(request)
@@ -37,9 +42,9 @@ class BackendCheckTests(unittest.IsolatedAsyncioTestCase):
             if not open_auth and request.headers.get("X-Service-Token") != TOKEN:
                 return httpx.Response(403)
             if request.url.path.endswith("/context"):
-                return httpx.Response(200, json={"data": context})
+                return httpx.Response(200, json={"data": {**deepcopy(context), **(http_context_change or {})}})
             if request.url.path == f"/internal/cases/{CASE}":
-                return httpx.Response(501 if incomplete else http_case_status, json={"data": case})
+                return httpx.Response(501 if incomplete else http_case_status, json={"data": {**deepcopy(case), **(http_case_change or {})}})
             return httpx.Response(501, json={"error": {"code": "NOT_IMPLEMENTED", "retryable": False}})
         original = httpx.AsyncClient
         def client(**kwargs):
@@ -103,6 +108,36 @@ class BackendCheckTests(unittest.IsolatedAsyncioTestCase):
     async def test_successful_mcp_cannot_hide_unavailable_direct_case_endpoint(self):
         report, _ = await self.run_probe(http_case_status=501)
         self.assertFalse(report["readContractReady"])
+
+    async def test_http_and_mcp_divergence_cannot_be_reported_ready(self):
+        for change in ({"policyVersion":"v3.1"},{"snapshotId":CASE},{"handlingRoute":"PASS"},
+                       {"ruleId":"RULE_TEST"},{"filterVersion":"different-filter"},{"targetVersions":{CASE:3}}):
+            with self.subTest(change=change):
+                report,_=await self.run_probe(http_case_change=change)
+                self.assertFalse(report["readContractReady"])
+                self.assertFalse(report["workflowPreflightReady"])
+                self.assertIn({"stage":"transportBinding","errorCode":"BACKEND_READ_DIVERGED"},report["blockers"])
+
+    async def test_same_snapshot_label_with_different_context_is_divergence(self):
+        messages=[{"messageId":CASE,"authorAlias":"masked","text":"different private chat", "sentAt":"2026-10-21T00:00:00Z","visibility":"HELD"}]
+        report,_=await self.run_probe(http_context_change={"messages":messages})
+        self.assertFalse(report["readContractReady"])
+        self.assertNotIn("different private chat",str(report))
+        self.assertFalse(report["checks"]["transportBindingReady"])
+
+    async def test_read_schema_success_is_separate_from_workflow_preflight(self):
+        report,_=await self.run_probe(public_target=True)
+        self.assertTrue(report["readContractReady"])
+        self.assertFalse(report["workflowPreflightReady"])
+        self.assertFalse(report["executionAuthorized"])
+        self.assertIn({"stage":"workflowPreflight","errorCode":"EXPECTED_HELD_TARGET"},report["blockers"])
+
+    async def test_confirmed_hidden_flood_is_readable_without_authorizing_execution(self):
+        report,_=await self.run_probe(confirmed_flood=True)
+        self.assertTrue(report["readContractReady"])
+        self.assertTrue(report["workflowPreflightReady"])
+        self.assertFalse(report["executionAuthorized"])
+        self.assertFalse(report["mutationExecuted"])
 
     async def test_real_shaped_b1_response_is_partial_not_silently_normalized(self):
         context = {"messages": [{"messageId": CASE, "authorAlias": "U1", "text": "[EMAIL]",

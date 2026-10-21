@@ -35,6 +35,10 @@ class CaseSnapshot(Contract):
     user_id: UUID | None = None
     handling_route: Literal["PASS", "RULE_CONFIRMED", "CONTEXT_REVIEW",
                             "PII_INVESTIGATION", "FLOOD_REVIEW"] | None = None
+    # BE-owned provenance: preserve it when supplied; never infer a rule or filter version.
+    rule_id: str | None = None
+    filter_version: str | None = None
+    matching_tags: list[str] | None = None
     kick_review: dict | None = None
     confirmation_status: Literal["CONFIRMED", "UNCONFIRMED", "PENDING",
                                  "CONFIRMED_VIOLATION", "CONFIRMED_NORMAL", "CANCELLED"] | None = None
@@ -97,6 +101,13 @@ def require_executable_case(loaded: AgentState) -> None:
         "CONFIRMED", "CONFIRMED_VIOLATION"
     }:
         raise AgentToolError("UNCONFIRMED_RULE_CASE", trace_id=trace_id)
+    if (route == "FLOOD_REVIEW"
+            and loaded["case_snapshot"].get("confirmationStatus") == "CONFIRMED_VIOLATION"):
+        # The BE owns confirmation and visibility changes. Frozen evidence may still
+        # describe HELD; a confirmed snapshot may describe HIDDEN. Neither authorizes KICK.
+        if any(m["visibility"] not in {"HELD", "HIDDEN"} for m in loaded["target_messages"]):
+            raise AgentToolError("INVALID_CONFIRMED_TARGET", trace_id=trace_id)
+        return
     if route in {"CONTEXT_REVIEW", "PII_INVESTIGATION", "FLOOD_REVIEW"} and any(
         m["visibility"] != "HELD" for m in loaded["target_messages"]
     ):
