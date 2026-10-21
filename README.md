@@ -10,7 +10,7 @@ Business/RAG MCP 조회와 실제 OpenAI 검증 결과는 각 이슈의 증거�
 최신 Notion 문맥 승인 정책과 AI2 PR #25를 연결한 별도 실행 Graph를
 `app.integration.workflow.build_moderation_graph`에 추가했다. CONTEXT 대기·보류·재개 후
 Backend 처리와 별도 KICK 대기를 연결하며 공유 실행 예산/마스킹을 사용한다.
-HTTP 실행기·영속 inbox·서비스 인증은 [#10 실행기 문서](docs/AI1-10-task-runtime.md)에 구현했다. 실제 Backend 업무 Gateway는 연동 대기다.
+HTTP 실행기·영속 inbox·서비스 인증은 [#10 실행기 문서](docs/AI1-10-task-runtime.md)에 구현했다. 실제 HTTP Gateway의 구현·설정·검증 범위는 [#48](docs/AI1-48-http-gateway.md)을 참조한다. 기본 배포에서는 명시적으로 활성화해야 한다.
 최신 BE 사건 입력 사전검사와 중단 작업 복구는 [#40 운영 준비 문서](docs/AI1-40-backend-preflight-recovery.md)를 참조한다. 사전검사는 모델·Gateway 없이도 가능하며 실행 승인을 대신하지 않는다.
 실제 B1 진행 이벤트 계약용 `BackendEvents` HTTP 어댑터는 추가했으며, 전체 Spring 집행 시험과 구분한다.
 [최신 명세 출처·Backend 잔여 계약](docs/AI1-10-latest-spec-and-boundary.md)을 먼저 확인한다.
@@ -111,7 +111,7 @@ LIVEGUARD_TEST_TCP=1 uv run --locked python -m unittest discover -s tests -v
 ```
 
 기본 테스트는 실제 Business MCP ASGI app·인증·MCP SDK/HTTP 직렬화를 사용하며 Backend만 가상이다. TCP 모드는 Uvicorn을 임시 로컬 포트에 띄운다. 테스트 범위와 결과는 [검증 기록](evidence/agent-read-check.json)에 구분한다.
-`load_case`와 통합 Graph는 HTTP 실행기에서 조립한다. 기본 배포의 실제 Backend Gateway 연결은 아직 남아 있다.
+`load_case`와 통합 Graph는 HTTP 실행기에서 조립한다. 실제 Gateway는 [#48](docs/AI1-48-http-gateway.md)에 구현했으며 기본 배포에서는 비활성이다.
 조회 시 `BUSINESS_MCP_URL`, `BUSINESS_MCP_AGENT_TOKEN`을 process environment에서 읽는다. `.env` 자동 로드는 하지 않는다.
 
 ## RAG 소비자 연결 (#8)

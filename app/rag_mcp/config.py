@@ -26,16 +26,21 @@ class IndexSettings:
 
     @property
     def policy_file(self) -> Path:
-        return POLICY_DIR / f"policy-v{self.policy_version}.md"
+        # File naming only. Index rows/Resource URIs retain the exact shared version.
+        return POLICY_DIR / f"policy-v{self.policy_version.removeprefix('v')}.md"
 
     @classmethod
     def from_env(cls) -> "IndexSettings":
+        shared = os.getenv("LIVEGUARD_POLICY_VERSION")
+        legacy = os.getenv("POLICY_VERSION")
+        if shared and legacy and shared != legacy:
+            raise ValueError("Shared and legacy policy versions conflict")
         # .env.example의 빈 값(KEY=)도 미설정으로 보고 기본값을 쓴다.
         return cls(
             db_url=os.getenv("RAG_DB_URL", ""),
             openai_api_key=os.getenv("OPENAI_API_KEY", ""),
             embedding_model=os.getenv("EMBEDDING_MODEL") or DEFAULT_EMBEDDING_MODEL,
-            policy_version=os.getenv("POLICY_VERSION") or DEFAULT_POLICY_VERSION,
+            policy_version=shared or legacy or DEFAULT_POLICY_VERSION,
         )
 
 
