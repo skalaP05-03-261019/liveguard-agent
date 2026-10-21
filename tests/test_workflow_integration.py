@@ -269,6 +269,19 @@ class WorkflowTests(unittest.IsolatedAsyncioTestCase):
         await self.resume()
         self.assertEqual((await self.graph.aget_state(self.config)).values["task_outcome"],"SUCCEEDED")
 
+    async def test_unverified_model_evidence_is_discarded_and_sent_to_human(self):
+        await self.prepare(verdict="VIOLATION")
+        forged = {**finding(self.state, "VIOLATION"), "evidenceMessageIds": [str(uuid4())]}
+        self.model.calls = [search(), finish([forged])]
+        result = await self.start()
+        self.assertIsNone(result["task_outcome"])
+        self.assertEqual(result["investigation_error"]["code"], "INVALID_EVIDENCE")
+        self.assertEqual(result["message_findings"][0].verdict, "NEEDS_REVIEW")
+        self.assertEqual(result["message_findings"][0].policy_ids, [])
+        self.assertEqual(result["message_findings"][0].categories, [])
+        self.assertEqual([call[0] for call in self.backend.calls], ["create"])
+        self.assertEqual((await pending_review(self.graph,self.task.thread_id))["reviewId"], REVIEW)
+
     async def test_unknown_apply_response_stops_without_kick(self):
         await self.prepare()
         await self.start()

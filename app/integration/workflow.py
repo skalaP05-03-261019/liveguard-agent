@@ -137,8 +137,8 @@ def build_moderation_graph(*, model, business, policy, backend: ModerationGatewa
         return result
 
     def after_investigation(state):
-        if (state.get("task_outcome") == "NEEDS_REVIEW"
-                and (state.get("error") or {}).get("code") == "EXECUTION_LIMIT"):
+        if (state.get("target_messages") and (state.get("error") or {}).get("code") in {
+                "EXECUTION_LIMIT", "INVALID_MODEL_OUTPUT", "INVALID_EVIDENCE", "INVALID_POLICY_EVIDENCE"}):
             return "manual_review"
         if state.get("task_outcome"):
             return "finish"
@@ -148,14 +148,17 @@ def build_moderation_graph(*, model, business, policy, backend: ModerationGatewa
         # A bounded investigation may stop without a verdict. Keep HELD and
         # expose the limitation to the operator; do not invent policy evidence.
         from app.schemas import MessageFinding
+        code = (state.get("error") or {}).get("code", "INVESTIGATION_INCOMPLETE")
+        reason = ("AI 조사 실행 한도에 도달해 판단을 완료하지 못했습니다." if code == "EXECUTION_LIMIT"
+                  else "AI 응답의 근거 검증을 통과하지 못해 판정을 사용하지 않았습니다.")
         return {"task_outcome": None, "error": None,
                 "investigation_error": state.get("error"),
                 "message_findings": [MessageFinding.model_validate({
                     "messageId": message["messageId"], "verdict": "NEEDS_REVIEW",
                     "categories": [], "policyIds": [],
                     "evidenceMessageIds": [message["messageId"]],
-                    "reason": "AI 조사 실행 한도에 도달해 판단을 완료하지 못했습니다.",
-                    "missingFacts": ["정책과 문맥을 운영자가 직접 확인해야 합니다. (EXECUTION_LIMIT)"]})
+                    "reason": reason,
+                    "missingFacts": [f"정책과 문맥을 운영자가 직접 확인해야 합니다. ({code})"]})
                     for message in state["target_messages"]]}
 
     async def validate(state):
