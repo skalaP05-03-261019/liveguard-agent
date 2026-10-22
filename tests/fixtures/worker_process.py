@@ -35,6 +35,7 @@ async def run(args):
 
     original_create = backend.create_review
     original_apply = backend.apply_context
+    original_get_decision = backend.get_decision
     original_model = fixture.model.complete
 
     async def create(**kwargs):
@@ -50,6 +51,12 @@ async def run(args):
     async def model(*a, **kw):
         record('model')
         return await original_model(*a, **kw)
+
+    async def get_decision(**kwargs):
+        result = await original_get_decision(**kwargs)
+        if kwargs['review_id'] == KICK:
+            result['decision'] = 'REJECT' if args.kick_status == 'REJECTED' else 'APPROVE'
+        return result
 
     async def revalidate(**kwargs):
         record('revalidate', kwargs)
@@ -78,6 +85,7 @@ async def run(args):
         return {'actionId': kwargs['action_id'], 'status': 'APPLIED'}
 
     backend.create_review, backend.apply_context = create, apply
+    backend.get_decision = get_decision
     backend.revalidate, backend.kick = revalidate, kick
     backend.read_case, backend.read_action = read_case, read_action
     fixture.model.complete = model

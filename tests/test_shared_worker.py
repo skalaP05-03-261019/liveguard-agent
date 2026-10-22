@@ -502,7 +502,8 @@ os._exit(9)
             db.execute(sql.SQL("UPDATE {} SET available_at=clock_timestamp()").format(self.store._jobs))
         self.assertTrue(await replacement.run_one())
         self.assertEqual(self.row()["status"], "SUCCEEDED")
-        self.assertEqual(calls, 2)
+        # Failed read, recovery preflight, then the Graph's decision read.
+        self.assertEqual(calls, 3)
 
     async def test_transient_recovery_decision_read_stops_after_max_attempts(self):
         await self.worker().run_one()
@@ -560,7 +561,8 @@ os._exit(9)
             db.execute(sql.SQL("UPDATE {} SET available_at=clock_timestamp()").format(self.store._jobs))
         self.assertTrue(await replacement.run_one())
         self.assertEqual(self.row()["status"], "SUCCEEDED")
-        self.assertEqual(calls, 2)
+        # Failed read, recovery preflight, then the Graph's decision read.
+        self.assertEqual(calls, 3)
         self.assertEqual(sum(c[0] == "apply" for c in self.backend.calls), 1)
 
     async def test_defer_then_final_queued_decision_and_duplicates_survive_replacement(self):
@@ -1086,11 +1088,14 @@ os._exit(9)
 
     async def test_defer_and_wrong_review_keep_waiting_without_reinvestigation(self):
         await self.worker().run_one()
+        before = await self.graph.aget_state(self.config)
         wrong = self.decision().model_copy(update={'review_kind': 'KICK'})
         self.store.accept(wrong)
         await self.worker('second').run_one()
-        self.assertEqual(self.store.get(self.task.task_id)['status'], 'WAITING_REVIEW')
+        self.assertEqual(self.store.get(self.task.task_id)['status'], 'FAILED')
         self.assertEqual(self.store.get(self.task.task_id)['code'], 'REVIEW_KIND_MISMATCH')
+        self.assertEqual((await self.graph.aget_state(self.config)).config, before.config)
+        self.assertTrue(before.interrupts)
         self.backend.decision = 'DEFER'
         deferred = self.decision().model_copy(update={'decision_id': uuid4()})
         self.store.accept(deferred)
