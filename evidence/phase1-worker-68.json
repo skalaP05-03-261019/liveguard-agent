@@ -15,7 +15,7 @@
     "failures": 0,
     "errors": 0,
     "skipped": 0,
-    "seconds": 38.569,
+    "seconds": 40.274,
     "addedScenarios": [
       "Independent process restart through CONTEXT then KICK, AI/human reason references retained",
       "KICK rejection after restart executes no kick",
@@ -58,7 +58,33 @@
     "app/harness/execution.py": "41109a267fa45f9c09fd1f31a38a978e5ee8cc517f8d719d7fbb49a4bf8ffffe",
     "app/integration/http_gateway.py": "f447d8b7f81abb3b18f93294ebe7a30f374a187db5e7999b07b2fc4874429169",
     "app/integration/workflow.py": "df5d01f8a552b12c3328ce946ab700465930c07e814fa183be98612048fdb845",
-    "tests/test_shared_worker.py": "cdc7b83d786b5d54927ffdf7be53523f4ab64fb47ecd1aa4ea6e0c724033796d",
+    "tests/test_shared_worker.py": "9e307adf80ddfc4d68b665d8ad4aa273515f9c20b02c8264acfc7e1dd0488d23",
     "tests/fixtures/worker_process.py": "62d64ae2df74dc93f84afd476d221c01e5b1ddb7efc8818fc292bfb5dd87dc95"
+  },
+  "previousRuns": [
+    {
+      "kind": "local-controlled",
+      "run": 344,
+      "errors": 0,
+      "seconds": 38.569
+    },
+    {
+      "kind": "GitHub-CI-TCP",
+      "jobId": 119658440308,
+      "head": "e7b61753479c01ec96464f440535778fc7558033",
+      "run": 344,
+      "errors": 1,
+      "seconds": 75.988,
+      "test": "test_lost_heartbeat_cancels_model_and_no_followup_mutation_or_write",
+      "error": "TimeoutError before model entry",
+      "cause": "Test heartbeat failure injected before model entry on slow startup"
+    }
+  ],
+  "heartbeatRegression": {
+    "beforeFix": "250ms delayed initial read reproduces model-entry wait TimeoutError",
+    "afterFix": "Model-entry Event gates injected LeaseLost; initial reads retain real heartbeat",
+    "targetTest": "PASS",
+    "additionalStartupDelayTest": "PASS",
+    "productionLogicChanged": false
   }
 }

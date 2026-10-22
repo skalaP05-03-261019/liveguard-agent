@@ -213,7 +213,24 @@ os._exit(9)
 
         self.model.complete = late
         worker = self.worker()
-        with patch.object(worker.store, "heartbeat", side_effect=LeaseLost):
+        original_heartbeat = worker.store.heartbeat
+        original_call = self.business.call
+
+        async def slow_initial_read(name, arguments):
+            if name == 'get_moderation_case':
+                # Exercise at least one healthy heartbeat before model entry.
+                await asyncio.sleep(.25)
+            return await original_call(name, arguments)
+
+        def lose_only_during_model(job, *, lease_seconds):
+            # Inject the failure at the scenario boundary, not at a wall-clock
+            # tick that can cancel startup on a slower CI runner.
+            if entered.is_set():
+                raise LeaseLost()
+            return original_heartbeat(job, lease_seconds=lease_seconds)
+
+        self.business.call = slow_initial_read
+        with patch.object(worker.store, "heartbeat", side_effect=lose_only_during_model):
             running = asyncio.create_task(worker.run_one())
             await asyncio.wait_for(entered.wait(), 5)
             await asyncio.wait_for(running, 5)
