@@ -1,0 +1,381 @@
+{
+  "kind": "candidate-screening-only",
+  "datasetSha256": "609933a4d69b840d305da4ab7ff3ec7ce35366c14b11586e7dbe12cf36152b0e",
+  "total": 20,
+  "assessed": 13,
+  "errors": 7,
+  "coverage": 0.65,
+  "experiments": {
+    "clear-only": {
+      "assessedOnly": {
+        "tp": 3,
+        "fp": 0,
+        "tn": 9,
+        "fn": 1,
+        "precision": 1.0,
+        "recall": 0.75,
+        "f1": 0.8571,
+        "normalCandidateRate": 0.0
+      },
+      "candidateCount": 3,
+      "missedExpectedCandidatesIncludingErrors": 7
+    },
+    "clear-or-possible": {
+      "assessedOnly": {
+        "tp": 3,
+        "fp": 0,
+        "tn": 9,
+        "fn": 1,
+        "precision": 1.0,
+        "recall": 0.75,
+        "f1": 0.8571,
+        "normalCandidateRate": 0.0
+      },
+      "candidateCount": 3,
+      "missedExpectedCandidatesIncludingErrors": 7
+    },
+    "include-uncertain": {
+      "assessedOnly": {
+        "tp": 3,
+        "fp": 0,
+        "tn": 9,
+        "fn": 1,
+        "precision": 1.0,
+        "recall": 0.75,
+        "f1": 0.8571,
+        "normalCandidateRate": 0.0
+      },
+      "candidateCount": 3,
+      "missedExpectedCandidatesIncludingErrors": 7
+    }
+  },
+  "riskKindLabeledAssessed": 13,
+  "riskKindsAssessedOnly": {
+    "REGION_DISPARAGEMENT": {
+      "tp": 2,
+      "fp": 0,
+      "tn": 10,
+      "fn": 1,
+      "precision": 1.0,
+      "recall": 0.6667,
+      "f1": 0.8,
+      "normalCandidateRate": 0.0
+    },
+    "GROUP_HATE": {
+      "tp": 1,
+      "fp": 0,
+      "tn": 12,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "normalCandidateRate": 0.0
+    },
+    "TARGETED_ATTACK": {
+      "tp": 0,
+      "fp": 0,
+      "tn": 13,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "normalCandidateRate": 0.0
+    },
+    "PROFANITY_VARIANT": {
+      "tp": 0,
+      "fp": 0,
+      "tn": 13,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "normalCandidateRate": 0.0
+    }
+  },
+  "latencyMs": {
+    "p50": 1189.94,
+    "p95": 1651.27
+  },
+  "usage": {
+    "inputTokens": 12295,
+    "outputTokens": 586
+  },
+  "results": [
+    {
+      "id": "P2-01",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 940,
+        "outputTokens": 22
+      },
+      "latencyMs": 2929.47
+    },
+    {
+      "id": "P2-02",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "REGION_DISPARAGEMENT"
+      ],
+      "candidates": {
+        "clear-only": true,
+        "clear-or-possible": true,
+        "include-uncertain": true
+      },
+      "usage": {
+        "inputTokens": 942,
+        "outputTokens": 110
+      },
+      "latencyMs": 1189.94
+    },
+    {
+      "id": "P2-03",
+      "expectedCandidate": true,
+      "status": "ERROR",
+      "errorCode": "INVALID_MODEL_OUTPUT",
+      "latencyMs": 1227.44
+    },
+    {
+      "id": "P2-04",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "GROUP_HATE"
+      ],
+      "candidates": {
+        "clear-only": true,
+        "clear-or-possible": true,
+        "include-uncertain": true
+      },
+      "usage": {
+        "inputTokens": 944,
+        "outputTokens": 126
+      },
+      "latencyMs": 1571.19
+    },
+    {
+      "id": "P2-05",
+      "expectedCandidate": true,
+      "status": "ERROR",
+      "errorCode": "INVALID_MODEL_OUTPUT",
+      "latencyMs": 1271.66
+    },
+    {
+      "id": "P2-06",
+      "expectedCandidate": true,
+      "status": "ERROR",
+      "errorCode": "INVALID_MODEL_OUTPUT",
+      "latencyMs": 1651.27
+    },
+    {
+      "id": "P2-07",
+      "expectedCandidate": true,
+      "status": "ERROR",
+      "errorCode": "INVALID_MODEL_OUTPUT",
+      "latencyMs": 1445.18
+    },
+    {
+      "id": "P2-08",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "REGION_DISPARAGEMENT"
+      ],
+      "candidates": {
+        "clear-only": true,
+        "clear-or-possible": true,
+        "include-uncertain": true
+      },
+      "usage": {
+        "inputTokens": 947,
+        "outputTokens": 130
+      },
+      "latencyMs": 1354.63
+    },
+    {
+      "id": "P2-09",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 940,
+        "outputTokens": 22
+      },
+      "latencyMs": 828.21
+    },
+    {
+      "id": "P2-10",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 941,
+        "outputTokens": 22
+      },
+      "latencyMs": 1045.49
+    },
+    {
+      "id": "P2-11",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 946,
+        "outputTokens": 22
+      },
+      "latencyMs": 863.92
+    },
+    {
+      "id": "P2-12",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 945,
+        "outputTokens": 22
+      },
+      "latencyMs": 844.53
+    },
+    {
+      "id": "P2-13",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 943,
+        "outputTokens": 22
+      },
+      "latencyMs": 810.09
+    },
+    {
+      "id": "P2-14",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 941,
+        "outputTokens": 22
+      },
+      "latencyMs": 720.27
+    },
+    {
+      "id": "P2-15",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 942,
+        "outputTokens": 22
+      },
+      "latencyMs": 707.42
+    },
+    {
+      "id": "P2-16",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 940,
+        "outputTokens": 22
+      },
+      "latencyMs": 695.39
+    },
+    {
+      "id": "P2-17",
+      "expectedCandidate": true,
+      "status": "ERROR",
+      "errorCode": "INVALID_MODEL_OUTPUT",
+      "latencyMs": 1585.04
+    },
+    {
+      "id": "P2-18",
+      "expectedCandidate": true,
+      "status": "ERROR",
+      "errorCode": "INVALID_MODEL_OUTPUT",
+      "latencyMs": 1650.91
+    },
+    {
+      "id": "P2-19",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 984,
+        "outputTokens": 22
+      },
+      "latencyMs": 757.19
+    },
+    {
+      "id": "P2-20",
+      "expectedCandidate": false,
+      "status": "ERROR",
+      "errorCode": "INVALID_MODEL_OUTPUT",
+      "latencyMs": 1567.15
+    }
+  ],
+  "limits": [
+    "Selection experiments are not customer policy or calibrated probabilities.",
+    "Metrics are conditional on assessed rows; coverage and errors must also be shown.",
+    "Candidate classification is not a violation finding or human decision.",
+    "No Backend delivery, hiding, enforcement, production throughput or Phase 1 baseline is proven.",
+    "Token counts are not monetary cost; pricing is not inferred."
+  ],
+  "execution": {
+    "mode": "live-model",
+    "sourceModel": "gpt-5.4-mini",
+    "promptSha256": "46db4d5b36a2ca84661c33c4c08d70610ad6110bf9f3f7a4e75087f2ffcf2c0a",
+    "timeoutSeconds": 20.0
+  }
+}

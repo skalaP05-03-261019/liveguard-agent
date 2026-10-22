@@ -5,6 +5,10 @@
 김태관 / AI1 Agent의 조사·정책 검증·승인 흐름 연결 서비스다.
 Business/RAG MCP 조회와 실제 OpenAI 검증 결과는 각 이슈의 증거와 문서를 참조한다.
 
+## Phase 2 · 공유 기획과 태관 후보 판별 개발
+
+[기획·역할·미정 사항](docs/phase2/README.md)과 [후보 판별/평가기 실행법](docs/phase2/implementation-61.md)을 추가했습니다. 새 모듈은 독립 실험용이며 기본 서비스 API·조사/승인·공유 Inbox/Worker에 연결하지 않습니다. 요약 기술은 세원님 담당으로 진행하되 이용 역할·시점은 추후 결정합니다. 실험용 신호 선택을 고객사 정책 확정이나 실제 제재로 해석하지 않습니다.
+
 ## #10 통합 진행
 
 2026-10-21 BE OpenAPI v1(A-9·A-16)에 따른 **PII NEEDS_REVIEW → 기존 CONTEXT 검토 interrupt**와 판정 제출 HTTP 어댑터는 [#46 변경·검증 범위](docs/AI1-46-openapi-v1-pii-context.md)를 참조한다. 판정 제출 어댑터와 전체 업무 Gateway 준비는 구분한다.

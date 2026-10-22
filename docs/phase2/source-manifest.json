@@ -1,0 +1,18 @@
+{
+  "sources": [
+    {
+      "sha256": "bb7b959f36e5eea492388f0b6cca13bf0b55f5ae81d911103c151ac8a5cbead8",
+      "kind": "user-supplied-team-document",
+      "readDate": "2026-10-22",
+      "originalFilename": "Phase2_시장조사_2026-10-22.pdf"
+    },
+    {
+      "sha256": "4dca17c7860a61d1ae8f9c3612d4a298b1ad565d18c20646b46a10eb6d82e056",
+      "kind": "user-supplied-team-document",
+      "readDate": "2026-10-22",
+      "originalFilename": "LIVEGUARD_Phase2_%EC%97%AD%ED%95%A0%EB%B3%84_%EC%9E%91%EC%97%85%EC%A0%95%EB%A6%AC.html"
+    }
+  ],
+  "verification": "Document contents inspected; external market claims not independently verified during this sync.",
+  "scope": "Source identification only. Team-shared originals remain local; public copy contains authored summaries."
+}
