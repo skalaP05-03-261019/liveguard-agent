@@ -13,7 +13,7 @@ from starlette.concurrency import run_in_threadpool
 from app.runtime.bootstrap import configured_runtime
 from app.runtime.inbox import configured_inbox
 from app.integration.preflight import configured_read_tools, inspect_task
-from app.runtime.store import TaskConflict
+from app.runtime.store import InboxCapacityExceeded, TaskConflict
 from app.schemas import TaskEnvelope
 
 
@@ -82,6 +82,9 @@ def create_app(*, runtime_factory=configured_runtime, service_token=None,
         store = inbox if inbox is not None else ready_runtime().store
         try:
             record, created = await run_in_threadpool(store.accept, task)
+        except InboxCapacityExceeded:
+            raise HTTPException(503, {"code": "INBOX_CAPACITY_EXCEEDED"},
+                                headers={"Retry-After": "10"}) from None
         except TaskConflict as error:
             raise HTTPException(409, {"code": str(error)}) from None
         except (sqlite3.Error, psycopg.Error):
@@ -125,6 +128,16 @@ def create_app(*, runtime_factory=configured_runtime, service_token=None,
         if record is None:
             raise HTTPException(404, {"code": "TASK_NOT_FOUND"})
         return record
+
+    @application.get("/agent/metrics", dependencies=[Depends(authenticate)])
+    async def metrics():
+        inbox = getattr(application.state, "inbox", None)
+        if inbox is None:
+            raise HTTPException(503, {"code": "SHARED_INBOX_NOT_CONFIGURED"})
+        try:
+            return await run_in_threadpool(inbox.metrics)
+        except psycopg.Error:
+            raise HTTPException(503, {"code": "TASK_STORE_UNAVAILABLE"}) from None
 
     return application
 

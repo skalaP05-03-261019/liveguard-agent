@@ -235,3 +235,10 @@ PDF 실제 61쪽의 비동기 접수/결과 구분, 72~73쪽의 상태·승인 �
 구현 참고: [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/), [Python sqlite3 트랜잭션](https://docs.python.org/3.11/library/sqlite3.html#transaction-control).
 
 검증 결과와 명령은 `evidence/task-runtime-2026-10-21.json`에 기록한다. 실제 모델 호출·실제 Spring 조치/복구·UI SSE 수신은 이번 검증에 포함하지 않는다.
+# 런타임 용량 및 할당량 업데이트 (#89)
+
+공유 배포에서는 작업 선점 전 워커·클러스터 Graph 실행 슬롯, 공유 모델
+RPM/TPM/동시성 진입 제어, 신뢰할 수 있는 선택 항목 `liveId` 기반 공정 스케줄링,
+용량 초과 시 503 백프레셔와 인증된 메트릭을 적용한다. 구체적인 기본값과 설정,
+레거시 공정성의 한계, 재시도 집계 및 자동 삭제 금지 정책은
+[#89 운영 정책](AI1-89-runtime-limits.md)을 참조한다.

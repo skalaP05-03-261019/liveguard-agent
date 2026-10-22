@@ -98,7 +98,9 @@ class RetryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await g.run("model", op), "recovered")
         snap = g.snapshot()
         self.assertEqual((op.calls, snap["retryCount"], snap["modelCalls"]), (3, 2, 3))
-        self.assertEqual(snap["activeSeconds"], 1.5)  # backoff 0.5 + 1.0
+        self.assertGreaterEqual(snap["activeSeconds"], 6)  # 2 + 4 plus jitter
+        self.assertLessEqual(snap["activeSeconds"], 8)
+        self.assertEqual(snap["modelRetryCount"], 2)
 
     async def test_retries_exhausted_raises_last_error(self) -> None:
         g, op = gate(), Flaky(5)

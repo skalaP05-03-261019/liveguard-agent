@@ -24,11 +24,14 @@ READ_TOOL_NAMES = frozenset({
 class AgentToolError(Exception):
     """Safe error metadata; never embeds a response body, token or chat text."""
 
-    def __init__(self, code: str, *, trace_id: str, retryable: bool = False):
+    def __init__(self, code: str, *, trace_id: str, retryable: bool = False,
+                 retry_after: float = 0, usage: dict[str, int] | None = None):
         super().__init__(code)
         self.code = code
         self.trace_id = trace_id
         self.retryable = retryable
+        self.retry_after = retry_after
+        self.usage = usage
 
 
 @dataclass(frozen=True)

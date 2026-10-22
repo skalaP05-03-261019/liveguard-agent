@@ -322,6 +322,7 @@ class OpenAIAdapterTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(requests[0]["store"])
         self.assertFalse(requests[0]["parallel_tool_calls"])
         self.assertEqual(requests[0]["tool_choice"], "required")
+        self.assertEqual(requests[0]["max_completion_tokens"], 2000)
 
     async def test_rate_limit_has_one_attempt_and_safe_error(self):
         import httpx
