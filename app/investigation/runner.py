@@ -134,8 +134,12 @@ class _GuardedPolicy:
 
 async def run_investigation(state: dict, *, model: InvestigationModel, business, policy,
                             gate: ExecutionGate | None = None,
-                            present_data: Callable[[Any], Any] = basic_presentation) -> dict:
+                            present_data: Callable[[Any], Any] = basic_presentation,
+                            prompt: str | None = None, extra_input: dict | None = None) -> dict:
     """Return an atomic patch; errors do not publish model findings or mutate input.
+
+    prompt/extra_input let a caller (Phase 2 #71) replace the system prompt and add
+    untrusted input fields. Defaults keep the Phase 1 behavior unchanged.
 
     Backend IDs, version and trace are bound by runtime, never accepted from model.
     Caller must load a validated case snapshot first. Model-visible data is separate
@@ -157,15 +161,19 @@ async def run_investigation(state: dict, *, model: InvestigationModel, business,
     active_gate = gate if gate is not None else StandaloneGate(working, trace_id)
     observations = list(working.get("tool_observations", []))
     policies = _GuardedPolicy(policy, active_gate, observations, trace_id)
-    initial = json.dumps(present_data({
-                    "dataKind": "UNTRUSTED_CHAT_DATA", "targetMessages": working["target_messages"],
-                    "contextMessages": working.get("context_messages", []),
-                    "policyVersion": working["policy_version"],
-                }), ensure_ascii=False)
+    first_input = {"dataKind": "UNTRUSTED_CHAT_DATA", "targetMessages": working["target_messages"],
+                   "contextMessages": working.get("context_messages", []),
+                   "policyVersion": working["policy_version"]}
+    if extra_input:
+        # Extra fields are additional data and can never replace evidence or the policy version.
+        if not isinstance(extra_input, dict) or set(extra_input) & set(first_input):
+            raise AgentToolError("INVALID_INPUT", trace_id=trace_id)
+        first_input.update(deepcopy(extra_input))
+    initial = json.dumps(present_data(first_input), ensure_ascii=False)
     if len(initial) > 48_000:
         raise AgentToolError("MODEL_CONTEXT_LIMIT", trace_id=trace_id)
     incomplete_context = "[TRUNCATED]" in initial
-    messages = [{"role": "system", "content": PROMPT.read_text()},
+    messages = [{"role": "system", "content": prompt if prompt is not None else PROMPT.read_text()},
                 {"role": "user", "content": initial}]
     usage = []
     seen_calls = set()

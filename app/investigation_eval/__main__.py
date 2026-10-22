@@ -15,10 +15,13 @@ from pydantic import ValidationError
 from app.clients.rag_mcp import RagMcpReadClient, RagMcpSettings
 from app.investigation.model import model_from_env
 from app.phase2_bridge.handoff import ExistingInvestigator
+from app.phase2_investigation.investigator import Phase2Investigator
 from .cases import load_case_set
-from .evaluate import UsageMeter, evaluate, source_fingerprint
+from .evaluate import INVESTIGATOR_SOURCES, PHASE2_SOURCES, UsageMeter, evaluate, source_fingerprint
 
-INVESTIGATORS = ("existing",)
+# existing = Phase 1 investigator (baseline), phase2 = #71 context investigation.
+INVESTIGATORS = {"existing": (ExistingInvestigator, INVESTIGATOR_SOURCES),
+                 "phase2": (Phase2Investigator, PHASE2_SOURCES)}
 
 
 def _write_exclusive(path: Path, payload, mode=0o644):
@@ -62,14 +65,16 @@ def main():
         if args.live:
             meter = UsageMeter(model_from_env())
             policy = RagMcpReadClient(RagMcpSettings.from_env())
-            factory = lambda business: ExistingInvestigator(model=meter, business=business, policy=policy,
-                                                            observer=lambda event: None)
+            investigator, sources = INVESTIGATORS[args.investigator]
+            factory = lambda business: investigator(model=meter, business=business, policy=policy,
+                                                    observer=lambda event: None)
             report, details = asyncio.run(evaluate(case_set, cases, args.standard, policy_version=args.policy_version,
                                                    investigator_factory=factory, meter=meter,
                                                    timeout_seconds=args.timeout))
             report["execution"] = {"mode": "live-model", "investigator": args.investigator,
                                    "sourceModel": os.getenv("MODEL_NAME"), "policyVersion": args.policy_version,
-                                   "split": args.split, "timeoutSeconds": args.timeout, **source_fingerprint()}
+                                   "split": args.split, "timeoutSeconds": args.timeout,
+                                   **source_fingerprint(sources=sources)}
         else:
             predictions = json.loads(args.predictions.read_text())
             if not isinstance(predictions, dict):
