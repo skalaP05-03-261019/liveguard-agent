@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>LIVE:GUARD · 채팅 판독 데모</title>
+  <link rel="stylesheet" href="/demo.css">
+  <script src="/demo.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">✦</span><strong>LIVE:GUARD</strong><span class="brand-divider"></span><span>Agent 실시간 판독</span></div>
+      <div class="topbar-right"><span class="connection-dot" id="connection-dot"></span><span id="connection-text">모델 연결 확인 중</span><button class="reset-button" id="reset" type="button">대화 초기화</button></div>
+    </header>
+    <main class="workspace">
+      <section class="chat-panel" aria-labelledby="chat-heading">
+        <div class="panel-head">
+          <div><p class="eyebrow">LOCAL LIVE ROOM / 시청자 화면</p><h1 id="chat-heading">채팅을 입력해 보세요<span class="period">.</span></h1><p class="intro">보낸 문장을 실제 Agent 모델이 검사합니다. 앞선 채팅 최대 8개가 문맥으로 함께 전달됩니다.</p></div>
+          <div class="live-badge"><span aria-hidden="true"></span>LIVE DEMO</div>
+        </div>
+        <div class="chat-log" id="chat-log" role="log" aria-live="polite" aria-relevant="additions">
+          <div class="empty-chat" id="empty-chat"><div class="empty-icon" aria-hidden="true">⌁</div><p>아직 채팅이 없습니다</p><span>직접 써도 되고, 아래 문장으로 먼저 시험해도 됩니다.</span></div>
+        </div>
+        <div class="composer-zone">
+          <div class="examples" aria-label="예시 문장"><button type="button" class="example" data-example="시바견 산책시키고 방송 보러 왔어요">정상 동음 표현</button><button type="button" class="example" data-example="씨바 너는 매번 남 탓만 하는구나">욕설 변형</button><button type="button" class="example" data-example="저 지역에서 왔다는 이유만으로 다 멍청해 보인다">지역 비하</button></div>
+          <form id="composer"><label for="message">시청자 채팅</label><div class="input-row"><textarea id="message" name="message" maxlength="500" rows="2" placeholder="채팅 내용을 입력하세요…" required></textarea><button id="send" type="submit">보내고 판독 <span aria-hidden="true">↗</span></button></div><div class="composer-foot"><span>Enter 전송 · Shift+Enter 줄바꿈</span><span id="counter">0 / 500</span></div></form>
+        </div>
+      </section>
+      <aside class="analysis-panel" aria-labelledby="analysis-heading">
+        <div class="analysis-head"><div><p class="eyebrow">AGENT OBSERVATION / 운영자 참고</p><h2 id="analysis-heading">AI 판독 결과</h2></div><span class="analysis-glyph" aria-hidden="true">◎</span></div>
+        <div class="analysis-content" id="analysis-content" aria-live="polite">
+          <div class="empty-analysis"><span class="scan-mark" aria-hidden="true">◇</span><h3>첫 채팅을 기다리는 중</h3><p>문장을 보내면 후보 여부와 판단 근거가 이곳에 표시됩니다.</p></div>
+        </div>
+        <div class="analysis-footer"><span class="footer-line"></span><p>후보 신호는 정책 위반 확정이나 강퇴 명령이 아닙니다.<br>사람이 근거를 검토하고 최종 판단합니다.</p></div>
+      </aside>
+    </main>
+  </div>
+</body>
+</html>
