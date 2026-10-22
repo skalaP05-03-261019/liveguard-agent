@@ -1,0 +1,77 @@
+{
+  "kind": "development-ai-draft-diagnostic-only",
+  "sourceRevision": "569ab5f495e046911898805d3bee92469988dcd9",
+  "sourceSha256": "f560a2f624d98f7cd9dc5ec6e5368efb7edd9bfc01cfa963538facfad9fc6001",
+  "reviewSha256": "3ba363eabbc82036cb38e6e2346f94d74fb8a6f7904c5ce4e228f45c80a10181",
+  "inputSha256": "326c5b29115f39a1844caab6337ff0c5f1492540955ff8b1649b5623df8a097c",
+  "total": 40,
+  "assessed": 40,
+  "errors": 0,
+  "notRun": 0,
+  "reviewStatuses": {
+    "PENDING": 40
+  },
+  "candidateCounts": {
+    "clear-only": 25,
+    "clear-or-possible": 32,
+    "include-uncertain": 33
+  },
+  "aiDraftComparison": {
+    "clear-only": {
+      "AGREES_WITH_AI_DRAFT": 26,
+      "DIFFERS_FROM_AI_DRAFT": 7,
+      "UNRESOLVED": 7
+    },
+    "clear-or-possible": {
+      "AGREES_WITH_AI_DRAFT": 29,
+      "DIFFERS_FROM_AI_DRAFT": 4,
+      "UNRESOLVED": 7
+    },
+    "include-uncertain": {
+      "AGREES_WITH_AI_DRAFT": 28,
+      "DIFFERS_FROM_AI_DRAFT": 5,
+      "UNRESOLVED": 7
+    }
+  },
+  "errorCodes": {},
+  "latencyMs": {
+    "p50": 1344.05,
+    "p95": 2286.71
+  },
+  "usage": {
+    "inputTokens": 47095,
+    "outputTokens": 6691
+  },
+  "usesHumanGroundTruthForScoring": false,
+  "serviceMetricsComputed": false,
+  "enforcementAuthorized": false,
+  "limits": [
+    "AI-draft agreement is not accuracy, precision, recall or policy approval.",
+    "Source labels and all review/draft fields are withheld from the detector.",
+    "Development only; no confirmation inputs or prompt modifications.",
+    "No Backend/FE delivery, enforcement or production throughput tested.",
+    "Latency is sequential model-call observation, not streaming E2E latency."
+  ],
+  "execution": {
+    "mode": "live-model",
+    "sourceModel": "gpt-5.4-mini",
+    "promptSha256": "dfaba6af1d2b12e5ba2e1af2183e223a768ee05d1ab27fa04c92c239c852cd57",
+    "timeoutSeconds": 8.0
+  },
+  "verification": {
+    "newSyntheticTests": 11,
+    "totalTests": 374,
+    "skipped": 0,
+    "transports": [
+      "ASGI",
+      "TCP"
+    ],
+    "database": "isolated PostgreSQL/pgvector",
+    "reviewFileUnchanged": true,
+    "confirmationInputsExecuted": 0
+  },
+  "code": {
+    "baseCommit": "7a462af757eb66b53dd596d1e65364fd085507ea",
+    "diagnoseSha256": "84d6b339b1024a716e2a853b16193ae7b831798d27b18c08aa91af08c10cf327"
+  }
+}

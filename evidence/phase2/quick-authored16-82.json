@@ -1,0 +1,116 @@
+{
+  "kind": "candidate-screening-only",
+  "datasetSha256": "03a0807a18ab749fbfe21b663fd784fe2b78ed966ff69b66b60da051a4fc9991",
+  "total": 16,
+  "assessed": 16,
+  "errors": 0,
+  "coverage": 1.0,
+  "experiments": {
+    "clear-only": {
+      "assessedOnly": {
+        "tp": 8,
+        "fp": 0,
+        "tn": 8,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "normalCandidateRate": 0.0
+      },
+      "candidateCount": 8,
+      "missedExpectedCandidatesIncludingErrors": 0
+    },
+    "clear-or-possible": {
+      "assessedOnly": {
+        "tp": 8,
+        "fp": 0,
+        "tn": 8,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "normalCandidateRate": 0.0
+      },
+      "candidateCount": 8,
+      "missedExpectedCandidatesIncludingErrors": 0
+    },
+    "include-uncertain": {
+      "assessedOnly": {
+        "tp": 8,
+        "fp": 0,
+        "tn": 8,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "normalCandidateRate": 0.0
+      },
+      "candidateCount": 8,
+      "missedExpectedCandidatesIncludingErrors": 0
+    }
+  },
+  "riskKindLabeledAssessed": 16,
+  "riskKindsAssessedOnly": {
+    "REGION_DISPARAGEMENT": {
+      "tp": 2,
+      "fp": 0,
+      "tn": 14,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "normalCandidateRate": 0.0
+    },
+    "GROUP_HATE": {
+      "tp": 3,
+      "fp": 0,
+      "tn": 13,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "normalCandidateRate": 0.0
+    },
+    "TARGETED_ATTACK": {
+      "tp": 1,
+      "fp": 2,
+      "tn": 13,
+      "fn": 0,
+      "precision": 0.3333,
+      "recall": 1.0,
+      "f1": 0.5,
+      "normalCandidateRate": 0.1333
+    },
+    "PROFANITY_VARIANT": {
+      "tp": 2,
+      "fp": 0,
+      "tn": 14,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "normalCandidateRate": 0.0
+    }
+  },
+  "latencyMs": {
+    "p50": 1037.71,
+    "p95": 2615.8
+  },
+  "usage": {
+    "inputTokens": 18430,
+    "outputTokens": 1361
+  },
+  "execution": {
+    "mode": "live-model",
+    "sourceModel": "gpt-5.4-mini",
+    "promptSha256": "dfaba6af1d2b12e5ba2e1af2183e223a768ee05d1ab27fa04c92c239c852cd57",
+    "timeoutSeconds": 8.0
+  },
+  "labelSource": "authored-development-regression-75; no team policy/QA approval or independent confirmation",
+  "limits": [
+    "16 authored development cases only, previously used for prompt work; not independent accuracy.",
+    "Candidate matching and risk-kind matching are separate.",
+    "Two PROFANITY_VARIANT cases also produced TARGETED_ATTACK; expectedKinds need team review.",
+    "No UnSmile confirmation evaluation, production chat throughput, Backend or FE flow measured."
+  ]
+}
