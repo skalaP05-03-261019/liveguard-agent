@@ -1,0 +1,147 @@
+{
+  "task": {
+    "eventId": "00000000-0000-4000-8000-000000000001",
+    "taskId": "00000000-0000-4000-8000-000000000002",
+    "caseId": "00000000-0000-4000-8000-000000000003",
+    "kind": "ANALYZE",
+    "threadId": "case:00000000-0000-4000-8000-000000000003:analysis:1",
+    "snapshotId": "00000000-0000-4000-8000-000000000004",
+    "expectedEvidenceVersion": 1,
+    "decisionId": null,
+    "traceId": "00000000-0000-4000-8000-000000000005"
+  },
+  "case": {
+    "caseId": "00000000-0000-4000-8000-000000000003",
+    "snapshotId": "00000000-0000-4000-8000-000000000004",
+    "evidenceVersion": 1,
+    "policyVersion": "fixture-policy-v1",
+    "targetMessageIds": [
+      "00000000-0000-4000-8000-000000000006"
+    ],
+    "targetVersions": {
+      "00000000-0000-4000-8000-000000000006": 1
+    },
+    "liveId": "00000000-0000-4000-8000-000000000010",
+    "userId": "00000000-0000-4000-8000-000000000011",
+    "handlingRoute": "CONTEXT_REVIEW",
+    "confirmationStatus": "UNCONFIRMED",
+    "targets": [
+      {
+        "messageId": "00000000-0000-4000-8000-000000000006",
+        "visibility": "HELD",
+        "version": 1
+      }
+    ],
+    "filterResult": "CONTEXT",
+    "matchingTags": [
+      "CONTEXT_PENDING"
+    ],
+    "version": 1,
+    "messages": [
+      {
+        "messageId": "00000000-0000-4000-8000-000000000006",
+        "authorAlias": "U1",
+        "text": "그 지역 사람들은 원래 다 수준이 낮아",
+        "sentAt": "2026-10-20T01:00:00Z",
+        "visibility": "HELD",
+        "replyToId": null
+      },
+      {
+        "messageId": "00000000-0000-4000-8000-000000000007",
+        "authorAlias": "U2",
+        "text": "누구를 말하는 건가요?",
+        "sentAt": "2026-10-20T01:00:01Z",
+        "visibility": "PUBLIC",
+        "replyToId": null
+      }
+    ]
+  },
+  "context": {
+    "caseId": "00000000-0000-4000-8000-000000000003",
+    "snapshotId": "00000000-0000-4000-8000-000000000004",
+    "evidenceVersion": 1,
+    "messages": [
+      {
+        "messageId": "00000000-0000-4000-8000-000000000006",
+        "authorAlias": "U1",
+        "text": "그 지역 사람들은 원래 다 수준이 낮아",
+        "sentAt": "2026-10-20T01:00:00Z",
+        "visibility": "HELD",
+        "replyToId": null
+      },
+      {
+        "messageId": "00000000-0000-4000-8000-000000000007",
+        "authorAlias": "U2",
+        "text": "누구를 말하는 건가요?",
+        "sentAt": "2026-10-20T01:00:01Z",
+        "visibility": "PUBLIC",
+        "replyToId": null
+      }
+    ]
+  },
+  "screenRequest": {
+    "contractVersion": "phase2-screen-v1",
+    "requestId": "00000000-0000-4000-8000-000000000012",
+    "experiment": "clear-or-possible",
+    "input": {
+      "liveId": "00000000-0000-4000-8000-000000000010",
+      "target": {
+        "messageId": "00000000-0000-4000-8000-000000000006",
+        "text": "그 지역 사람들은 원래 다 수준이 낮아"
+      },
+      "context": []
+    }
+  },
+  "screenResult": {
+    "contractVersion": "phase2-screen-v1",
+    "requestId": "00000000-0000-4000-8000-000000000012",
+    "liveId": "00000000-0000-4000-8000-000000000010",
+    "targetMessageId": "00000000-0000-4000-8000-000000000006",
+    "experiment": "clear-or-possible",
+    "selected": true,
+    "assessment": {
+      "signals": [
+        {
+          "kind": "REGION_DISPARAGEMENT",
+          "strength": "CLEAR",
+          "evidence": [
+            {
+              "messageId": "00000000-0000-4000-8000-000000000006",
+              "text": "그 지역 사람들은 원래 다 수준이 낮아"
+            }
+          ],
+          "reason": "집단 일반화·비하 신호의 직접 작성 예시"
+        }
+      ],
+      "missingFacts": []
+    },
+    "usage": {},
+    "executionAuthorized": false
+  },
+  "draft": {
+    "analysis": {
+      "caseId": "00000000-0000-4000-8000-000000000003",
+      "snapshotId": "00000000-0000-4000-8000-000000000004",
+      "evidenceVersion": 1,
+      "policyVersion": "fixture-policy-v1",
+      "messageFindings": [
+        {
+          "messageId": "00000000-0000-4000-8000-000000000006",
+          "verdict": "NEEDS_REVIEW",
+          "categories": [],
+          "policyIds": [],
+          "evidenceMessageIds": [
+            "00000000-0000-4000-8000-000000000006"
+          ],
+          "reason": "신규 집단 혐오 유형의 정책 적용 확인 필요",
+          "missingFacts": [
+            "팀이 합의한 집단 혐오 정책과 위반 유형"
+          ]
+        }
+      ]
+    },
+    "policyEvidence": [],
+    "harnessBudget": {},
+    "executionAuthorized": false
+  }
+}

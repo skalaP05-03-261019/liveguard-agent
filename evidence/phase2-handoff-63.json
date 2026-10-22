@@ -1,0 +1,68 @@
+{
+  "issue": 63,
+  "agentBase": "7db3f7b18c83a4a37ec8576e5722edd960ff0930",
+  "backendInspectedMain": "8f0d4d080a5bfce2b47b0c92d63c30fc9464f2f6",
+  "backend58": {
+    "state": "open",
+    "head": "6a4f9fd31012acd81e02c55002c140a227e9e66e"
+  },
+  "tests": {
+    "kind": "observed-controlled-regression",
+    "transport": "TCP enabled plus ASGI tests",
+    "database": "isolated ephemeral PostgreSQL with pgvector",
+    "run": 296,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 21.256
+  },
+  "realModelSmoke": {
+    "kind": "observed-real-model-standalone-tcp",
+    "unauthenticatedStatus": 401,
+    "authenticatedStatus": 200,
+    "executionAuthorized": false,
+    "selected": true,
+    "signalCount": 1,
+    "usage": {
+      "inputTokens": 986,
+      "outputTokens": 102
+    },
+    "backendWrites": 0,
+    "limits": "One authored target. Not accuracy, real-time throughput or BE/FE end-to-end evidence."
+  },
+  "controlledExample": {
+    "kind": "fixture",
+    "readTools": [
+      "get_moderation_case",
+      "get_chat_context"
+    ],
+    "verdicts": [
+      "NEEDS_REVIEW"
+    ],
+    "backendSubmissionExecuted": false
+  },
+  "unexecuted": [
+    "Real BE candidate case creation",
+    "Live BE handoff of new Phase 2 candidate",
+    "FE review card/SSE integration",
+    "Human approval and enforcement for Phase 2 candidate"
+  ],
+  "sha256": {
+    "app/candidate_detection/api.py": "b4ffbfd0425e74af0b346041de31e5462048244cd213d93565253fe209466051",
+    "app/phase2_bridge/__init__.py": "8ea8fc5792b98b719e9c694d2abe9d1178199d5d1b705040509c0bcb47418387",
+    "app/phase2_bridge/contracts.py": "679ddd5268bdc8bac53361266dc3816300c15330ebb67f84f6670e0ab37d5c98",
+    "app/phase2_bridge/handoff.py": "fb86f6ad74ff75ea3c5c8c19b05f745a93e6d64ea61a076c6c47cf49e11b7c5e",
+    "app/phase2_bridge/__main__.py": "d866bf50a04148a8314011faac0992b67cf7c45bf116f6dc3753410b2be9367c",
+    "tests/test_phase2_bridge.py": "15b36b9af5c1c196b2796848fc24da432ac615a5984ad5d6f68affaedf9adde4",
+    "examples/phase2-handoff/backend-task.json": "85c0e80570602ba4196a0ba1e574f02a925b99d07470e5ccf2ec8676ebfec7ac",
+    "examples/phase2-handoff/controlled-flow.json": "37b029a487f8be3d8aa5117a856969007fbe32fb98ab7efe5aab844c0b94584d",
+    "examples/phase2-handoff/investigation-draft.json": "b0ad8f4303e508fbd106bd54bf4f6065ac247631ff9dc7426e1c3177f510e4cb",
+    "examples/phase2-handoff/investigation-request.json": "fc80f247e67c827883ee0afa38502a9c9518c6db895baf9db09b067c6bfdb183",
+    "examples/phase2-handoff/schemas/InvestigationDraft.json": "fc5119a90196e92c85f7ae123a3cda9b7770988288e00cc962f34ac236cde80e",
+    "examples/phase2-handoff/schemas/InvestigationHandoff.json": "6b72c939481b166dec1432055c5ccce58e97e9e010c1b0762dc3c597f4fa5349",
+    "examples/phase2-handoff/schemas/ScreenRequest.json": "df4e244b4925f50008501bb499b9166a1b5e1829fc72c6dca5433f78f3ddf019",
+    "examples/phase2-handoff/schemas/ScreenResult.json": "1c4b28531295d154da355e3cd7e92ea837f7f2aca3f385992d76bc6226258a5c",
+    "examples/phase2-handoff/screen-request.json": "c92494b4eb0d559954e0037902c5e93a74b48270270a5cd31acc30bc0135c4ae",
+    "examples/phase2-handoff/screen-result.json": "159bfdad2cb0f8a0993cd29c2dbc0809171c83425aa331515712230e484d49e7"
+  }
+}

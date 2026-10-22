@@ -1,0 +1,86 @@
+{
+  "$defs": {
+    "ChatMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "messageId": {
+          "format": "uuid",
+          "title": "Messageid",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "messageId",
+        "text"
+      ],
+      "title": "ChatMessage",
+      "type": "object"
+    },
+    "ScreeningInput": {
+      "additionalProperties": false,
+      "properties": {
+        "liveId": {
+          "format": "uuid",
+          "title": "Liveid",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/ChatMessage"
+        },
+        "context": {
+          "items": {
+            "$ref": "#/$defs/ChatMessage"
+          },
+          "maxItems": 8,
+          "title": "Context",
+          "type": "array"
+        }
+      },
+      "required": [
+        "liveId",
+        "target"
+      ],
+      "title": "ScreeningInput",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "contractVersion": {
+      "const": "phase2-screen-v1",
+      "default": "phase2-screen-v1",
+      "title": "Contractversion",
+      "type": "string"
+    },
+    "requestId": {
+      "format": "uuid",
+      "title": "Requestid",
+      "type": "string"
+    },
+    "experiment": {
+      "enum": [
+        "clear-only",
+        "clear-or-possible",
+        "include-uncertain"
+      ],
+      "title": "Experiment",
+      "type": "string"
+    },
+    "input": {
+      "$ref": "#/$defs/ScreeningInput"
+    }
+  },
+  "required": [
+    "requestId",
+    "experiment",
+    "input"
+  ],
+  "title": "ScreenRequest",
+  "type": "object"
+}
