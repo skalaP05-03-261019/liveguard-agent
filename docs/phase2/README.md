@@ -1,5 +1,7 @@
 # LIVE:GUARD Phase 2
 
+- [직접 채팅 입력·실모델 후보 판독 로컬 데모](interactive-demo-83.md)
+
 - [미검수 개발셋 진단·불일치 검수 큐](development-diagnostics-81.md)
 
 - [UnSmile 로컬 선별·팀 정책/QA 검수·평가 내보내기](curation-78.md)
