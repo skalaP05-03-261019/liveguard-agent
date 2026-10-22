@@ -25,6 +25,7 @@ def create_app(*, runtime_factory=configured_runtime, service_token=None,
                                            else os.getenv("AGENT_SERVICE_TOKEN", ""))
         async with AsyncExitStack() as stack:
             inbox = await stack.enter_async_context(inbox_factory())
+            # Shared intake never starts a Graph or requires model/MCP credentials.
             runtime = None if inbox is not None else await stack.enter_async_context(runtime_factory())
             application.state.inbox = inbox
             application.state.runtime = runtime
