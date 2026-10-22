@@ -11,6 +11,7 @@ from app.clients.business_mcp import AgentToolError, BusinessMcpSettings, _decod
 from app.integration.judgment_http import JudgmentHttpClient
 from app.business_mcp.schemas import KickCommand
 from app.integration.backend_events import BackendEvents
+from app.runtime.fencing import check_execution
 
 class HttpModerationGateway:
     def __init__(self, client, *, service_token, business_settings):
@@ -25,6 +26,7 @@ class HttpModerationGateway:
         return "HttpModerationGateway(service_token=<redacted>)"
 
     async def _request(self, method, path, trace_id, body=None):
+        await check_execution()
         try:
             response = await self.client.request(method, path, json=body,
                 headers={"X-Service-Token": self._token, "X-Trace-Id": str(UUID(trace_id))},
@@ -43,6 +45,15 @@ class HttpModerationGateway:
             return envelope["data"]
         except (ValueError,AttributeError):
             raise AgentToolError("INVALID_BACKEND_RESULT", trace_id=trace_id) from None
+
+    async def read_case(self, *, case_id, trace_id):
+        return await self._request("GET", f"/internal/cases/{UUID(case_id)}", trace_id)
+
+    async def read_action(self, *, action_id, trace_id):
+        from app.clients.business_mcp import BusinessMcpReadClient
+        result = await BusinessMcpReadClient(self.business).call(
+            "get_action_status", {"actionId": str(UUID(action_id)), "traceId": trace_id})
+        return result["data"]
 
     async def create_review(self, *, card, trace_id):
         # A-9: judgment creates the review; no separate review mutation.
@@ -81,6 +92,7 @@ class HttpModerationGateway:
         async with create_mcp_http_client(headers={"Authorization":f"Bearer {self.business.token}"}) as http:
             async with Client(streamable_http_client(self.business.url,http_client=http),
                               read_timeout_seconds=self.business.timeout_seconds) as client:
+                await check_execution()
                 result = await client.call_tool("kick_user",{
                     "actionCommand":command.model_dump(mode="json",by_alias=True,exclude_none=True),
                     "traceId":trace_id})

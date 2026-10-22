@@ -15,6 +15,7 @@ from typing import Any
 from app.clients.business_mcp import AgentToolError
 from app.harness.observability import Observer, TraceRecorder, record_event
 from app.harness.safety import safe_presentation
+from app.runtime.fencing import check_execution
 
 EXECUTION_LIMIT = "EXECUTION_LIMIT"
 MODEL = "model"
@@ -123,6 +124,7 @@ class HarnessGate:
     async def run(self, name: str, operation: Callable[[], Awaitable[Any]]) -> Any:
         retries = 0
         while True:
+            await check_execution()
             try:
                 self._count_attempt(name)
             except AgentToolError:
@@ -131,6 +133,7 @@ class HarnessGate:
             started = self._clock()
             try:
                 result = await self._timed(operation)
+                await check_execution()
             except AgentToolError as error:
                 self._emit("call", name=name, attempt=retries + 1, status="error", errorCode=error.code,
                            retryable=error.retryable, latencyMs=self._elapsed_ms(started))

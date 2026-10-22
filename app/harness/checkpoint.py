@@ -49,14 +49,17 @@ def state_serializer() -> JsonPlusSerializer:
 
 @asynccontextmanager
 async def open_checkpointer(
-    db_url: str, *, schema: str = CHECKPOINT_SCHEMA, initialize: bool = True
+    db_url: str, *, schema: str = CHECKPOINT_SCHEMA, initialize: bool = True,
+    saver_type=AsyncPostgresSaver,
 ) -> AsyncIterator[AsyncPostgresSaver]:
     """스키마를 만들고 checkpointer 테이블을 준비한 뒤 연결을 연다. 앱 수명 동안 하나를 공유한다."""
     if initialize:
-        with psycopg.connect(db_url, autocommit=True) as conn:
+        with psycopg.connect(db_url) as conn:
+            conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
+                         (f"checkpoint-schema:{schema}",))
             conn.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(schema)))
     scoped_url = make_conninfo(db_url, options=f"-c search_path={schema}")
-    async with AsyncPostgresSaver.from_conn_string(scoped_url, serde=state_serializer()) as saver:
+    async with saver_type.from_conn_string(scoped_url, serde=state_serializer()) as saver:
         if initialize:
             await saver.setup()
         yield saver
