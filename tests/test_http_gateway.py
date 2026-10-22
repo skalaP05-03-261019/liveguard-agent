@@ -1,7 +1,7 @@
 from copy import deepcopy
 import json
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 import httpx
 from app.integration.http_gateway import HttpModerationGateway
 from app.clients.business_mcp import AgentToolError,BusinessMcpSettings
@@ -73,6 +73,23 @@ class HttpGatewayTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(raised.exception.code,"BACKEND_DELIVERY_UNKNOWN")
         self.assertFalse(raised.exception.retryable)
         self.assertEqual(len(calls),1)
+
+    async def test_recovery_reads_existing_case_and_mcp_action_status_only(self):
+        requests = []
+        def handler(req):
+            requests.append(req)
+            return httpx.Response(200,json={"traceId":DECISION,"data":{"caseId":REVIEW}})
+        with patch("app.clients.business_mcp.BusinessMcpReadClient.call", new_callable=AsyncMock) as read:
+            read.return_value = {"data":{"actionId":REVIEW,"status":"APPLIED"}}
+            async def observe(gateway):
+                case = await gateway.read_case(case_id=REVIEW,trace_id=DECISION)
+                action = await gateway.read_action(action_id=REVIEW,trace_id=DECISION)
+                return case, action
+            case, action = await self.call(observe,handler)
+            read.assert_awaited_once_with("get_action_status",{"actionId":REVIEW,"traceId":DECISION})
+        self.assertEqual((requests[0].method,requests[0].url.path),
+                         ("GET",f"/internal/cases/{REVIEW}"))
+        self.assertEqual((case["caseId"],action["actionId"]),(REVIEW,REVIEW))
 
     async def test_malformed_trace_and_http_errors_fail_closed(self):
         for response in (httpx.Response(200,json={"traceId":LIVE,"data":{}}),

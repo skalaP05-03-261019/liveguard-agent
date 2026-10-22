@@ -21,6 +21,12 @@ Business/RAG MCP 조회와 실제 OpenAI 검증 결과는 각 이슈의 증거�
 `app.integration.workflow.build_moderation_graph`에 추가했다. CONTEXT 대기·보류·재개 후
 Backend 처리와 별도 KICK 대기를 연결하며 공유 실행 예산/마스킹을 사용한다.
 HTTP 실행기·영속 inbox·서비스 인증은 [#10 실행기 문서](docs/AI1-10-task-runtime.md)에 구현했다. 실제 HTTP Gateway의 구현·설정·검증 범위는 [#48](docs/AI1-48-http-gateway.md)을 참조한다. 기본 배포에서는 명시적으로 활성화해야 한다.
+
+다중 인스턴스는 `AGENT_INBOX_DB_URL`을 설정한 API-only 서버와
+`uv run --locked python -m app.worker` 실행기를 별도 배포한다.
+공유 PostgreSQL Inbox·checkpoint fencing·lease/복구 설정과 보장 한계는
+[#58/#60 운영 절차](docs/AI1-10-task-runtime.md#공유-postgresql-inbox와-독립-worker-5860)를 따른다.
+SQLite 실행기는 기존 단일 호스트용 legacy 경로로 유지한다.
 최신 BE 사건 입력 사전검사와 중단 작업 복구는 [#40 운영 준비 문서](docs/AI1-40-backend-preflight-recovery.md)를 참조한다. 사전검사는 모델·Gateway 없이도 가능하며 실행 승인을 대신하지 않는다.
 실제 B1 진행 이벤트 계약용 `BackendEvents` HTTP 어댑터는 추가했으며, 전체 Spring 집행 시험과 구분한다.
 [최신 명세 출처·Backend 잔여 계약](docs/AI1-10-latest-spec-and-boundary.md)을 먼저 확인한다.

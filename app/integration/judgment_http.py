@@ -13,6 +13,7 @@ from pydantic import ValidationError, model_validator
 from app.clients.business_mcp import AgentToolError
 from app.harness.safety import safe_presentation
 from app.schemas import AnalysisResult, Contract
+from app.runtime.fencing import check_execution
 
 
 class JudgmentReceipt(Contract):
@@ -71,6 +72,7 @@ class JudgmentHttpClient:
             body = judgment_body(analysis)
         except (ValueError, TypeError, KeyError, AttributeError):
             raise AgentToolError("INVALID_INPUT", trace_id=trace_id) from None
+        await check_execution()
         try:
             response = await self._client.post(
                 f"/internal/cases/{body['caseId']}/judgment", json=body,
