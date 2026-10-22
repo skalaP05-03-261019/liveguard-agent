@@ -69,7 +69,106 @@ DB 실패 및 트랜잭션 롤백을 검증한다. Graph 실행과 실제 BE 집
 
 Backend→Agent는 Bearer, Agent→MCP도 각각 별도 Bearer, MCP→Spring은 기존 `X-Service-Token`이다. Agent 수신 토큰을 다른 서비스 자격증명과 재사용하지 않는다. 서비스 인증은 운영자 권한 검증을 대체하지 않는다.
 
-## 저장·실행·재시작
+## 공유 PostgreSQL Inbox와 독립 Worker (#58/#60)
+
+`AGENT_INBOX_DB_URL`이 있으면 `app.main`은 접수·조회만 한다. API는 모델/MCP/Gateway
+자격증명 없이도 영속 접수가 가능하며, `/health`는 Inbox 연결과 수신 인증 구성만 검사한다.
+**API 준비 상태는 Worker 실행 가능 여부를 뜻하지 않는다.** 기존 202/200 duplicate,
+409 바인딩 충돌, 503 저장 실패 및 GET 응답 필드는 유지한다.
+operation 키는 `run:{taskId}` / `resume:{decisionId}`이고 eventId/traceId 변경만 있는 재전송도
+동일 작업이다. 여러 API 인스턴스에서 동일 접수와 상태를 공유한다.
+
+실행기는 별도 프로세스로 시작한다(프로세스 환경에 `.env`를 명시적으로 로드).
+
+```sh
+uv run --locked uvicorn app.main:app --host 0.0.0.0 --port 8000
+uv run --locked python -m app.worker
+```
+
+필수 구성: `AGENT_INBOX_DB_URL`, `AGENT_CHECKPOINT_DB_URL`,
+`AGENT_GATEWAY_FACTORY=app.integration.http_gateway:configured_gateway`,
+실제 Backend 서비스 인증, Business/RAG MCP 및 모델 설정. Inbox는 `agent_inbox`,
+checkpoint는 `agent` 스키마에 둔다. **두 URL은 같은 PostgreSQL 인스턴스의 같은
+database여야 한다.** Worker는 시작 시 이를 검증한다. checkpoint fencing을 위해
+DB 역할은 두 Agent 스키마에 접근할 수 있어야 한다. SQLite maintenance lock은 이 경로에서
+사용하지 않는다. 업무 테이블과 BE RabbitMQ/Outbox는 수정하지 않는다.
+설정/DB/Gateway 복구 기능이 없으면 `WORKER_NOT_READY: WORKER_RUNTIME_UNAVAILABLE`와
+종료 코드 1로 실패한다. 정상 조립 후 `WORKER_READY`를 출력한다. 런타임 저장소 장애도
+준비 상태를 내리고 비정상 종료하며, 오류 본문·DSN·토큰을 출력하지 않는다.
+외부 서비스의 미구현 경로/501을 성공으로 대체하지 않는다.
+
+| 환경 변수 | 기본값 | 의미 |
+| --- | --- | --- |
+| `AGENT_WORKER_ID` | 프로세스 UUID | 실행 주체 식별자(최대 128자) |
+| `AGENT_WORKER_LEASE_SECONDS` | 30 | DB 시간 기준 lease 기간(초) |
+| `AGENT_WORKER_HEARTBEAT_SECONDS` | 5 | 갱신 간격(lease 기간의 1/3 이하) |
+| `AGENT_WORKER_POLL_SECONDS` | 0.5 | 유휴 시 claim 간격 |
+| `AGENT_WORKER_SHUTDOWN_SECONDS` | 30 | 정상 완료를 기다리는 유예 시간 |
+| `AGENT_WORKER_MAX_ATTEMPTS` | 3 | 미시작 재시도/안전한 checkpoint 진행 상한 |
+| `AGENT_WORKER_BACKOFF_SECONDS` | 1 | 미시작 일시 실패의 지수 backoff 기준(최대 300초) |
+
+Worker들은 thread 행의 `FOR UPDATE SKIP LOCKED`, 작업 행 잠금, thread별 RUNNING
+unique index로 경쟁한다. claim은 worker ID·새 UUID lease token·만료 시각·attempts를
+기록하고 즉시 commit한다. heartbeat도 별도 짧은 트랜잭션이다. 모델·MCP·Gateway 호출은
+DB 트랜잭션 밖이다. 완료/실패/backoff 기록은 operation/thread/worker/token/미만료를
+검증한다. 체크포인트와 pending writes도 **같은 DB 트랜잭션에서 lease 행을 잠그고
+쓰기 전후 소유권을 확인**하므로 옛 Worker가 새 소유자의 checkpoint를 덮어쓰지 못한다.
+Graph 노드 전후, 조사 모델/도구의 각 시도, BE 변경 호출 전후에서도 소유권을 확인한다.
+lease 갱신 실패 시 실행을 취소하고 공유 guard로 늦게 반환한 결과/후속 단계의 저장을 차단한다.
+정상 종료 유예 시간이 지나면 취소 처리보다 먼저 공유 guard를 무효화하고 heartbeat를 중단한다.
+취소 정리도 같은 유예 시간만큼만 기다린다. 취소를 무시하는 외부 호출이 남더라도
+후속 변경/체크포인트 저장은 차단하며, 프로세스 강제 종료는 배포 관리자의 최종 종료 제한으로 처리한다.
+
+### 만료·오류 복구
+
+- **claim 후 Graph 미시작**: 새 lease로 회수하여 동일 envelope/operation을 실행한다.
+  Graph 시작 전 일시 오류는 QUEUED + `RETRY_BACKOFF`, 상한 도달은
+  FAILED + `ATTEMPTS_EXHAUSTED`다. lease 자체가 만료된 미시작 작업도 상한을 적용한다.
+- **Graph 시작 후 종료/강제 종료**: 새 Worker가 checkpoint를 조회한다.
+  기존 recovery의 사건/task/thread/snapshot/evidence와 결정 바인딩, 승인 카드 바인딩을
+  재사용한다. 확정 terminal 또는 WAITING_REVIEW만 복원한다.
+  외부 변경 intent가 없고 바인딩이 검증된 read-only 진행 중 checkpoint만
+  `ainvoke(None)`으로 pending 노드부터 이어간다. 초기 task나 승인 Command를 재전달하지 않는다.
+- **변경 가능성이 있거나 pending 변경 노드 결과가 불확실**:
+  create/submit/apply/revalidate/kick **호출 전** mutation intent를 영속 저장한다.
+  이후 완료 checkpoint를 증명하지 못하면 Graph를 재실행하지 않는다.
+  actionId가 있으면 실제 Business MCP `get_action_status`, 없으면 기존 Gateway의
+  GET `/internal/cases/{caseId}`를 조회한다.
+  action 확인만으로 전체 Graph 성공을 추정하지 않는다.
+  확인된 action은 NEEDS_REVIEW + `ACTION_CONFIRMED_REQUIRES_REVIEW`,
+  사건 상태만 확인되면 UNKNOWN + `BACKEND_STATE_REQUIRES_REVIEW`,
+  미확인/조회 실패/참조 불일치는 UNKNOWN과 안전한 복구 코드로 남긴다.
+  운영자는 BE action/결정/사건과 checkpoint를 대조해야 한다. UNKNOWN을 QUEUED로
+  수동 변경하거나 초기 task를 다시 실행하지 않는다. 자동 재전송 API는 제공하지 않는다.
+- 기존 actionCommand/actionId/idempotencyKey는 그대로 전달하며 Worker가 재발급하지 않는다.
+  mutation 도구 재시도 소유자는 기존 Business MCP다. Worker 재시도가 이를 감싸지 않는다.
+  `read_case`/`read_action`이 없는 사용자 정의 Gateway는 Worker 준비 단계에서 거부한다.
+
+SIGINT/SIGTERM은 즉시 신규 claim을 중단하고 heartbeat를 유지하며 진행 중 작업의 정상
+완료를 기다린다. 유예가 지나면 취소하고 guard를 폐기한다. DB에는 기존 RUNNING lease를
+남겨 만료 후 다른 Worker가 위 규칙으로 복구한다(취소 결과를 성공/미실행으로 단정하지 않음).
+
+**보장 한계:** BE가 lease token을 검증하지 않으므로 마지막 소유권 확인과 실제 외부
+전송 사이의 경쟁, 이미 전송된 변경의 효과까지 되돌릴 수 없다. 취소는 외부 조치의 취소
+증거가 아니며 exactly-once가 아니다. 그러므로 불확실한 조치는 BE 상태 조회/운영자 검토로
+보내며 무조건 재실행하지 않는다. 멱등성은 BE가 발급한 기존 action identity에 의존한다.
+
+새 실행/복구 메타데이터는 worker/operation/thread 식별자, lease 만료, attempts,
+backoff 시각, 시작/변경 가능 여부, actionId 및 안전한 코드뿐이다. lease token은 private
+DB 필드이며 공개 상태/로그/Graph state에는 넣지 않는다. 원문·도구 인자·명령 전체·자격증명은
+추가 메타데이터에 넣지 않는다. 기존 envelope/checkpoint의 데이터 보관·접근 정책은 별도다.
+
+실제 PostgreSQL 시험(경쟁·프로세스 종료·heartbeat·stale checkpoint/결과 차단·승인 재개
+불확실성·shutdown)은 기존 unittest runner로 실행한다.
+
+```sh
+AGENT_TEST_CHECKPOINT_DB_URL="$AGENT_CHECKPOINT_DB_URL" \
+  uv run --locked python -m unittest discover -s tests -p 'test_shared_worker.py' -v
+```
+
+테스트는 UUID별 독립 Agent 스키마를 생성·삭제한다. 실제 BE 변경/실제 모델 성공의 증거는 아니다.
+
+## 저장·실행·재시작 (legacy SQLite)
 
 Agent 소유 inbox는 표준 라이브러리 SQLite WAL 파일을 사용한다. 업무 DB를 수정하지 않는다. 외부 DB 계약 없이 진행하기 위한 로컬 배포 선택이며 수업 지정 기술이 아니다. `AGENT_TASK_DB_PATH`는 반드시 영속 볼륨에 두고, 같은 호스트의 worker들이 동일 파일을 공유한다. 여러 호스트/네트워크 파일시스템 배포는 이 구현 범위 밖이다. RabbitMQ 보너스 구현으로 주장하지 않는다.
 

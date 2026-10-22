@@ -22,6 +22,7 @@ from app.harness.kick_review import _uuid
 from app.harness.safety import safe_presentation
 from app.schemas import AnalysisResult
 from app.state import AgentState
+from app.runtime.fencing import GuardedGateway, guarded_node
 
 
 class ModerationGateway(Protocol):
@@ -90,6 +91,7 @@ def build_moderation_graph(*, model, business, policy, backend: ModerationGatewa
     """
     if checkpointer is None:
         raise ValueError("Persistent checkpointer must be configured by the task runner")
+    backend = GuardedGateway(backend)
 
     async def load(state):
         task = state["task"]
@@ -294,8 +296,8 @@ def build_moderation_graph(*, model, business, policy, backend: ModerationGatewa
                      "apply_context_decision": decide, "apply_context": apply_human_decision,
                      "submit_pii": submit_pii, "review_kick": kick_wait, "execute_kick": kick,
                      "flood_pending": flood_pending, "finish": finish}.items():
-        graph.add_node(name, fn)
-    graph.add_node("manual_review", manual_review)
+        graph.add_node(name, guarded_node(fn))
+    graph.add_node("manual_review", guarded_node(manual_review))
     graph.add_edge("manual_review", "validate")
     graph.add_edge(START, "load_case")
     for source, router, destinations in [
