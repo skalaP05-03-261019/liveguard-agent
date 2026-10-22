@@ -180,6 +180,52 @@ class SharedInboxTests(unittest.TestCase):
         self.first.finish(run, "WAITING_REVIEW")
         self.assertEqual(self.second.claim("worker-b")["operation_id"], operation_id(resume))
 
+    def test_resume_intake_blocks_unknown_predecessors_but_keeps_duplicate_receipts(self):
+        self.first.accept(self.task)
+        run = self.first.claim("worker-a")
+        resume = self.task.model_copy(update={
+            "kind": "RESUME_REVIEW", "review_kind": "CONTEXT",
+            "review_id": uuid4(), "decision_id": uuid4(),
+        })
+        self.first.accept(resume)
+        self.first.finish(run, "UNKNOWN")
+
+        receipt, created = self.second.accept(resume)
+        self.assertFalse(created)
+        self.assertEqual(receipt["status"], "QUEUED")
+        with self.assertRaisesRegex(TaskConflict, "THREAD_NOT_WAITING"):
+            self.second.accept(resume.model_copy(update={"decision_id": uuid4()}))
+
+    def test_failed_resume_allows_correction_only_while_approval_is_pending(self):
+        self.first.accept(self.task)
+        self.mark_waiting(self.task)
+        failed = self.task.model_copy(update={
+            "kind": "RESUME_REVIEW", "review_kind": "CONTEXT",
+            "review_id": uuid4(), "decision_id": uuid4(),
+        })
+        self.first.accept(failed)
+        claimed = self.first.claim("worker-a")
+        self.first.finish(claimed, "FAILED", "REVIEW_MISMATCH")
+        correction = failed.model_copy(update={"decision_id": uuid4()})
+        _, created = self.second.accept(correction)
+        self.assertTrue(created)
+
+    def test_failed_queued_resume_does_not_reopen_completed_thread(self):
+        self.first.accept(self.task)
+        self.mark_waiting(self.task)
+        resume = self.task.model_copy(update={
+            "kind": "RESUME_REVIEW", "review_kind": "CONTEXT",
+            "review_id": uuid4(), "decision_id": uuid4(),
+        })
+        self.first.accept(resume)
+        queued_resume = resume.model_copy(update={"decision_id": uuid4()})
+        self.first.accept(queued_resume)
+        self.first.finish(self.first.claim("worker-a"), "SUCCEEDED")
+        self.first.finish(self.first.claim("worker-b"), "FAILED", "NO_PENDING_APPROVAL")
+
+        with self.assertRaisesRegex(TaskConflict, "THREAD_NOT_WAITING"):
+            self.second.accept(resume.model_copy(update={"decision_id": uuid4()}))
+
     def test_unknown_and_backoff_heads_block_only_their_own_thread(self):
         for status in ("UNKNOWN", "BACKOFF"):
             with self.subTest(status=status):
