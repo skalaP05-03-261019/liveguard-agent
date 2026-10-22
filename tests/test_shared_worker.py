@@ -416,6 +416,8 @@ os._exit(9)
         worker.start()
         await asyncio.wait_for(entered.wait(), 5)
         await worker.close()
+        # app.worker.main and configured_worker.finally both close the same worker.
+        await worker.close()
         self.assertEqual(self.row()["status"], "RUNNING")
         self.assertTrue(self.row()["mutation_started"])
         self.expire()
@@ -644,3 +646,34 @@ os._exit(9)
         self.assertEqual(sum(row[0] == 'create' for row in self.backend.calls), 1)
         self.assertEqual(sum(row[0] == 'apply' for row in self.backend.calls), 0)
         self.assertEqual(len(self.model.inputs), 2)
+
+    async def test_cancelling_shutdown_caller_does_not_swallow_cancellation(self):
+        entered, released = asyncio.Event(), asyncio.Event()
+        original = self.backend.create_review
+        async def slow(**kwargs):
+            entered.set()
+            await released.wait()
+            return await original(**kwargs)
+        self.backend.create_review = slow
+        worker = self.worker()
+        worker.start()
+        try:
+            await asyncio.wait_for(entered.wait(), 5)
+            closing = asyncio.create_task(worker.close())
+            await asyncio.sleep(0)
+            closing.cancel()
+            with self.assertRaises(asyncio.CancelledError):
+                await closing
+            self.assertFalse(worker.worker.done())
+        finally:
+            released.set()
+            await asyncio.wait_for(worker.close(), 5)
+
+    async def test_wrong_live_decision_persists_failure_without_apply_or_kick(self):
+        await self.worker().run_one()
+        self.backend.wrong_live = True
+        self.store.accept(self.decision())
+        await self.worker('second').run_one()
+        self.assertEqual(self.store.get(self.task.task_id)['status'], 'FAILED')
+        self.assertNotIn('apply', [row[0] for row in self.backend.calls])
+        self.assertNotIn('kick', [row[0] for row in self.backend.calls])
