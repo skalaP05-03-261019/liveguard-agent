@@ -1,0 +1,61 @@
+{
+  "issue": 65,
+  "agentBase": "e3d0dd46d8c14778121fda77ca7ab09a16d83080",
+  "backendInspectedMain": "1736c2c2107debfc502dd8af1d1fc70d8e1e8b12",
+  "tests": {
+    "kind": "controlled-regression",
+    "database": "isolated PostgreSQL/pgvector",
+    "tcpEnabled": true,
+    "run": 310,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 23.22
+  },
+  "smoke": {
+    "kind": "controlled-BE-evidence-real-model-real-RAG-TCP",
+    "unauthenticatedStatus": 401,
+    "authenticatedStatus": 200,
+    "verdicts": [
+      "VIOLATION"
+    ],
+    "policyEvidenceCount": 3,
+    "modelCalls": 2,
+    "executionAuthorized": false,
+    "backendWrites": 0,
+    "limits": "Single authored fixture, not semantic judgment quality, new-policy approval, live case creation or FE proof"
+  },
+  "existingStackRead": {
+    "kind": "observed-real-Business-MCP-BE-read",
+    "caseId": "5fa5ac58-d709-483a-843c-19a1228ba771",
+    "route": "FLOOD_REVIEW",
+    "confirmation": "CONFIRMED_VIOLATION",
+    "eligibleForNewContextHandoff": false,
+    "latestBackendRedeployed": false,
+    "mutationExecuted": false
+  },
+  "cli": {
+    "kind": "controlled-service-fixture",
+    "outputMode": "0600",
+    "executionAuthorized": false,
+    "realDependencies": false
+  },
+  "unexecuted": [
+    "Real BE new Phase2 candidate ingress and creation",
+    "Latest BE main redeployment",
+    "Live new CONTEXT handoff",
+    "Phase2 FE SSE review approval enforcement",
+    "New investigator semantic quality evaluation"
+  ],
+  "sha256": {
+    "app/candidate_detection/api.py": "15f3a6ecc4c492a124c2c7e477a73264799e3bcc6bb5fee36eea894468b13f86",
+    "app/phase2_bridge/api.py": "64f74d90da38a4fd1cd77cf76bf8e126183730121196df583c5754dfb6ea677e",
+    "app/phase2_bridge/service.py": "8ec368ea9a928b4ac01318cdd6f3ad6bdd136ed841c4a1e9ea803e6ebf5e6ed7",
+    "app/phase2_bridge/__main__.py": "126f17a159c27f520d7e332ae943dff37c7cbfd65d82dcee4185884b297e374c",
+    "tests/test_phase2_draft_service.py": "006736f0b80192720d4398177320dd00846ed9f848fec5526d31a88ef23ed050",
+    "examples/phase2-handoff/draft-request.json": "26a3a600250d46f0036c82d0fd9a3c0721c86cfa760a0d7ce471c641742f74e9",
+    "examples/phase2-handoff/draft-response.json": "ef68223adca27e84babbc29c97a9e0b21fa7c3790fb07a6c21512a719b16b983",
+    "examples/phase2-handoff/schemas/DraftRequest.json": "7d9eb1f669d7124ab96e31663a75cd45bf9c5a325b278f048ba355d64754298d",
+    "examples/phase2-handoff/schemas/DraftResponse.json": "83cff289bdd55315763848c856ec4fd76ed17f15d13909293d9844070a2c670a"
+  }
+}

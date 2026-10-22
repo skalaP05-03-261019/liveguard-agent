@@ -7,6 +7,8 @@
 - [후보 판별·평가 구현과 실행법](implementation-61.md)
 - [실제 모델 개발 진단과 남은 실패](results-61.md)
 - [후보 API·BE 사건 검증·세원 조사 인계](handoff-63.md)
+- [BE 조회→조사 초안 실행 API/CLI](draft-service-65.md)
+- [BE 후보 접수 협의안·Phase 1 안내 보완점](candidate-ingress-proposal.md)
 
 ## 현재 상태
 

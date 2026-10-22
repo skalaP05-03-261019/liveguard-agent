@@ -1,0 +1,202 @@
+{
+  "$defs": {
+    "AnalysisResult": {
+      "additionalProperties": false,
+      "description": "다음 PR의 조사 루프가 생성할 메시지별 출력. 아직 HTTP 결과로 반환하지 않는다.",
+      "properties": {
+        "caseId": {
+          "format": "uuid",
+          "title": "Caseid",
+          "type": "string"
+        },
+        "snapshotId": {
+          "format": "uuid",
+          "title": "Snapshotid",
+          "type": "string"
+        },
+        "evidenceVersion": {
+          "minimum": 1,
+          "title": "Evidenceversion",
+          "type": "integer"
+        },
+        "policyVersion": {
+          "minLength": 1,
+          "title": "Policyversion",
+          "type": "string"
+        },
+        "messageFindings": {
+          "items": {
+            "$ref": "#/$defs/MessageFinding"
+          },
+          "minItems": 1,
+          "title": "Messagefindings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "caseId",
+        "snapshotId",
+        "evidenceVersion",
+        "policyVersion",
+        "messageFindings"
+      ],
+      "title": "AnalysisResult",
+      "type": "object"
+    },
+    "Category": {
+      "enum": [
+        "PROFANITY",
+        "HARASSMENT",
+        "FLOOD",
+        "PHISHING",
+        "PII_EXPOSURE"
+      ],
+      "title": "Category",
+      "type": "string"
+    },
+    "InvestigationDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis": {
+          "$ref": "#/$defs/AnalysisResult"
+        },
+        "policyEvidence": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Policyevidence",
+          "type": "array"
+        },
+        "harnessBudget": {
+          "additionalProperties": true,
+          "title": "Harnessbudget",
+          "type": "object"
+        },
+        "executionAuthorized": {
+          "const": false,
+          "default": false,
+          "title": "Executionauthorized",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "analysis"
+      ],
+      "title": "InvestigationDraft",
+      "type": "object"
+    },
+    "Judgment": {
+      "enum": [
+        "VIOLATION",
+        "NO_VIOLATION",
+        "NEEDS_REVIEW"
+      ],
+      "title": "Judgment",
+      "type": "string"
+    },
+    "MessageFinding": {
+      "additionalProperties": false,
+      "description": "Notion CONTRACTS 출력 제안. 제재 기간과 실행 명령은 포함하지 않는다.",
+      "properties": {
+        "messageId": {
+          "format": "uuid",
+          "title": "Messageid",
+          "type": "string"
+        },
+        "verdict": {
+          "$ref": "#/$defs/Judgment"
+        },
+        "categories": {
+          "items": {
+            "$ref": "#/$defs/Category"
+          },
+          "title": "Categories",
+          "type": "array"
+        },
+        "policyIds": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Policyids",
+          "type": "array"
+        },
+        "evidenceMessageIds": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Evidencemessageids",
+          "type": "array"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "missingFacts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missingfacts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "messageId",
+        "verdict",
+        "reason"
+      ],
+      "title": "MessageFinding",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "contractVersion": {
+      "const": "phase2-draft-v1",
+      "default": "phase2-draft-v1",
+      "title": "Contractversion",
+      "type": "string"
+    },
+    "requestId": {
+      "format": "uuid",
+      "title": "Requestid",
+      "type": "string"
+    },
+    "taskId": {
+      "format": "uuid",
+      "title": "Taskid",
+      "type": "string"
+    },
+    "traceId": {
+      "format": "uuid",
+      "title": "Traceid",
+      "type": "string"
+    },
+    "liveId": {
+      "format": "uuid",
+      "title": "Liveid",
+      "type": "string"
+    },
+    "draft": {
+      "$ref": "#/$defs/InvestigationDraft"
+    },
+    "executionAuthorized": {
+      "const": false,
+      "default": false,
+      "title": "Executionauthorized",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "requestId",
+    "taskId",
+    "traceId",
+    "liveId",
+    "draft"
+  ],
+  "title": "DraftResponse",
+  "type": "object"
+}

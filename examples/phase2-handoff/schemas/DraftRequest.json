@@ -1,0 +1,380 @@
+{
+  "$defs": {
+    "Assessment": {
+      "additionalProperties": false,
+      "properties": {
+        "signals": {
+          "items": {
+            "$ref": "#/$defs/RiskSignal"
+          },
+          "maxItems": 4,
+          "title": "Signals",
+          "type": "array"
+        },
+        "missingFacts": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 5,
+          "title": "Missingfacts",
+          "type": "array"
+        }
+      },
+      "title": "Assessment",
+      "type": "object"
+    },
+    "ChatMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "messageId": {
+          "format": "uuid",
+          "title": "Messageid",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "messageId",
+        "text"
+      ],
+      "title": "ChatMessage",
+      "type": "object"
+    },
+    "Quote": {
+      "additionalProperties": false,
+      "properties": {
+        "messageId": {
+          "format": "uuid",
+          "title": "Messageid",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "messageId",
+        "text"
+      ],
+      "title": "Quote",
+      "type": "object"
+    },
+    "RiskKind": {
+      "enum": [
+        "REGION_DISPARAGEMENT",
+        "GROUP_HATE",
+        "TARGETED_ATTACK",
+        "PROFANITY_VARIANT"
+      ],
+      "title": "RiskKind",
+      "type": "string"
+    },
+    "RiskSignal": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/RiskKind"
+        },
+        "strength": {
+          "$ref": "#/$defs/Strength"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Quote"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "reason": {
+          "maxLength": 400,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "strength",
+        "evidence",
+        "reason"
+      ],
+      "title": "RiskSignal",
+      "type": "object"
+    },
+    "ScreenRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "phase2-screen-v1",
+          "default": "phase2-screen-v1",
+          "title": "Contractversion",
+          "type": "string"
+        },
+        "requestId": {
+          "format": "uuid",
+          "title": "Requestid",
+          "type": "string"
+        },
+        "experiment": {
+          "enum": [
+            "clear-only",
+            "clear-or-possible",
+            "include-uncertain"
+          ],
+          "title": "Experiment",
+          "type": "string"
+        },
+        "input": {
+          "$ref": "#/$defs/ScreeningInput"
+        }
+      },
+      "required": [
+        "requestId",
+        "experiment",
+        "input"
+      ],
+      "title": "ScreenRequest",
+      "type": "object"
+    },
+    "ScreenResult": {
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": {
+          "const": "phase2-screen-v1",
+          "default": "phase2-screen-v1",
+          "title": "Contractversion",
+          "type": "string"
+        },
+        "requestId": {
+          "format": "uuid",
+          "title": "Requestid",
+          "type": "string"
+        },
+        "liveId": {
+          "format": "uuid",
+          "title": "Liveid",
+          "type": "string"
+        },
+        "targetMessageId": {
+          "format": "uuid",
+          "title": "Targetmessageid",
+          "type": "string"
+        },
+        "experiment": {
+          "enum": [
+            "clear-only",
+            "clear-or-possible",
+            "include-uncertain"
+          ],
+          "title": "Experiment",
+          "type": "string"
+        },
+        "selected": {
+          "title": "Selected",
+          "type": "boolean"
+        },
+        "assessment": {
+          "$ref": "#/$defs/Assessment"
+        },
+        "usage": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Usage",
+          "type": "object"
+        },
+        "executionAuthorized": {
+          "const": false,
+          "default": false,
+          "title": "Executionauthorized",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "requestId",
+        "liveId",
+        "targetMessageId",
+        "experiment",
+        "selected",
+        "assessment"
+      ],
+      "title": "ScreenResult",
+      "type": "object"
+    },
+    "ScreeningInput": {
+      "additionalProperties": false,
+      "properties": {
+        "liveId": {
+          "format": "uuid",
+          "title": "Liveid",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/ChatMessage"
+        },
+        "context": {
+          "items": {
+            "$ref": "#/$defs/ChatMessage"
+          },
+          "maxItems": 8,
+          "title": "Context",
+          "type": "array"
+        }
+      },
+      "required": [
+        "liveId",
+        "target"
+      ],
+      "title": "ScreeningInput",
+      "type": "object"
+    },
+    "Strength": {
+      "enum": [
+        "CLEAR",
+        "POSSIBLE",
+        "UNCERTAIN"
+      ],
+      "title": "Strength",
+      "type": "string"
+    },
+    "TaskEnvelope": {
+      "additionalProperties": false,
+      "properties": {
+        "eventId": {
+          "format": "uuid",
+          "title": "Eventid",
+          "type": "string"
+        },
+        "taskId": {
+          "format": "uuid",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "caseId": {
+          "format": "uuid",
+          "title": "Caseid",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "ANALYZE",
+            "REANALYZE",
+            "RESUME_REVIEW",
+            "RECONCILE"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "threadId": {
+          "minLength": 1,
+          "title": "Threadid",
+          "type": "string"
+        },
+        "snapshotId": {
+          "format": "uuid",
+          "title": "Snapshotid",
+          "type": "string"
+        },
+        "expectedEvidenceVersion": {
+          "minimum": 1,
+          "title": "Expectedevidenceversion",
+          "type": "integer"
+        },
+        "decisionId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decisionid"
+        },
+        "reviewKind": {
+          "anyOf": [
+            {
+              "enum": [
+                "CONTEXT",
+                "KICK"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reviewkind"
+        },
+        "reviewId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reviewid"
+        },
+        "traceId": {
+          "format": "uuid",
+          "title": "Traceid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "eventId",
+        "taskId",
+        "caseId",
+        "kind",
+        "threadId",
+        "snapshotId",
+        "expectedEvidenceVersion",
+        "traceId"
+      ],
+      "title": "TaskEnvelope",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "contractVersion": {
+      "const": "phase2-draft-v1",
+      "default": "phase2-draft-v1",
+      "title": "Contractversion",
+      "type": "string"
+    },
+    "task": {
+      "$ref": "#/$defs/TaskEnvelope"
+    },
+    "screeningRequest": {
+      "$ref": "#/$defs/ScreenRequest"
+    },
+    "screeningResult": {
+      "$ref": "#/$defs/ScreenResult"
+    }
+  },
+  "required": [
+    "task",
+    "screeningRequest",
+    "screeningResult"
+  ],
+  "title": "DraftRequest",
+  "type": "object"
+}
