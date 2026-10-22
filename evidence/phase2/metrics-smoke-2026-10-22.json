@@ -1,0 +1,172 @@
+{
+  "kind": "candidate-screening-only",
+  "datasetSha256": "f7bcbb0ef5fa9fd32eb19f4b0e7f5720450a77ba519ef5bb43d93d04aa77ef28",
+  "total": 4,
+  "assessed": 4,
+  "errors": 0,
+  "coverage": 1.0,
+  "experiments": {
+    "clear-only": {
+      "assessedOnly": {
+        "tp": 1,
+        "fp": 1,
+        "tn": 1,
+        "fn": 1,
+        "precision": 0.5,
+        "recall": 0.5,
+        "f1": 0.5,
+        "normalCandidateRate": 0.5
+      },
+      "candidateCount": 2,
+      "missedExpectedCandidatesIncludingErrors": 1
+    },
+    "clear-or-possible": {
+      "assessedOnly": {
+        "tp": 1,
+        "fp": 1,
+        "tn": 1,
+        "fn": 1,
+        "precision": 0.5,
+        "recall": 0.5,
+        "f1": 0.5,
+        "normalCandidateRate": 0.5
+      },
+      "candidateCount": 2,
+      "missedExpectedCandidatesIncludingErrors": 1
+    },
+    "include-uncertain": {
+      "assessedOnly": {
+        "tp": 1,
+        "fp": 1,
+        "tn": 1,
+        "fn": 1,
+        "precision": 0.5,
+        "recall": 0.5,
+        "f1": 0.5,
+        "normalCandidateRate": 0.5
+      },
+      "candidateCount": 2,
+      "missedExpectedCandidatesIncludingErrors": 1
+    }
+  },
+  "riskKindLabeledAssessed": 4,
+  "riskKindsAssessedOnly": {
+    "REGION_DISPARAGEMENT": {
+      "tp": 1,
+      "fp": 1,
+      "tn": 1,
+      "fn": 1,
+      "precision": 0.5,
+      "recall": 0.5,
+      "f1": 0.5,
+      "normalCandidateRate": 0.5
+    },
+    "GROUP_HATE": {
+      "tp": 0,
+      "fp": 0,
+      "tn": 4,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "normalCandidateRate": 0.0
+    },
+    "TARGETED_ATTACK": {
+      "tp": 0,
+      "fp": 0,
+      "tn": 4,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "normalCandidateRate": 0.0
+    },
+    "PROFANITY_VARIANT": {
+      "tp": 0,
+      "fp": 0,
+      "tn": 4,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "normalCandidateRate": 0.0
+    }
+  },
+  "latencyMs": {
+    "p50": 0.0,
+    "p95": 0.01
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0
+  },
+  "results": [
+    {
+      "id": "P2-01",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "REGION_DISPARAGEMENT"
+      ],
+      "candidates": {
+        "clear-only": true,
+        "clear-or-possible": true,
+        "include-uncertain": true
+      },
+      "usage": {},
+      "latencyMs": 0.01
+    },
+    {
+      "id": "P2-02",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {},
+      "latencyMs": 0.0
+    },
+    {
+      "id": "P2-09",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "REGION_DISPARAGEMENT"
+      ],
+      "candidates": {
+        "clear-only": true,
+        "clear-or-possible": true,
+        "include-uncertain": true
+      },
+      "usage": {},
+      "latencyMs": 0.01
+    },
+    {
+      "id": "P2-10",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {},
+      "latencyMs": 0.0
+    }
+  ],
+  "limits": [
+    "Selection experiments are not customer policy or calibrated probabilities.",
+    "Metrics are conditional on assessed rows; coverage and errors must also be shown.",
+    "Candidate classification is not a violation finding or human decision.",
+    "No Backend delivery, hiding, enforcement, production throughput or Phase 1 baseline is proven.",
+    "Token counts are not monetary cost; pricing is not inferred."
+  ],
+  "execution": {
+    "mode": "offline-predictions",
+    "promptExecuted": false
+  }
+}

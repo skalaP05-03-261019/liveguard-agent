@@ -1,0 +1,42 @@
+{
+  "P2-01": {
+    "signals": [
+      {
+        "kind": "REGION_DISPARAGEMENT",
+        "strength": "CLEAR",
+        "evidence": [
+          {
+            "messageId": "b86be728-a8e9-51d8-9434-f629dfde82e4",
+            "text": "그 지역 사람들은 여기서 말하지 마"
+          }
+        ],
+        "reason": "통제된 평가기 동작 확인용 출력"
+      }
+    ],
+    "missingFacts": []
+  },
+  "P2-02": {
+    "signals": [],
+    "missingFacts": []
+  },
+  "P2-09": {
+    "signals": [
+      {
+        "kind": "REGION_DISPARAGEMENT",
+        "strength": "CLEAR",
+        "evidence": [
+          {
+            "messageId": "1bd8d3d7-c156-5383-bea2-7bc3577906d4",
+            "text": "지역별 맛집 추천 부탁해요"
+          }
+        ],
+        "reason": "통제된 평가기 동작 확인용 출력"
+      }
+    ],
+    "missingFacts": []
+  },
+  "P2-10": {
+    "signals": [],
+    "missingFacts": []
+  }
+}
