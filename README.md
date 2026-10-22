@@ -31,6 +31,10 @@ HTTP 실행기·영속 inbox·서비스 인증은 [#10 실행기 문서](docs/AI
 공유 PostgreSQL Inbox·checkpoint fencing·lease/복구 설정과 보장 한계는
 [#58/#60 운영 절차](docs/AI1-10-task-runtime.md#공유-postgresql-inbox와-독립-worker-5860)를 따른다.
 SQLite 실행기는 기존 단일 호스트용 legacy 경로로 유지한다.
+[#89 실행 용량·모델 quota 운영 정책](docs/AI1-89-runtime-limits.md): Worker당 Graph 2,
+클러스터 Graph/모델 4, 모델 RPM/TPM 공유 예약, 방송별 공정 접수, 503 backpressure,
+인증된 metrics 및 명시적 보존 정책을 제공한다. 기존 envelope의 `liveId` 생략은
+legacy 공정성 버킷으로 처리하며 방송별 공정성을 보장하는 것으로 해석하지 않는다.
 최신 BE 사건 입력 사전검사와 중단 작업 복구는 [#40 운영 준비 문서](docs/AI1-40-backend-preflight-recovery.md)를 참조한다. 사전검사는 모델·Gateway 없이도 가능하며 실행 승인을 대신하지 않는다.
 실제 B1 진행 이벤트 계약용 `BackendEvents` HTTP 어댑터는 추가했으며, 전체 Spring 집행 시험과 구분한다.
 [최신 명세 출처·Backend 잔여 계약](docs/AI1-10-latest-spec-and-boundary.md)을 먼저 확인한다.

@@ -17,7 +17,7 @@ from app.main import create_app
 from app.harness.checkpoint import open_checkpointer
 from app.integration.workflow import build_moderation_graph
 from app.runtime.runner import TaskRunner
-from app.runtime.store import TaskConflict, TaskStore, operation_id
+from app.runtime.store import InboxCapacityExceeded, TaskConflict, TaskStore, operation_id
 from app.schemas import TaskEnvelope
 from runtime_support import AUTH, test_application, wait_for_task
 from test_agent_read import FIXTURE
@@ -32,6 +32,17 @@ class StoreTests(unittest.TestCase):
         self.path = f"{self.directory.name}/inbox.db"
         self.store = TaskStore(self.path)
         self.task = TaskEnvelope.model_validate(FIXTURE["task"])
+
+    def test_local_capacity_preserves_duplicate_and_completed_receipt(self):
+        self.store.capacity = 1
+        self.store.accept(self.task)
+        other = self.task.model_copy(update={"task_id": uuid4(), "thread_id": "other"})
+        with self.assertRaises(InboxCapacityExceeded):
+            self.store.accept(other)
+        self.assertFalse(self.store.accept(self.task)[1])
+        self.store.finish(operation_id(self.task), "SUCCEEDED")
+        self.store.accept(other)
+        self.assertEqual(self.store.get(self.task.task_id)["status"], "SUCCEEDED")
 
     def test_atomic_duplicate_delivery_across_connections_and_reopen(self):
         def accept(_):

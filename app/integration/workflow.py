@@ -102,6 +102,8 @@ def build_moderation_graph(*, model, business, policy, backend: ModerationGatewa
         try:
             loaded = await nodes.load_case(state, tools=business)
             require_executable_case(loaded)
+            if task.live_id is not None and str(task.live_id) != loaded["live_id"]:
+                raise AgentToolError("LIVE_BINDING_MISMATCH", trace_id=str(task.trace_id))
         except AgentToolError as error:
             patch = _error({"trace_id": str(task.trace_id)}, error.code)
             patch["error"]["retryable"] = error.retryable
