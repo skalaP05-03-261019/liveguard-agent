@@ -1,0 +1,64 @@
+{
+  "issue": 68,
+  "agentStartMain": "60df922127f99214e7b39822ba06a8383a083586",
+  "reviewedWorkerHeads": [
+    "8f15db6a22719ecbf9e81223530ade054329e935",
+    "465f57c7f58bf6742b2a97aeed431be6d331e493"
+  ],
+  "worker66MergedBy": "iihlolo",
+  "latestIncludedMain": "a0c84a129f73c9956d011da05d42ee592c632e8d",
+  "tests": {
+    "kind": "controlled-with-real-PostgreSQL-and-OS-processes",
+    "postgres": "isolated PostgreSQL/pgvector",
+    "tcpEnabled": true,
+    "run": 344,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 38.569,
+    "addedScenarios": [
+      "Independent process restart through CONTEXT then KICK, AI/human reason references retained",
+      "KICK rejection after restart executes no kick",
+      "Duplicate KICK receipt causes no second command",
+      "SIGKILL during review mutation→new process reads BE state, no replay, UNKNOWN",
+      "DEFER and wrong review type preserve waiting without investigation/apply",
+      "Repeated shutdown close and caller cancellation",
+      "Cross-live stored decision rejected without apply/kick"
+    ]
+  },
+  "review": {
+    "standardsBlockingFindings": 0,
+    "standardsNonblockingFindings": 2,
+    "specBlockingFindings": 0,
+    "unverifiedLiveBackendIdempotency": true
+  },
+  "observedBackendRead": {
+    "kind": "real-existing-deployment-read-only",
+    "status": "CONNECTED",
+    "caseId": "5fa5ac58-d709-483a-843c-19a1228ba771",
+    "snapshotId": "998269b2-703e-4ee3-a941-f4cc001d9c2d",
+    "evidenceVersion": 1,
+    "policyVersion": "v3.1",
+    "mutationExecuted": false,
+    "latestBackendDeploymentProven": false
+  },
+  "unexecuted": [
+    "Latest BE/FE deployment and UI retest",
+    "Live BE duplicate mutation delivery",
+    "Viewer detailed kick-reason UX",
+    "Production database/SQLite migration",
+    "phase1-end team agreement/tag"
+  ],
+  "sha256": {
+    "app/runtime/inbox.py": "53c6d18399262410533e90b3ab5090d1225f1564836b7e2e0e08684c705522eb",
+    "app/runtime/worker.py": "8f77f7161a75b88d3d30968066d1161dc6ceab180e89663fe211ddf6b027fbcf",
+    "app/runtime/fencing.py": "b1be6c27e2e6710f16039c2b011cf3908b9c6490e414ea21196a055d28977a21",
+    "app/worker.py": "bbaa7ad5214a574feae2d619ecce57076f35962d3c9d63d2f458c3d371ab265b",
+    "app/harness/checkpoint.py": "35b396fb55eea6739783db4c0fea416d28d53a713da430486707b3131ca29baf",
+    "app/harness/execution.py": "41109a267fa45f9c09fd1f31a38a978e5ee8cc517f8d719d7fbb49a4bf8ffffe",
+    "app/integration/http_gateway.py": "f447d8b7f81abb3b18f93294ebe7a30f374a187db5e7999b07b2fc4874429169",
+    "app/integration/workflow.py": "df5d01f8a552b12c3328ce946ab700465930c07e814fa183be98612048fdb845",
+    "tests/test_shared_worker.py": "cdc7b83d786b5d54927ffdf7be53523f4ab64fb47ecd1aa4ea6e0c724033796d",
+    "tests/fixtures/worker_process.py": "62d64ae2df74dc93f84afd476d221c01e5b1ddb7efc8818fc292bfb5dd87dc95"
+  }
+}
