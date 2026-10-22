@@ -1,6 +1,7 @@
 # LIVE:GUARD Phase 2
 
 - [직접 채팅 입력·실모델 후보 판독 로컬 데모](interactive-demo-83.md)
+- [로컬 데모 판독 실패 처리·한 번 재시도](demo-invalid-output-retry-85.md)
 
 - [미검수 개발셋 진단·불일치 검수 큐](development-diagnostics-81.md)
 

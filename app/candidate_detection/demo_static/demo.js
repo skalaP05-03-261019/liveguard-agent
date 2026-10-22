@@ -17,7 +17,7 @@ const labelFor = {
 const errorFor = {
   CANDIDATE_TIMEOUT: 'AI 응답 시간이 초과됐습니다. 잠시 후 다시 보내 주세요.',
   CANDIDATE_BUSY: '다른 판독을 처리 중입니다. 잠시 후 다시 보내 주세요.',
-  MODEL_RESPONSE_REJECTED: 'AI 근거 형식을 확인할 수 없습니다. 다시 보내 주세요.',
+  MODEL_RESPONSE_REJECTED: 'AI 근거 형식을 확인할 수 없습니다. 대화 초기화 후 다시 시도해 주세요.',
   MODEL_UNAVAILABLE: '모델 연결을 확인해 주세요.',
   VALIDATION_FAILED: '채팅 길이와 입력 형식을 확인해 주세요.',
 };

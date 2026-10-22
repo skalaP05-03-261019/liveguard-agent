@@ -118,7 +118,14 @@ def create_app(screen, *, max_concurrent=2):
             return fail(429, 'CANDIDATE_BUSY')
         await slots.acquire()
         try:
-            assessment, usage = await screen.assess(request.input, trace_id=str(request.request_id))
+            try:
+                assessment, usage = await screen.assess(request.input, trace_id=str(request.request_id))
+            except AgentToolError as error:
+                if error.code != 'INVALID_MODEL_OUTPUT':
+                    raise
+                # The model can return malformed evidence once. Retry the same
+                # bounded read-only assessment; never relax provenance checks.
+                assessment, usage = await screen.assess(request.input, trace_id=str(request.request_id))
             return ScreenResult(requestId=request.request_id, liveId=request.input.live_id,
                                 targetMessageId=request.input.target.message_id,
                                 experiment=request.experiment,

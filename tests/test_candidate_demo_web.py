@@ -110,6 +110,55 @@ class DemoWebTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.json(), {'error': {'code': 'MODEL_UNAVAILABLE'}})
         self.assertNotIn('PRIVATE_SYNTHETIC', result.text)
 
+    async def test_invalid_model_evidence_retries_once_with_same_chat_and_then_succeeds(self):
+        body = payload('Synthetic target chat', [
+            {'messageId': str(uuid4()), 'text': 'Synthetic preceding chat'}])
+
+        class IntermittentScreen:
+            def __init__(self): self.calls = []
+
+            async def assess(self, data, *, trace_id):
+                self.calls.append((data, trace_id))
+                if len(self.calls) == 1:
+                    raise AgentToolError('INVALID_MODEL_OUTPUT', trace_id=trace_id)
+                return Assessment(), {'inputTokens': 10, 'outputTokens': 3}
+
+        screen = IntermittentScreen()
+        response = await self.request(create_app(screen), 'POST', '/api/screen', json=body)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(screen.calls), 2)
+        self.assertEqual(screen.calls[0], screen.calls[1])
+        self.assertEqual(screen.calls[0][0].context[0].text, 'Synthetic preceding chat')
+
+    async def test_persistent_invalid_model_evidence_stops_after_one_retry(self):
+        body = payload()
+
+        class InvalidScreen:
+            calls = 0
+
+            async def assess(self, data, *, trace_id):
+                self.calls += 1
+                raise AgentToolError('INVALID_MODEL_OUTPUT', trace_id=trace_id)
+
+        screen = InvalidScreen()
+        response = await self.request(create_app(screen), 'POST', '/api/screen', json=body)
+        self.assertEqual(response.status_code, 502)
+        self.assertEqual(response.json(), {'error': {'code': 'MODEL_RESPONSE_REJECTED'}})
+        self.assertEqual(screen.calls, 2)
+
+    async def test_auth_failure_does_not_retry(self):
+        class UnauthorizedScreen:
+            calls = 0
+
+            async def assess(self, data, *, trace_id):
+                self.calls += 1
+                raise AgentToolError('UNAUTHENTICATED', trace_id=trace_id)
+
+        screen = UnauthorizedScreen()
+        response = await self.request(create_app(screen), 'POST', '/api/screen', json=payload())
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(screen.calls, 1)
+
     async def test_no_model_configured_returns_available_page_and_api_error(self):
         app = create_app(None)
         self.assertEqual((await self.request(app, 'GET', '/')).status_code, 200)
