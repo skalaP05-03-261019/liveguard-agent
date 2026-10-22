@@ -14,7 +14,12 @@
 
 `BUSINESS_MCP_URL` 기본값은 `http://127.0.0.1:8002/mcp`. Agent는 `BUSINESS_MCP_AGENT_TOKEN` Bearer를 사용한다. Backend 서비스 토큰은 Agent 조회 클라이언트가 사용하지 않는다. `.env` 자동 로드는 없다.
 
-조회 7개만 allowlist로 허용한다. MCP 서버가 변경 도구를 함께 제공해도 이 클라이언트는 호출을 거부한다. 도구마다 새 세션을 열고 닫으며 연결/협상/호출/종료를 합쳐 10초 제한이다. 자동 도구 재시도는 없다. SDK의 프로토콜 탐색과 legacy 협상은 업무 도구 재실행과 구분한다.
+조회 7개만 allowlist로 허용한다. MCP 서버가 변경 도구를 함께 제공해도 이 클라이언트는 호출을 거부한다. 도구마다 새 세션을 열고 닫으며 슬롯 대기/연결/협상/호출/종료를 합쳐 기본 10초 제한이다. 자동 도구 재시도는 없다. 호출 전 schema를 조회하며 SDK 고수준 API의 자동 도구 재전송을 사용하지 않는다. SDK의 프로토콜 탐색과 legacy 협상은 업무 도구 재실행과 구분한다.
+
+#94의 서버는 무상태 Streamable HTTP이므로 요청별 LB 분산에 affinity가 필요 없다.
+같은 endpoint의 클라이언트 호출은 프로세스/event loop당 기본 8개로 제한하며,
+신뢰된 변경 호출도 같은 제한을 공유한다. 세션별 HTTP pool은 최대 2연결이다.
+설정과 장애 대응은 [Business MCP 다중 인스턴스](BE2-94-business-mcp-cluster.md)를 따른다.
 
 `load_case`는 다음 두 호출을 수행한다. 공통 입력은 caseId와 작업 traceId이며, get_chat_context의 before/after는 각각 5다.
 

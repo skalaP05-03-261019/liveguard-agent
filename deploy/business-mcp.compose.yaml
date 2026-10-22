@@ -1,0 +1,43 @@
+name: liveguard-business-mcp
+
+x-mcp: &mcp
+  build:
+    context: ..
+  command: ["python", "-m", "app.business_mcp"]
+  environment:
+    BUSINESS_MCP_HOST: 0.0.0.0
+    BUSINESS_MCP_PORT: 8002
+    BUSINESS_BACKEND_BASE_URL: ${BUSINESS_BACKEND_BASE_URL:?Set Backend URL reachable from containers}
+    BUSINESS_MCP_AGENT_TOKEN: ${BUSINESS_MCP_AGENT_TOKEN:?Set Agent token}
+    BUSINESS_MCP_SERVICE_TOKEN: ${BUSINESS_MCP_SERVICE_TOKEN:?Set Backend service token}
+    BUSINESS_MCP_ALLOWED_HOSTS: business-mcp:*,localhost:*,127.0.0.1:*,mcp-1:*,mcp-2:*
+    BUSINESS_MCP_MAX_REQUESTS: ${BUSINESS_MCP_MAX_REQUESTS:-16}
+    BUSINESS_MCP_BACKEND_CONNECTIONS: ${BUSINESS_MCP_BACKEND_CONNECTIONS:-16}
+    BUSINESS_MCP_BACKEND_TIMEOUT: ${BUSINESS_MCP_BACKEND_TIMEOUT:-10}
+    BUSINESS_MCP_SHUTDOWN_TIMEOUT: ${BUSINESS_MCP_SHUTDOWN_TIMEOUT:-20}
+  stop_grace_period: 30s
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/ready', timeout=2)"]
+    interval: 5s
+    timeout: 3s
+    retries: 3
+
+services:
+  mcp-1:
+    <<: *mcp
+  mcp-2:
+    <<: *mcp
+  business-mcp:
+    image: haproxy:3.0-alpine
+    volumes:
+      - ./business-mcp.haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "127.0.0.1:8002:8002"
+    depends_on:
+      mcp-1:
+        condition: service_healthy
+      mcp-2:
+        condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 30s

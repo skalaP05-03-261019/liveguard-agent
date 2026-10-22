@@ -227,7 +227,7 @@ class BusinessMcpTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("STALE_EVIDENCE", result.content[0].text)
         self.assertIn(str(TRACE_ID), result.content[0].text)
 
-    async def test_kick_user_retries_twice_then_returns_failed(self) -> None:
+    async def test_kick_user_never_replays_retryable_failure_as_success(self) -> None:
         backend = RetryableKickBackend()
         server = MCPServer("test")
         register_tools(server, lambda: backend)
@@ -255,24 +255,13 @@ class BusinessMcpTests(unittest.IsolatedAsyncioTestCase):
                 {"actionCommand": action_command, "traceId": str(TRACE_ID)},
             )
 
-        self.assertFalse(result.is_error)
-        self.assertEqual(len(backend.kick_calls), 3)
+        self.assertTrue(result.is_error)
+        self.assertEqual(len(backend.kick_calls), 1)
         self.assertEqual(
             {command.idempotency_key for command in backend.kick_calls},
             {"00000000-0000-4000-8000-000000000010"},
         )
-        self.assertEqual(
-            result.structured_content,
-            {
-                "data": {
-                    "actionId": "00000000-0000-4000-8000-000000000010",
-                    "status": "FAILED",
-                    "attempts": 3,
-                    "errorCode": "TEMPORARY_UNAVAILABLE",
-                },
-                "traceId": str(TRACE_ID),
-            },
-        )
+        self.assertIn("TEMPORARY_UNAVAILABLE", result.content[0].text)
 
     async def test_backend_adapter_sends_auth_trace_and_typed_query(self) -> None:
         requests: list[httpx.Request] = []

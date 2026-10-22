@@ -250,27 +250,6 @@ async def _execute_kick(
     backend: BackendOperations,
     trace_id: UUID | None,
 ) -> dict[str, Any]:
-    resolved_trace_id = _trace_id(trace_id)
-    max_attempts = 3  # 최초 실행 1회와 재시도 2회
-
-    for attempt in range(1, max_attempts + 1):
-        try:
-            # 재시도도 같은 actionId/idempotencyKey를 사용해 중복 강퇴를 막는다.
-            data = await backend.execute_action(command, trace_id=resolved_trace_id)
-        except BackendError as error:
-            if not error.retryable:
-                _raise_tool_error(error)
-            if attempt == max_attempts:
-                return _success(
-                    {
-                        "actionId": str(command.action_id),
-                        "status": "FAILED",
-                        "attempts": attempt,
-                        "errorCode": error.code,
-                    },
-                    resolved_trace_id,
-                )
-        else:
-            return _success(data, resolved_trace_id)
-
-    raise RuntimeError("Kick retry loop ended unexpectedly")
+    # The caller must observe the original action before deciding on a replay.
+    # Even retryable transport/server failures do not prove that KICK was not applied.
+    return await _execute_expected(command, "KICK", backend, trace_id)

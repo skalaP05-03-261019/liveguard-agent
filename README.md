@@ -70,7 +70,11 @@ BUSINESS_MCP_SERVICE_TOKEN='replace-with-backend-service-token' \
 uv run python -m app.business_mcp
 ```
 
-`BUSINESS_BACKEND_BASE_URL`은 기본 `http://127.0.0.1:8080`이다. 서비스는 Backend `/internal/**` API를 호출하며 업무 DB에 직접 연결하지 않는다. `/health`는 credential 설정 여부만 보고하고 비밀값을 노출하지 않는다. `BUSINESS_MCP_URL`은 Agent 측 MCP 접속 URL용이며, 서버 listen 설정은 `BUSINESS_MCP_HOST`와 `BUSINESS_MCP_PORT`다.
+`BUSINESS_BACKEND_BASE_URL`은 기본 `http://127.0.0.1:8080`이다. 서비스는 Backend `/internal/**` API를 호출하며 업무 DB에 직접 연결하지 않는다. `/health`는 설정·시작·drain 상태만 보고하고, LB는 `/ready`의 200/503을 사용한다. Backend 연결 성공을 의미하는 probe는 아니다. `BUSINESS_MCP_URL`은 Agent 측 MCP 접속 URL용이며, 서버 listen 설정은 `BUSINESS_MCP_HOST`와 `BUSINESS_MCP_PORT`다.
+
+#94부터 Business MCP는 **무상태 Streamable HTTP / JSON 응답**을 사용한다. 두 인스턴스와
+공통 주소, 제한값, 응답 유실 대응은 [다중 인스턴스 운영 문서](docs/BE2-94-business-mcp-cluster.md)를 따른다.
+변경 도구는 MCP 내부에서 재시도하지 않으며, 결과가 불명확하면 기존 action 상태부터 확인한다.
 이 서버는 process environment를 읽는다. `.env.example`은 설정 참고 파일이며 자동 로드되지 않는다.
 
 ## RAG 정책 색인 (AI2, #3)
