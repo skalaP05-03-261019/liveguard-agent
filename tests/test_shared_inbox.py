@@ -115,8 +115,6 @@ class SharedInboxTests(unittest.TestCase):
             "kind": "RESUME_REVIEW", "review_kind": "CONTEXT",
             "review_id": uuid4(), "decision_id": uuid4(),
         })
-        with self.assertRaisesRegex(TaskConflict, "THREAD_NOT_WAITING"):
-            self.second.accept(resume)
         self.mark_waiting(self.task)
         for changes in (
             {"snapshot_id": uuid4()}, {"case_id": uuid4()}, {"task_id": uuid4()},
@@ -135,12 +133,12 @@ class SharedInboxTests(unittest.TestCase):
             self.assertEqual(sorted(r.status_code for r in replies), [200, 202])
             self.assertEqual(b.get(self.path, headers=AUTH).json()["operationId"],
                              operation_id(resume))
-        with self.assertRaisesRegex(TaskConflict, "THREAD_NOT_WAITING"):
-            self.second.accept(resume.model_copy(update={"decision_id": uuid4()}))
+        _, created = self.second.accept(resume.model_copy(update={"decision_id": uuid4()}))
+        self.assertTrue(created)
         with self.assertRaisesRegex(TaskConflict, "IDEMPOTENCY_CONFLICT"):
             self.second.accept(resume.model_copy(update={"review_id": uuid4()}))
 
-    def test_distinct_resume_decisions_cannot_both_be_queued(self):
+    def test_distinct_resume_decisions_queue_in_thread_order(self):
         self.first.accept(self.task)
         self.mark_waiting(self.task)
         resumes = [self.task.model_copy(update={
@@ -159,7 +157,51 @@ class SharedInboxTests(unittest.TestCase):
 
         with ThreadPoolExecutor(max_workers=2) as pool:
             results = list(pool.map(accept, zip((self.first, self.second), resumes)))
-        self.assertCountEqual(results, [True, "THREAD_NOT_WAITING"])
+        self.assertEqual(results, [True, True])
+        first = self.first.claim("worker-a")
+        self.assertIsNotNone(first)
+        self.assertIsNone(self.second.claim("worker-b"))
+        self.first.finish(first, "WAITING_REVIEW")
+        second = self.second.claim("worker-b")
+        self.assertIsNotNone(second)
+        self.assertNotEqual(first["operation_id"], second["operation_id"])
+
+    def test_early_resume_is_durable_but_not_claimable_ahead_of_run(self):
+        self.first.accept(self.task)
+        run = self.first.claim("worker-a")
+        resume = self.task.model_copy(update={
+            "kind": "RESUME_REVIEW", "review_kind": "CONTEXT",
+            "review_id": uuid4(), "decision_id": uuid4(),
+        })
+        receipt, created = self.second.accept(resume)
+        self.assertTrue(created)
+        self.assertEqual(receipt["status"], "QUEUED")
+        self.assertIsNone(self.second.claim("worker-b"))
+        self.first.finish(run, "WAITING_REVIEW")
+        self.assertEqual(self.second.claim("worker-b")["operation_id"], operation_id(resume))
+
+    def test_unknown_and_backoff_heads_block_only_their_own_thread(self):
+        for status in ("UNKNOWN", "BACKOFF"):
+            with self.subTest(status=status):
+                task = self.task.model_copy(update={
+                    "task_id": uuid4(), "thread_id": "0-blocked-" + uuid4().hex})
+                self.first.accept(task)
+                run = self.first.claim("worker-a")
+                self.first.accept(task.model_copy(update={
+                    "kind": "RESUME_REVIEW", "review_kind": "CONTEXT",
+                    "review_id": uuid4(), "decision_id": uuid4(),
+                }))
+                if status == "UNKNOWN":
+                    self.first.finish(run, "UNKNOWN")
+                else:
+                    self.first.retry_unstarted(run, backoff_seconds=300)
+                other = self.task.model_copy(update={
+                    "task_id": uuid4(), "thread_id": "z-ready-" + uuid4().hex})
+                self.second.accept(other)
+                claimed = self.second.claim("worker-b")
+                self.assertEqual(claimed["thread_id"], other.thread_id)
+                self.second.finish(claimed, "SUCCEEDED")
+                self.assertIsNone(self.second.claim("worker-c"))
 
     def test_durable_receipt_survives_api_process_exit(self):
         code = """

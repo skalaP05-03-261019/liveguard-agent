@@ -6,7 +6,7 @@ from app.runtime.outcomes import TERMINAL, checkpoint_outcome
 from app.schemas import TaskEnvelope
 
 
-def _bound(task, values):
+def _bound(task, values, *, require_decision=True):
     try:
         original = TaskEnvelope.model_validate(values.get("task"))
     except (ValidationError, TypeError):
@@ -19,15 +19,20 @@ def _bound(task, values):
             "evidence_version": task.expected_evidence_version}
     if any(key in values and values[key] != value for key, value in refs.items()):
         return False
-    if task.kind == "RESUME_REVIEW":
-        prefix = "context" if task.review_kind == "CONTEXT" else "kick"
-        result = values.get(prefix + "_result") or {}
-        if (values.get(prefix + "_decision_id") != str(task.decision_id)
-                or values.get(prefix + "_review_id") != str(task.review_id)
-                or result.get("decisionId") != str(task.decision_id)
-                or result.get("reviewId") != str(task.review_id)):
-            return False
+    if task.kind == "RESUME_REVIEW" and require_decision:
+        return _decision_bound(task, values)
     return True
+
+
+def _decision_bound(task, values, *, require_result=True):
+    prefix = "context" if task.review_kind == "CONTEXT" else "kick"
+    if (values.get(prefix + "_decision_id") != str(task.decision_id)
+            or values.get(prefix + "_review_id") != str(task.review_id)):
+        return False
+    result = values.get(prefix + "_result") or {}
+    return not require_result or (
+        result.get("decisionId") == str(task.decision_id)
+        and result.get("reviewId") == str(task.review_id))
 
 
 def _waiting_is_bound(task, snapshot):

@@ -48,6 +48,7 @@ class Backend:
         self.calls.append(("decision", decision_id))
         return {**self.refs(), "liveId": USER if self.wrong_live else LIVE,
                 "threadId": self.state["thread_id"], "reviewId": review_id, "decisionId": decision_id,
+                "kind": "KICK" if review_id == KICK else "CONTEXT",
                 "status": "DECIDED", "decision": self.decision, "categories": ["HARASSMENT"]}
 
     def result(self):

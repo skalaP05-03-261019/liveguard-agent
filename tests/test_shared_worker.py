@@ -6,15 +6,19 @@ import json
 import os
 import subprocess
 import sys
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
+from langgraph.pregel._io import map_command
+from langgraph.types import Command
 from psycopg import sql
 
 from app.harness.checkpoint import open_checkpointer
 from app.harness.resume import resume_review
+from app.clients.business_mcp import AgentToolError
 from app.integration.workflow import build_moderation_graph
 from app.main import create_app
 from app.runtime.fencing import GuardedGateway, LeaseGuard, current_lease
@@ -90,6 +94,28 @@ class SharedWorkerTests(unittest.IsolatedAsyncioTestCase):
     def worker(self, worker_id="worker-a"):
         return GraphWorker(PostgresInbox(URL, schema=self.schema), self.graph,
             gateway=self.backend, settings=replace(self.settings, worker_id=worker_id))
+
+    async def independent_worker(self, worker_id="worker-b", fixture=None):
+        saver = await self.stack.enter_async_context(open_checkpointer(URL,
+            schema=self.checkpoint_schema, initialize=False, saver_type=FencedPostgresSaver))
+        if fixture is None:
+            graph, backend = self.build(saver), self.backend
+        else:
+            backend = fixture.backend
+            graph = build_moderation_graph(model=fixture.model, business=fixture.business,
+                policy=Policies(), backend=backend, checkpointer=saver, observer=lambda *_: None)
+        return GraphWorker(PostgresInbox(URL, schema=self.schema), graph, gateway=backend,
+            settings=replace(self.settings, worker_id=worker_id))
+
+    async def another_thread(self, route="CONTEXT_REVIEW"):
+        fixture = SimpleNamespace()
+        await workflow.WorkflowTests.prepare(fixture, route=route)
+        fixture.task = fixture.task.model_copy(update={
+            "task_id": uuid4(), "thread_id": "another-" + uuid4().hex})
+        fixture.state.update(task=fixture.task, task_id=str(fixture.task.task_id),
+                             thread_id=fixture.task.thread_id)
+        self.store.accept(fixture.task)
+        return fixture
 
     def row(self):
         with self.store.connection() as db:
@@ -227,6 +253,10 @@ os._exit(9)
         snapshot = await self.graph.aget_state(self.config)
         self.expire()
         second = self.store.claim("new")
+        replacement = await self.independent_worker()
+        await self.invoke_owned(second, lambda: replacement.graph.aupdate_state(
+            self.config, {"backend_result": {"owner": "new"}}))
+        owned_snapshot = await replacement.graph.aget_state(self.config)
         async def stale_writes():
             with self.assertRaises(LeaseLost):
                 await self.graph.aupdate_state(self.config, {"task_outcome": "SUCCEEDED"})
@@ -234,7 +264,8 @@ os._exit(9)
                 await self.saver.aput_writes(snapshot.config, [("task_outcome", "SUCCEEDED")], "late")
         await self.invoke_owned(first, stale_writes)
         state = await self.graph.aget_state(self.config)
-        self.assertEqual(state.config, snapshot.config)
+        self.assertEqual(state.config, owned_snapshot.config)
+        self.assertEqual(state.values["backend_result"], {"owner": "new"})
         self.assertNotIn("task_outcome", state.values)
         self.store.finish(second, "WAITING_REVIEW")
 
@@ -304,6 +335,338 @@ os._exit(9)
         self.assertFalse(created)
         self.assertEqual(receipt["status"], "SUCCEEDED")
         self.assertFalse(await self.worker().run_one())
+
+    async def test_early_resume_waits_for_active_thread_without_blocking_other_thread(self):
+        entered, released = asyncio.Event(), asyncio.Event()
+        original = self.backend.create_review
+
+        async def slow(**kwargs):
+            result = await original(**kwargs)
+            entered.set()  # BE has committed; no interrupt checkpoint exists yet.
+            await released.wait()
+            return result
+
+        self.backend.create_review = slow
+        first = asyncio.create_task(self.worker().run_one())
+        try:
+            await asyncio.wait_for(entered.wait(), 5)
+            receipt, created = self.store.accept(self.decision())
+            self.assertTrue(created)
+            self.assertEqual(receipt["status"], "QUEUED")
+            second = await self.independent_worker()
+            self.assertFalse(await second.run_one())
+            other = await self.another_thread(route="PASS")
+            other_worker = await self.independent_worker("worker-c", other)
+            self.assertTrue(await other_worker.run_one())
+            self.assertEqual(self.store.get(other.task.task_id)["status"], "SUCCEEDED")
+            self.assertFalse(first.done())
+        finally:
+            released.set()
+            await asyncio.wait_for(first, 5)
+        self.assertTrue(await second.run_one())
+        self.assertEqual(self.store.get(self.task.task_id)["status"], "SUCCEEDED")
+        self.assertEqual(sum(c[0] == "apply" for c in self.backend.calls), 1)
+
+    async def test_distinct_threads_execute_truly_concurrently_with_independent_savers(self):
+        other = await self.another_thread()
+        entered_a, entered_b, release = asyncio.Event(), asyncio.Event(), asyncio.Event()
+
+        def block(model, entered):
+            original = model.complete
+
+            async def complete(*args, **kwargs):
+                entered.set()
+                await release.wait()
+                return await original(*args, **kwargs)
+            model.complete = complete
+
+        block(self.model, entered_a)
+        block(other.model, entered_b)
+        workers = {
+            self.task.thread_id: self.worker("a"),
+            other.task.thread_id: await self.independent_worker("b", other),
+        }
+        # Start in claim order so each fixture handles its own thread. The
+        # second worker must enter while the first still holds an active lease.
+        threads = sorted(workers)
+        events = {self.task.thread_id: entered_a, other.task.thread_id: entered_b}
+        running = [asyncio.create_task(workers[threads[0]].run_one())]
+        try:
+            await asyncio.wait_for(events[threads[0]].wait(), 5)
+            running.append(asyncio.create_task(workers[threads[1]].run_one()))
+            await asyncio.wait_for(asyncio.gather(entered_a.wait(), entered_b.wait()), 5)
+            self.assertTrue(all(not task.done() for task in running))
+        finally:
+            release.set()
+            await asyncio.wait_for(asyncio.gather(*running), 5)
+        self.assertEqual(self.store.get(self.task.task_id)["status"], "WAITING_REVIEW")
+        self.assertEqual(self.store.get(other.task.task_id)["status"], "WAITING_REVIEW")
+
+    async def test_wait_releases_workers_slot_and_thread_claim(self):
+        worker = self.worker()
+        await worker.run_one()
+        waiting = self.row()
+        self.assertIsNone(waiting["lease_token"])
+        self.assertIsNone(waiting["worker_id"])
+        self.assertIsNone(waiting["lease_expires_at"])
+        other = await self.another_thread(route="PASS")
+        # Same worker process has no held approval slot; a new execution starts.
+        self.business.fixture["case"]["handlingRoute"] = "PASS"
+        try:
+            self.assertTrue(await worker.run_one())
+        finally:
+            self.business.fixture["case"]["handlingRoute"] = "CONTEXT_REVIEW"
+        self.assertEqual(self.store.get(other.task.task_id)["status"], "SUCCEEDED")
+        self.store.accept(self.decision())
+        second = await self.independent_worker()
+        self.assertTrue(await second.run_one())
+        self.assertEqual(self.store.get(self.task.task_id)["status"], "SUCCEEDED")
+
+    async def test_early_resume_survives_lost_waiting_inbox_update_and_replacement(self):
+        job = self.store.claim("dead")
+        self.store.mark_started(job)
+        await self.invoke_owned(job, lambda: self.graph.ainvoke({"task": self.task}, self.config))
+        before = await self.graph.aget_state(self.config)
+        calls = len(self.model.inputs)
+        self.assertTrue(before.interrupts)
+        self.assertEqual(self.row()["status"], "RUNNING")
+        self.store.accept(self.decision())
+        replacement = await self.independent_worker()
+        self.assertFalse(await replacement.run_one())
+        self.expire()
+        self.assertTrue(await replacement.run_one())  # Recover run, not resume.
+        self.assertEqual((await self.graph.aget_state(self.config)).config, before.config)
+        self.assertEqual(self.row()["status"], "QUEUED")
+        self.assertTrue(await replacement.run_one())
+        self.assertEqual(self.row()["status"], "SUCCEEDED")
+        self.assertEqual(len(self.model.inputs), calls)
+        self.assertEqual(sum(c[0] == "create" for c in self.backend.calls), 1)
+        self.assertEqual(sum(c[0] == "apply" for c in self.backend.calls), 1)
+
+    async def test_resume_crash_before_command_is_revalidated_and_recovered(self):
+        await self.worker().run_one()
+        self.store.accept(self.decision())
+        job = self.store.claim("dead")
+        self.store.mark_started(job)
+        self.expire()
+        replacement = await self.independent_worker()
+        self.assertTrue(await replacement.run_one())
+        self.assertEqual(self.row()["status"], "SUCCEEDED")
+        self.assertEqual(sum(c[0] == "apply" for c in self.backend.calls), 1)
+
+    async def test_resume_pending_readonly_checkpoint_continues_without_redelivery(self):
+        await self.worker().run_one()
+        task = self.decision()
+        self.store.accept(task)
+        job = self.store.claim("dead")
+        self.store.mark_started(job)
+        self.graph.interrupt_before_nodes = ["apply_context_decision"]
+        await self.invoke_owned(job, lambda: resume_review(self.graph,
+            review_kind=task.review_kind, thread_id=task.thread_id,
+            review_id=task.review_id, decision_id=task.decision_id, case_id=task.case_id))
+        self.assertEqual((await self.graph.aget_state(self.config)).next, ("apply_context_decision",))
+        self.expire()
+        replacement = await self.independent_worker()
+        self.assertTrue(await replacement.run_one())
+        self.assertEqual(self.row()["status"], "SUCCEEDED")
+        self.assertEqual(sum(c[0] == "apply" for c in self.backend.calls), 1)
+
+    async def test_defer_then_final_queued_decision_and_duplicates_survive_replacement(self):
+        await self.worker().run_one()
+        original = self.backend.get_decision
+        final = self.decision().model_copy(update={"decision_id": uuid4()})
+
+        async def stored(**kwargs):
+            result = await original(**kwargs)
+            result["decision"] = "DEFER" if kwargs["decision_id"] == DECISION else "CONFIRM_NORMAL"
+            return result
+
+        self.backend.get_decision = stored
+        self.store.accept(self.decision())
+        self.store.accept(final)
+        self.assertTrue(await self.worker().run_one())
+        snapshot = await self.graph.aget_state(self.config)
+        self.assertTrue(snapshot.interrupts)
+        self.assertEqual(snapshot.values["context_result"]["decision"], "DEFER")
+        self.assertEqual(sum(c[0] == "apply" for c in self.backend.calls), 0)
+        replacement = await self.independent_worker()
+        self.assertTrue(await replacement.run_one())
+        self.assertEqual(self.row()["status"], "SUCCEEDED")
+        receipt, created = self.store.accept(self.decision())
+        self.assertFalse(created)
+        self.assertEqual(receipt["status"], "WAITING_REVIEW")
+        receipt, created = self.store.accept(final)
+        self.assertFalse(created)
+        self.assertEqual(receipt["status"], "SUCCEEDED")
+        self.assertFalse(await replacement.run_one())
+        self.assertEqual(sum(c[0] == "apply" for c in self.backend.calls), 1)
+
+    async def test_durable_resume_writes_recover_defer_without_losing_next_decision(self):
+        await self.worker().run_one()
+        original = self.backend.get_decision
+        final = self.decision().model_copy(update={"decision_id": uuid4()})
+
+        async def stored(**kwargs):
+            result = await original(**kwargs)
+            result["decision"] = "DEFER" if kwargs["decision_id"] == DECISION else "CONFIRM_NORMAL"
+            return result
+
+        self.backend.get_decision = stored
+        self.store.accept(self.decision())
+        job = self.store.claim("dead")
+        self.store.mark_started(job)
+        snapshot = await self.graph.aget_state(self.config)
+        command = Command(resume={"reviewId": REVIEW, "decisionId": DECISION})
+        # Process death after Command writes commit but before the waiting node
+        # consumes them. Use the installed LangGraph's actual write encoding.
+        async def persist_command():
+            for task_id, channel, value in map_command(cmd=command):
+                await self.saver.aput_writes(snapshot.config, [(channel, value)], task_id)
+        await self.invoke_owned(job, persist_command)
+        self.store.accept(final)
+        self.expire()
+        replacement = await self.independent_worker()
+        await replacement.run_one()
+        state = await self.graph.aget_state(self.config)
+        self.assertTrue(state.interrupts)
+        self.assertEqual(state.values["context_result"]["decision"], "DEFER")
+        self.assertEqual(sum(c[0] == "apply" for c in self.backend.calls), 0)
+        self.assertEqual(self.row()["status"], "QUEUED")
+        await replacement.run_one()
+        self.assertEqual(self.row()["status"], "SUCCEEDED")
+        self.assertEqual(sum(c[0] == "apply" for c in self.backend.calls), 1)
+
+    async def test_kick_resume_reads_persisted_kind_and_decision_before_revalidation(self):
+        self.backend.require_kick = True
+        await self.worker().run_one()
+        self.store.accept(self.decision())
+        await self.worker().run_one()
+        self.assertEqual(self.row()["status"], "WAITING_REVIEW")
+        original = self.backend.get_decision
+        task = self.decision().model_copy(update={
+            "review_kind": "KICK", "review_id": UUID(workflow.KICK), "decision_id": uuid4()})
+        self.store.accept(task)
+        await self.worker().run_one()  # CONTEXT value cannot authorize KICK.
+        self.assertEqual(self.row()["code"], "DECISION_BINDING_MISMATCH")
+        self.assertNotIn("revalidate", [call[0] for call in self.backend.calls])
+
+        async def rejected(**kwargs):
+            result = await original(**kwargs)
+            result["decision"] = "REJECT"
+            return result
+
+        self.backend.get_decision = rejected
+        self.store.accept(task.model_copy(update={"decision_id": uuid4()}))
+        replacement = await self.independent_worker()
+        await replacement.run_one()
+        self.assertEqual(self.row()["status"], "SUCCEEDED")
+        self.assertEqual(sum(c[0] == "revalidate" for c in self.backend.calls), 1)
+        self.assertNotIn("kick", [call[0] for call in self.backend.calls])
+
+    async def test_invalid_persisted_decisions_rejected_before_checkpoint_or_effects(self):
+        await self.worker().run_one()
+        before = await self.graph.aget_state(self.config)
+        original = self.backend.get_decision
+        for key, value in (
+            ("reviewId", str(uuid4())), ("decisionId", str(uuid4())),
+            ("caseId", str(uuid4())), ("liveId", str(uuid4())),
+            ("snapshotId", str(uuid4())), ("evidenceVersion", 99),
+            ("evidenceVersion", True),
+            ("policyVersion", "wrong"), ("threadId", "wrong"), ("kind", "KICK"),
+            ("status", "PENDING"), ("decision", "APPROVE"), ("value", "DEFER"),
+        ):
+            with self.subTest(key=key):
+                async def invalid(**kwargs):
+                    return {**await original(**kwargs), key: value}
+                self.backend.get_decision = invalid
+                task = self.decision().model_copy(update={"decision_id": uuid4()})
+                self.store.accept(task)
+                await self.worker().run_one()
+                self.assertEqual(self.row()["status"], "FAILED")
+                self.assertEqual(self.row()["code"], "DECISION_BINDING_MISMATCH")
+                self.assertEqual((await self.graph.aget_state(self.config)).config, before.config)
+                self.assertEqual(sum(c[0] == "apply" for c in self.backend.calls), 0)
+        self.backend.get_decision = original
+        self.store.accept(self.decision())
+        await self.worker().run_one()
+        self.assertEqual(self.row()["status"], "SUCCEEDED")
+
+    async def test_wrong_review_or_kind_rejects_without_even_reading_decision(self):
+        await self.worker().run_one()
+        before = await self.graph.aget_state(self.config)
+        for changes, code in (
+            ({"review_kind": "KICK"}, "REVIEW_KIND_MISMATCH"),
+            ({"review_id": uuid4()}, "REVIEW_MISMATCH"),
+        ):
+            task = self.decision().model_copy(update={**changes, "decision_id": uuid4()})
+            self.store.accept(task)
+            await self.worker().run_one()
+            self.assertEqual(self.row()["status"], "FAILED")
+            self.assertEqual(self.row()["code"], code)
+            self.assertEqual((await self.graph.aget_state(self.config)).config, before.config)
+        self.assertEqual([c[0] for c in self.backend.calls], ["create"])
+
+    async def test_checkpoint_task_binding_is_checked_before_resume_or_decision_read(self):
+        await self.worker().run_one()
+        self.store.accept(self.decision())
+        job = self.store.claim("owner")
+        await self.invoke_owned(job, lambda: self.graph.aupdate_state(
+            self.config, {"task_id": str(uuid4())}))
+        before = await self.graph.aget_state(self.config)
+        await self.worker()._execute(LeaseGuard(self.store, job))
+        self.assertEqual(self.row()["status"], "FAILED")
+        self.assertEqual(self.row()["code"], "CHECKPOINT_BINDING_MISMATCH")
+        self.assertEqual((await self.graph.aget_state(self.config)).config, before.config)
+        self.assertEqual([c[0] for c in self.backend.calls], ["create"])
+
+    async def test_pending_recovery_cannot_execute_another_operations_decision(self):
+        await self.worker().run_one()
+        task = self.decision()
+        self.store.accept(task)
+        job = self.store.claim("dead")
+        self.store.mark_started(job)
+        self.graph.interrupt_before_nodes = ["apply_context_decision"]
+        await self.invoke_owned(job, lambda: resume_review(self.graph,
+            review_kind=task.review_kind, thread_id=task.thread_id,
+            review_id=task.review_id, decision_id=task.decision_id, case_id=task.case_id))
+        await self.invoke_owned(job, lambda: self.graph.aupdate_state(
+            self.config, {"context_decision_id": str(uuid4())}))
+        before = await self.graph.aget_state(self.config)
+        self.assertEqual(before.next, ("apply_context_decision",))
+        self.expire()
+        replacement = await self.independent_worker()
+        await replacement.run_one()
+        self.assertEqual(self.row()["status"], "UNKNOWN")
+        self.assertEqual(self.row()["code"], "CHECKPOINT_BINDING_UNVERIFIED")
+        self.assertEqual((await self.graph.aget_state(self.config)).config, before.config)
+        self.assertEqual([c[0] for c in self.backend.calls], ["create"])
+
+    async def test_missing_decision_explicitly_rejected_but_transient_reads_retry_bounded(self):
+        await self.worker().run_one()
+
+        async def missing(**kwargs):
+            raise AgentToolError("NOT_FOUND", trace_id=str(self.task.trace_id))
+
+        self.backend.get_decision = missing
+        self.store.accept(self.decision())
+        await self.worker().run_one()
+        self.assertEqual(self.row()["code"], "DECISION_NOT_FOUND")
+        before = await self.graph.aget_state(self.config)
+
+        async def unavailable(**kwargs):
+            raise AgentToolError("BACKEND_DELIVERY_UNKNOWN", trace_id=str(self.task.trace_id))
+
+        self.backend.get_decision = unavailable
+        self.store.accept(self.decision().model_copy(update={"decision_id": uuid4()}))
+        for attempt in range(3):
+            await self.worker().run_one()
+            self.assertFalse(self.row()["started"])
+            self.assertFalse(self.row()["mutation_started"])
+            with self.store.connection() as db:
+                db.execute(sql.SQL("UPDATE {} SET available_at=clock_timestamp()").format(self.store._jobs))
+        self.assertEqual(self.row()["status"], "FAILED")
+        self.assertEqual(self.row()["code"], "ATTEMPTS_EXHAUSTED")
+        self.assertEqual((await self.graph.aget_state(self.config)).config, before.config)
 
     async def test_pending_mutating_resume_reconciles_be_without_replay(self):
         await self.worker().run_one()

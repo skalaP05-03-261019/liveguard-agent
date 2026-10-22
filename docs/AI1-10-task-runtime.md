@@ -14,8 +14,11 @@
 - 같은 논리 요청은 저장된 상태와 200/duplicate=true, 신규는 커밋 후 202/duplicate=false다.
   eventId/traceId 변경만으로 새 작업을 만들지 않는다. 다른 payload는 409다.
 - thread의 taskId/caseId/snapshotId/evidenceVersion 바인딩은 변경하지 않는다.
-  resume 접수 시 thread 행을 잠그고 최신 작업이 WAITING_REVIEW인지 확인한다.
-  서로 다른 결정이 동시에 도착해도 하나만 QUEUED가 된다.
+  resume 접수 시 thread 행을 잠그고 바인딩을 확인한다. #74부터 초기 작업/이전 결정이
+  QUEUED/RUNNING이어도 결정 참조를 영속 큐에 넣는다. 검토 생성 직후 interrupt 저장 전의
+  결정도 유실하지 않으며, 서로 다른 결정은 thread의 접수 순서대로 처리한다.
+  WAITING_REVIEW 또는 거부된 FAILED 뒤의 정정 결정도 접수할 수 있다.
+  UNKNOWN/완료된 thread의 신규 접수는 THREAD_NOT_WAITING으로 거부한다.
 - GET은 어느 API에서도 같은 최신 operation을 조회한다. 응답에는 envelope/원문/인증정보를 넣지 않는다.
 - DB 연결/트랜잭션 실패는 503/TASK_STORE_UNAVAILABLE로 반환하며 성공 영수증을 만들지 않는다.
   커밋 응답 유실로 결과가 불확실하면 동일 요청을 재전송해 중복 판별한다.
@@ -26,8 +29,8 @@
 시작 시 스키마를 트랜잭션으로 준비하며 최초 동시 시작도 advisory lock으로 보호한다.
 DB 계정에는 해당 스키마의 DDL/DML 권한이 필요하다. 스키마 준비 실패 시 시작을 중단한다.
 
-**범위 경계:** PostgreSQL Inbox의 claim/lease/실행/복구 Worker는 후속 이슈다.
-이 모드 단독으로는 작업이 QUEUED에 남으며, 기존 SQLite TaskRunner가 이를 소비하지 않는다.
+**범위 경계:** API 모드 단독으로는 작업이 QUEUED에 남으며, 기존 SQLite TaskRunner가
+이를 소비하지 않는다. 아래의 독립 PostgreSQL Worker를 함께 운영해야 한다.
 Worker 준비 전에는 실제 운영 트래픽을 전환하지 않는다. BE Outbox/RabbitMQ는 변경하지 않는다.
 별도 결과 백엔드나 Celery/Taskiq도 추가하지 않는다.
 
@@ -65,7 +68,7 @@ DB 실패 및 트랜잭션 롤백을 검증한다. Graph 실행과 실제 BE 집
 
 기존 `/resume`의 동기 결과 응답은 비동기 접수·조회로 바뀐다. Backend 호출부가 아직 없으므로 연결 전에 이 변경을 공유해야 한다. 같은 taskId/threadId를 재개에도 유지하며 caseId/snapshotId/expectedEvidenceVersion은 원 작업과 같아야 한다. 새로운 snapshot 재조사는 새 taskId/threadId를 사용한다. RECONCILE은 별도 계약 전까지 400이다.
 
-새 접수는 202, 동일 논리 요청 재전송은 실행을 반복하지 않고 저장된 상태와 200/duplicate=true를 반환한다. eventId/traceId만 달라진 전달도 중복으로 취급한다. run은 taskId, resume는 decisionId를 중복 키로 사용하며 동일 키의 다른 논리 입력은 409다. 다른 task의 thread 재사용·다른 snapshot의 결정은 409다. 미인증은 401, 토큰/실행기 미구성 또는 저장 실패는 503이다. 재개는 대기 중인 thread에서만 접수한다. review 종류 불일치는 worker가 기존 resume 검증에서 거부하고 WAITING_REVIEW + 오류 코드를 남긴다. 결정 참조 오류를 수정하려면 새 decisionId를 사용한다.
+새 접수는 202, 동일 논리 요청 재전송은 실행을 반복하지 않고 저장된 상태와 200/duplicate=true를 반환한다. eventId/traceId만 달라진 전달도 중복으로 취급한다. run은 taskId, resume는 decisionId를 중복 키로 사용하며 동일 키의 다른 논리 입력은 409다. 다른 task의 thread 재사용·다른 snapshot의 결정은 409다. 미인증은 401, 토큰/실행기 미구성 또는 저장 실패는 503이다. legacy SQLite 재개는 대기 중인 thread에서만 접수하고 review 종류 불일치에 WAITING_REVIEW + 오류 코드를 남긴다. 공유 PostgreSQL은 아래 #74의 영속 대기/결정 사전검증을 적용한다. 결정 참조 오류를 수정하려면 새 decisionId를 사용한다.
 
 Backend→Agent는 Bearer, Agent→MCP도 각각 별도 Bearer, MCP→Spring은 기존 `X-Service-Token`이다. Agent 수신 토큰을 다른 서비스 자격증명과 재사용하지 않는다. 서비스 인증은 운영자 권한 검증을 대체하지 않는다.
 
@@ -108,7 +111,10 @@ DB 역할은 두 Agent 스키마에 접근할 수 있어야 한다. SQLite maint
 | `AGENT_WORKER_BACKOFF_SECONDS` | 1 | 미시작 일시 실패의 지수 backoff 기준(최대 300초) |
 
 Worker들은 thread 행의 `FOR UPDATE SKIP LOCKED`, 작업 행 잠금, thread별 RUNNING
-unique index로 경쟁한다. claim은 worker ID·새 UUID lease token·만료 시각·attempts를
+unique index로 경쟁한다. thread의 영구 소유 바인딩은 하나의 원 task이며, 실행 소유자는
+그 thread의 가장 앞선 미완료 operation의 미만료 lease다. QUEUED/RUNNING/UNKNOWN
+선행 작업을 후속 결정이 추월할 수 없다. backoff/실행 중/UNKNOWN인 thread가 다른
+thread의 claim을 막지는 않는다. claim은 worker ID·새 UUID lease token·만료 시각·attempts를
 기록하고 즉시 commit한다. heartbeat도 별도 짧은 트랜잭션이다. 모델·MCP·Gateway 호출은
 DB 트랜잭션 밖이다. 완료/실패/backoff 기록은 operation/thread/worker/token/미만료를
 검증한다. 체크포인트와 pending writes도 **같은 DB 트랜잭션에서 lease 행을 잠그고
@@ -119,6 +125,31 @@ lease 갱신 실패 시 실행을 취소하고 공유 guard로 늦게 반환한 
 취소 정리도 같은 유예 시간만큼만 기다린다. 취소를 무시하는 외부 호출이 남더라도
 후속 변경/체크포인트 저장은 차단하며, 프로세스 강제 종료는 배포 관리자의 최종 종료 제한으로 처리한다.
 
+### 공유 승인 대기·재개 (#74)
+
+- Graph의 interrupt checkpoint 저장이 끝난 **뒤** Inbox를 WAITING_REVIEW로 바꾸고
+  worker/token/lease를 해제한다. 기다리는 동안 실행 슬롯·thread 실행 lease·DB 행 잠금을
+  유지하지 않는다. A가 대기한 checkpoint를 독립 saver/연결을 쓰는 B가 재개할 수 있다.
+- 검토 생성과 checkpoint 사이에 도착한 resume는 QUEUED로 영속 접수한다(202).
+  선행 실행이 끝나거나 만료 후 checkpoint로 복구될 때까지 claim하지 않는다.
+  WAITING_REVIEW 상태 갱신이 유실돼도 먼저 선행 operation을 복구하고 결정을 처리한다.
+  선행 UNKNOWN은 자동 추월하지 않으며 큐/기존 operation을 운영자가 함께 확인해야 한다.
+- Command 전달 **전** 원 task/thread/case/snapshot/evidence, interrupt 카드 전체 참조,
+  review 종류/reviewId를 확인한다. 기존 BE GET
+  `/internal/reviews/{reviewId}/decisions/{decisionId}`로 저장 결정을 조회하고
+  `kind`, review/decision/case/live/snapshot/evidence/policy/thread 바인딩,
+  DECIDED 상태와 종류별 결정 값을 검증한다. 임의의 새 Gateway API를 요구하지 않는다.
+  KICK도 저장된 APPROVE/REJECT를 검증한 뒤 기존 BE 재검증을 별도로 거친다.
+- 잘못된 참조는 해당 operation만 FAILED + 명시적 오류 코드로 거부한다.
+  승인 checkpoint는 소비/변경하지 않으므로 정정된 결정을 새 operation으로 보낼 수 있다.
+  저장 결정 조회의 일시 실패는 Graph 미시작 backoff/attempt 상한을 적용한다.
+- DEFER는 같은 reviewId로 다시 interrupt하고 현재 operation을 WAITING_REVIEW로 끝낸다.
+  뒤에 미리 접수한 최종 결정은 별도 operation으로 이어서 처리한다. 중복 DEFER/최종 결정
+  전달은 각각 기존 영수증만 반환하며, 새 결정을 덮어쓰거나 Graph를 재실행하지 않는다.
+- BE HTTP Outbox의 기존 THREAD_NOT_WAITING/409 재시도 계약은 유지한다.
+  조기 결정은 공유 모드의 영속 큐가 책임지므로 checkpoint 타이밍에 맞춰 BE가 반복 전송할
+  필요가 없다. 202는 결정 유효성/집행 성공이 아니라 **영속 접수**만 의미한다.
+
 ### 만료·오류 복구
 
 - **claim 후 Graph 미시작**: 새 lease로 회수하여 동일 envelope/operation을 실행한다.
@@ -126,9 +157,13 @@ lease 갱신 실패 시 실행을 취소하고 공유 guard로 늦게 반환한 
   FAILED + `ATTEMPTS_EXHAUSTED`다. lease 자체가 만료된 미시작 작업도 상한을 적용한다.
 - **Graph 시작 후 종료/강제 종료**: 새 Worker가 checkpoint를 조회한다.
   기존 recovery의 사건/task/thread/snapshot/evidence와 결정 바인딩, 승인 카드 바인딩을
-  재사용한다. 확정 terminal 또는 WAITING_REVIEW만 복원한다.
+  재사용한다. 해당 operation의 결정과 일치하는 확정 terminal 또는 WAITING_REVIEW만 복원한다.
   외부 변경 intent가 없고 바인딩이 검증된 read-only 진행 중 checkpoint만
-  `ainvoke(None)`으로 pending 노드부터 이어간다. 초기 task나 승인 Command를 재전달하지 않는다.
+  `ainvoke(None)`으로 pending 노드부터 이어간다. 재개 작업은 checkpoint의 소비된
+  decisionId/reviewId도 해당 operation과 같아야 하며 BE 저장 결정을 다시 검증한다.
+  초기 task는 재전달하지 않는다. resume가 시작 표시 후 아직 승인을 소비하지 않았다면
+  승인 카드와 BE 결정을 다시 검증하고 **동일 operation의 동일 결정만** 전달할 수 있다.
+  DEFER 완료 checkpoint는 재전달하지 않는다. 안전한 복구도 attempts 상한을 적용한다.
 - **변경 가능성이 있거나 pending 변경 노드 결과가 불확실**:
   create/submit/apply/revalidate/kick **호출 전** mutation intent를 영속 저장한다.
   이후 완료 checkpoint를 증명하지 못하면 Graph를 재실행하지 않는다.
@@ -158,8 +193,9 @@ backoff 시각, 시작/변경 가능 여부, actionId 및 안전한 코드뿐이
 DB 필드이며 공개 상태/로그/Graph state에는 넣지 않는다. 원문·도구 인자·명령 전체·자격증명은
 추가 메타데이터에 넣지 않는다. 기존 envelope/checkpoint의 데이터 보관·접근 정책은 별도다.
 
-실제 PostgreSQL 시험(경쟁·프로세스 종료·heartbeat·stale checkpoint/결과 차단·승인 재개
-불확실성·shutdown)은 기존 unittest runner로 실행한다.
+실제 PostgreSQL 시험(경쟁·서로 다른 thread의 동시 실행·독립 saver 간 승인 재개·
+조기/중복 결정·DEFER 뒤 최종 결정·대기 상태 갱신 유실·프로세스 종료·heartbeat·
+stale checkpoint/결과 차단·승인 재개 불확실성·shutdown)은 기존 unittest runner로 실행한다.
 
 ```sh
 AGENT_TEST_CHECKPOINT_DB_URL="$AGENT_CHECKPOINT_DB_URL" \
