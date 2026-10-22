@@ -60,3 +60,18 @@ python -m app.candidate_detection.diagnose \
 단일 순차 모델 호출 관찰 p50 1,344.05ms / p95 2,286.71ms, 입력47,095·출력6,691토큰. 독립 정확도·실서비스 지연·실시간 처리량 증거가 아니다. 집계/해시는 `evidence/phase2/development-diagnostics-81.json`에 있고 원문/행별 결과는 로컬만 보관한다.
 
 신규 합성11개 포함 전체374 tests가 격리PostgreSQL·ASGI/TCP에서 통과했다(skip0). 테스트 출력은 통제 모델이며 위 실제 호출 결과와 구분한다.
+
+## 16개 직접 작성 사례로 빠르게 시험하기
+
+API 키는 환경변수 `MODEL_API_KEY` 또는 `OPENAI_API_KEY`로 로컬에서 설정한다. `MODEL_PROVIDER=openai`, `MODEL_NAME=gpt-5.4-mini`를 명시한다. 키를 명령문/저장소에 기록하지 않는다. 원본 repo의 `local-data/`가 gitignore인지 확인하고 새 출력 경로를 쓴다.
+
+```bash
+python -m app.candidate_detection \
+  --cases tests/fixtures/phase2/authored-regression-75.json \
+  --live --limit 16 --timeout 8 \
+  --out local-data/quick-authored16.json
+```
+
+실행 결과는 16유효·오류0, 후보 기준 세 실험 모두 TP8/FP0/TN8/FN0이었다. **이전에 프롬프트 개발에 쓴 직접 작성 사례**라서 100%를 일반 성능으로 발표하면 안 된다. 유형별로는 TARGETED_ATTACK이 기대값보다 2개 많았다. 두 욕설 변형 사례를 개인 공격으로도 표시했으며, 기대 유형을 팀 정책·QA가 재검토해야 한다. 모델 결과가 반드시 오판이라고 확정하지 않았다.
+
+집계 증거는 `evidence/phase2/quick-authored16-82.json`, 행별 실행 결과는 로컬에 둔다. 정확도를 제시하려면 정책·QA 검수 완료 후 #78 export → `--cases`에 확정 사례 지정 → 분리된 확인용40개에서 재평가해야 한다.
