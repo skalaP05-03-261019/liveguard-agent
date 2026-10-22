@@ -40,7 +40,9 @@ SQLite 실행기는 기존 단일 호스트용 legacy 경로로 유지한다.
 다중 API 접수는 [#58 공유 Inbox 모드](docs/AI1-10-task-runtime.md)를 사용한다.
 `AGENT_INBOX_DB_URL`과 `AGENT_SERVICE_TOKEN`을 설정하면 같은 PostgreSQL Inbox에
 접수·중복 판별·상태 조회를 수행하고, API 프로세스는 Graph를 시작하지 않는다.
-공유 Inbox의 실행 Worker/lease는 후속 범위이므로 이 모드만으로 검사가 실행되지는 않는다.
+공유 Inbox API만으로 검사가 실행되지는 않는다. 별도 `python -m app.worker`가
+영속 checkpoint와 thread별 lease로 실행하며, 조기 resume는 같은 thread의 선행 작업 뒤에
+영속 대기한다. #74의 결정 검증·대기 슬롯 해제·복구 절차는 위 운영 문서를 따른다.
 미설정 시 기존 로컬 SQLite+Graph 실행 모드를 유지한다.
 
 ```bash
@@ -103,7 +105,7 @@ Postgres 재시작 복원 테스트는 `AGENT_TEST_CHECKPOINT_DB_URL`이 있을 
 
 ## Harness: 문맥 검토 interrupt/resume (AI2, #24)
 
-`handling_route`가 `CONTEXT_REVIEW`면 `request_context_review → review_context → apply_context_decision`이 Backend에 검토 요청(reviewId)을 만들고, AI 제안이 정상이어도 운영자 결정 전까지 멈춘다. `/resume`(`reviewKind: CONTEXT`)으로 같은 `threadId`를 재개하면 Backend 저장본의 결정(CONFIRM_NORMAL / CONFIRM_VIOLATION / DEFER)을 `context_result`에 남기고, 보류면 다시 기다린다. 심사 종류가 다른 재개는 비동기 실행 중 `REVIEW_KIND_MISMATCH`로 거부하고 WAITING_REVIEW를 유지한다. Graph 연결과 결정 후 처리는 #10. 계약: [docs/AI2-06-harness-context-review-contract.md](docs/AI2-06-harness-context-review-contract.md)
+`handling_route`가 `CONTEXT_REVIEW`면 `request_context_review → review_context → apply_context_decision`이 Backend에 검토 요청(reviewId)을 만들고, AI 제안이 정상이어도 운영자 결정 전까지 멈춘다. `/resume`(`reviewKind: CONTEXT`)으로 같은 `threadId`를 재개하면 Backend 저장본의 결정(CONFIRM_NORMAL / CONFIRM_VIOLATION / DEFER)을 `context_result`에 남기고, 보류면 다시 기다린다. 심사 종류가 다른 재개는 비동기 실행 중 `REVIEW_KIND_MISMATCH`로 거부한다. 공유 Worker는 잘못된 operation을 FAILED로 기록하되 승인 checkpoint를 유지하며, legacy SQLite는 WAITING_REVIEW + 오류 코드로 기록한다. Graph 연결과 결정 후 처리는 #10. 계약: [docs/AI2-06-harness-context-review-contract.md](docs/AI2-06-harness-context-review-contract.md)
 
 ## 파일과 다음 작업
 

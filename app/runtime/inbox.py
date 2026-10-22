@@ -111,10 +111,25 @@ class PostgresInbox:
                 """).format(self._threads), (task.thread_id,)).fetchone()
                 if origin is None or tuple(origin.values()) != refs:
                     raise TaskConflict("THREAD_BINDING_MISMATCH")
+                state = db.execute(sql.SQL("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM {} WHERE thread_id=%s AND status='UNKNOWN'
+                    ) AS unresolved_unknown,
+                    (SELECT status FROM {} WHERE thread_id=%s AND status<>'FAILED'
+                     ORDER BY sequence DESC LIMIT 1) AS latest_nonfailed
+                """).format(self._jobs, self._jobs),
+                    (task.thread_id, task.thread_id)).fetchone()
                 latest = db.execute(sql.SQL("""
                     SELECT status FROM {} WHERE thread_id=%s ORDER BY sequence DESC LIMIT 1
                 """).format(self._jobs), (task.thread_id,)).fetchone()
-                if latest is None or latest["status"] != "WAITING_REVIEW":
+                # A review can commit in BE before its interrupt is checkpointed.
+                # Keep the reference durably behind the current operation; only
+                # the owning worker may validate the checkpoint and decision.
+                if (latest is None or state["unresolved_unknown"]
+                        or latest["status"] not in {
+                            "QUEUED", "RUNNING", "WAITING_REVIEW", "FAILED"}
+                        or (latest["status"] == "FAILED"
+                            and state["latest_nonfailed"] != "WAITING_REVIEW")):
                     raise TaskConflict("THREAD_NOT_WAITING")
             row = db.execute(sql.SQL("""
                 INSERT INTO {} (operation_id,thread_id,fingerprint,envelope)
@@ -139,9 +154,13 @@ class PostgresInbox:
                 SELECT t.thread_id FROM {} t WHERE EXISTS (
                     SELECT 1 FROM {} j WHERE j.thread_id=t.thread_id AND
                     ((j.status='QUEUED' AND j.available_at<=clock_timestamp())
-                     OR (j.status='RUNNING' AND j.lease_expires_at<=clock_timestamp())))
+                     OR (j.status='RUNNING' AND j.lease_expires_at<=clock_timestamp()))
+                    AND NOT EXISTS (
+                        SELECT 1 FROM {} prior WHERE prior.thread_id=j.thread_id
+                        AND prior.sequence<j.sequence
+                        AND prior.status IN ('QUEUED','RUNNING','UNKNOWN')))
                 ORDER BY t.thread_id FOR UPDATE OF t SKIP LOCKED LIMIT 1
-            """).format(self._threads, self._jobs)).fetchone()
+            """).format(self._threads, self._jobs, self._jobs)).fetchone()
             if thread is None:
                 return None
             row = db.execute(sql.SQL("""
@@ -247,6 +266,22 @@ class PostgresInbox:
                 AND lease_expires_at>clock_timestamp()
             """).format(self._jobs), ("FAILED" if exhausted else "QUEUED",
                 "ATTEMPTS_EXHAUSTED" if exhausted else "RETRY_BACKOFF", delay, job["operation_id"])))
+
+    def retry_recovery(self, job, *, backoff_seconds=1):
+        with self.connection() as db:
+            self._owned(db, job)
+            current = db.execute(sql.SQL("SELECT started FROM {} WHERE operation_id=%s").format(
+                self._jobs), (job["operation_id"],)).fetchone()
+            if not current["started"]:
+                raise ValueError("Unstarted execution must use retry_unstarted")
+            delay = min(300, backoff_seconds * 2 ** min(job["attempts"] - 1, 16))
+            self._updated(db.execute(sql.SQL("""
+                UPDATE {} SET status='QUEUED',code='RETRY_BACKOFF',
+                worker_id=NULL,lease_token=NULL,lease_expires_at=NULL,
+                available_at=clock_timestamp()+(%s * interval '1 second'),
+                updated_at=clock_timestamp() WHERE operation_id=%s
+                AND lease_expires_at>clock_timestamp()
+            """).format(self._jobs), (delay, job["operation_id"])))
 
 
 @asynccontextmanager

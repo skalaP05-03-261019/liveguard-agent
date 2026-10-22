@@ -5,11 +5,13 @@ import math
 import os
 from uuid import uuid4
 
+from app.clients.business_mcp import AgentToolError
 from app.harness.resume import ResumeError, resume_review, thread_config
+from app.harness.context_review import CONTEXT_DECISIONS
 from app.runtime.fencing import FencedPostgresSaver, GuardedGateway, LeaseGuard, current_lease
 from app.runtime.inbox import LeaseLost
 from app.runtime.outcomes import TERMINAL, checkpoint_outcome
-from app.runtime.recovery import _bound, _waiting_is_bound
+from app.runtime.recovery import _bound, _decision_bound, _waiting_is_bound
 from app.schemas import TaskEnvelope
 
 
@@ -152,6 +154,21 @@ class GraphWorker:
         await asyncio.to_thread(self.store.retry_unstarted, guard.job,
             max_attempts=self.settings.max_attempts, backoff_seconds=self.settings.backoff_seconds)
 
+    async def _retry_recovery_read(self, guard, read):
+        try:
+            await read
+        except AgentToolError as error:
+            if error.code != "BACKEND_DELIVERY_UNKNOWN":
+                raise
+            await guard.check()
+            if guard.job["attempts"] >= self.settings.max_attempts:
+                await self._finish(guard, "UNKNOWN", "DECISION_REVALIDATION_UNAVAILABLE")
+            else:
+                await asyncio.to_thread(self.store.retry_recovery, guard.job,
+                    backoff_seconds=self.settings.backoff_seconds)
+            return False
+        return True
+
     async def _execute(self, guard):
         token = current_lease.set(guard)
         job = guard.job
@@ -170,6 +187,8 @@ class GraphWorker:
                 if previous.created_at is not None:
                     await self._finish(guard, "FAILED", "THREAD_CHECKPOINT_EXISTS")
                     return
+            else:
+                await self._prepare_resume(guard, task)
             await asyncio.to_thread(self.store.mark_started, job)
             job["started"] = True
             if task.kind == "RESUME_REVIEW":
@@ -186,9 +205,9 @@ class GraphWorker:
         except LeaseLost:
             guard.lost = True
         except ResumeError as error:
-            await guard.check()
-            snapshot = await self.graph.aget_state(thread_config(task.thread_id))
-            await self._finish(guard, "WAITING_REVIEW" if snapshot.interrupts else "FAILED", error.code)
+            # Reject this operation, not the valid approval checkpoint. A later
+            # corrected decision may still resume it; no Command has been sent.
+            await self._finish(guard, "FAILED", error.code)
         except asyncio.CancelledError:
             # Child tasks inherit this guard too. Block late writes immediately,
             # keep the durable claim for expiry/reconciliation by another worker.
@@ -203,25 +222,101 @@ class GraphWorker:
         finally:
             current_lease.reset(token)
 
+    async def _prepare_resume(self, guard, task, snapshot=None):
+        if snapshot is None:
+            snapshot = await self.graph.aget_state(thread_config(task.thread_id))
+        await guard.check()
+
+        def reject(code):
+            raise ResumeError(code, code, status_code=409)
+
+        if snapshot.created_at is None:
+            reject("THREAD_NOT_FOUND")
+        if not _bound(task, snapshot.values, require_decision=False):
+            reject("CHECKPOINT_BINDING_MISMATCH")
+        if not snapshot.interrupts:
+            reject("NO_PENDING_APPROVAL")
+        if not _waiting_is_bound(task, snapshot):
+            reject("CHECKPOINT_BINDING_MISMATCH")
+        card = snapshot.interrupts[0].value
+        if card["reviewKind"] != task.review_kind:
+            reject("REVIEW_KIND_MISMATCH")
+        if card["reviewId"] != str(task.review_id):
+            reject("REVIEW_MISMATCH")
+        await self._verify_decision(guard, task, card)
+
+    async def _verify_decision(self, guard, task, refs):
+        def reject(code):
+            raise ResumeError(code, code, status_code=409)
+
+        # Existing BE GET binds the decision to its review and returns kind,
+        # case/live/snapshot/evidence/policy/thread refs. Never trust the envelope
+        # as authorization, and never consume an interrupt on invalid data.
+        try:
+            stored = await self.gateway.get_decision(review_id=str(task.review_id),
+                decision_id=str(task.decision_id), trace_id=str(task.trace_id))
+        except AgentToolError as error:
+            if error.code == "NOT_FOUND":
+                reject("DECISION_NOT_FOUND")
+            if error.code in {"INVALID_BACKEND_RESULT", "VALIDATION_FAILED", "FORBIDDEN"}:
+                reject("DECISION_NOT_VERIFIED")
+            raise
+        refs = {key: refs[key] for key in (
+            "reviewId", "caseId", "liveId", "snapshotId", "evidenceVersion",
+            "policyVersion", "threadId")}
+        refs.update(decisionId=str(task.decision_id), kind=task.review_kind, status="DECIDED")
+        allowed = CONTEXT_DECISIONS if task.review_kind == "CONTEXT" else ("APPROVE", "REJECT")
+        if (not isinstance(stored, dict) or any(stored.get(k) != v for k, v in refs.items())
+                or type(stored.get("evidenceVersion")) is not int
+                or stored.get("decision") not in allowed
+                or ("value" in stored and stored["value"] != stored.get("decision"))):
+            reject("DECISION_BINDING_MISMATCH")
+        await guard.check()
+
     async def _recover(self, guard, task, *, allow_resume):
         await guard.check()
         snapshot = await self.graph.aget_state(thread_config(task.thread_id))
         await guard.check()
-        bound = snapshot.created_at is not None and _bound(task, snapshot.values)
+        bound = snapshot.created_at is not None and _bound(
+            task, snapshot.values, require_decision=False)
         if bound and not any(item.error for item in snapshot.tasks):
             if snapshot.interrupts and _waiting_is_bound(task, snapshot):
-                await self._finish(guard, "WAITING_REVIEW", "CHECKPOINT_WAITING_CONFIRMED")
-                return
+                if task.kind != "RESUME_REVIEW" or _bound(task, snapshot.values):
+                    await self._finish(guard, "WAITING_REVIEW", "CHECKPOINT_WAITING_CONFIRMED")
+                    return
+                if (allow_resume and not guard.job["mutation_started"]
+                        and guard.job["attempts"] <= self.settings.max_attempts):
+                    # Crash before consuming the approval: validate again and
+                    # deliver only this same durable operation, never a new one.
+                    if not await self._retry_recovery_read(
+                            guard, self._prepare_resume(guard, task, snapshot)):
+                        return
+                    await resume_review(self.graph, review_kind=task.review_kind,
+                        thread_id=task.thread_id, review_id=task.review_id,
+                        decision_id=task.decision_id, case_id=task.case_id)
+                    await self._recover(guard, task, allow_resume=False)
+                    return
             if not snapshot.next and not snapshot.interrupts:
                 status, code = checkpoint_outcome(snapshot)
-                if status in TERMINAL:
+                if status in TERMINAL and _bound(task, snapshot.values):
                     await self._finish(guard, status, code)
                     return
             if (allow_resume and snapshot.next and not snapshot.interrupts
                     and not guard.job["mutation_started"]
                     and guard.job["attempts"] <= self.settings.max_attempts):
-                # Continue durable pending nodes, never re-invoke the initial task
-                # or re-deliver a human decision. Mutation intent rules out replay.
+                if task.kind == "RESUME_REVIEW":
+                    if not _decision_bound(task, snapshot.values, require_result=False):
+                        await self._finish(guard, "UNKNOWN", "CHECKPOINT_BINDING_UNVERIFIED")
+                        return
+                    values = snapshot.values
+                    if not await self._retry_recovery_read(guard, self._verify_decision(guard, task, {
+                        "reviewId": str(task.review_id), "caseId": values["case_id"],
+                        "liveId": values["live_id"], "snapshotId": values["snapshot_id"],
+                        "evidenceVersion": values["evidence_version"],
+                        "policyVersion": values["policy_version"], "threadId": values["thread_id"]})):
+                        return
+                # Continue durable pending nodes, never re-invoke the initial
+                # task. Mutation intent rules out replay.
                 await self.graph.ainvoke(None, thread_config(task.thread_id))
                 await self._recover(guard, task, allow_resume=False)
                 return
