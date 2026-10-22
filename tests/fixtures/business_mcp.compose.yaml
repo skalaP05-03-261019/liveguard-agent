@@ -1,0 +1,22 @@
+# Used only with an isolated project by test_business_mcp_docker.py.
+services:
+  mcp-1:
+    image: ${MCP_TEST_IMAGE}
+    restart: "no"
+    depends_on: [backend-fixture]
+  mcp-2:
+    image: ${MCP_TEST_IMAGE}
+    restart: "no"
+    depends_on: [backend-fixture]
+  backend-fixture:
+    image: ${MCP_TEST_IMAGE}
+    command: ["uvicorn", "business_mcp_backend:app", "--app-dir", "/fixture", "--host", "0.0.0.0", "--port", "8080", "--no-access-log"]
+    environment:
+      BUSINESS_MCP_SERVICE_TOKEN: ${BUSINESS_MCP_SERVICE_TOKEN}
+    volumes:
+      - ${MCP_TEST_FIXTURES}:/fixture:ro
+    ports:
+      - "127.0.0.1::8080"
+  business-mcp:
+    ports: !override
+      - "127.0.0.1::8002"

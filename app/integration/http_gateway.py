@@ -4,10 +4,7 @@ import os
 from urllib.parse import urlsplit
 from uuid import UUID
 import httpx
-from mcp import Client
-from mcp.client.streamable_http import streamable_http_client
-from mcp.shared._httpx_utils import create_mcp_http_client
-from app.clients.business_mcp import AgentToolError, BusinessMcpSettings, _decode_result
+from app.clients.business_mcp import AgentToolError, BusinessMcpSettings, call_business_tool
 from app.integration.judgment_http import JudgmentHttpClient
 from app.business_mcp.schemas import KickCommand
 from app.integration.backend_events import BackendEvents
@@ -89,19 +86,17 @@ class HttpModerationGateway:
     async def kick(self, action_command, *, trace_id):
         # Code-owned, post-interrupt only. Never expose mutation tools to the model.
         command = KickCommand.model_validate(action_command)
-        async with create_mcp_http_client(headers={"Authorization":f"Bearer {self.business.token}"}) as http:
-            async with Client(streamable_http_client(self.business.url,http_client=http),
-                              read_timeout_seconds=self.business.timeout_seconds) as client:
-                await check_execution()
-                result = await client.call_tool("kick_user",{
-                    "actionCommand":command.model_dump(mode="json",by_alias=True,exclude_none=True),
-                    "traceId":trace_id})
-                try:
-                    return _decode_result(result,trace_id)["data"]
-                except AgentToolError as error:
-                    if error.code == "ACTION_OUTCOME_UNKNOWN":
-                        return {"actionId":str(command.action_id),"status":"UNKNOWN"}
-                    raise
+        await check_execution()
+        try:
+            result = await call_business_tool(self.business, "kick_user", {
+                "actionCommand": command.model_dump(mode="json", by_alias=True, exclude_none=True),
+                "traceId": trace_id,
+            }, mutation=True)
+            return result["data"]
+        except AgentToolError as error:
+            if error.code == "ACTION_OUTCOME_UNKNOWN":
+                return {"actionId": str(command.action_id), "status": "UNKNOWN"}
+            raise
 
 @asynccontextmanager
 async def configured_gateway():

@@ -112,46 +112,43 @@ class BackendApi:
                     "X-Trace-Id": trace_id,
                 },
             )
-        except httpx.ReadTimeout as error:
+        except httpx.RequestError:
             if method == "POST":
-                raise BackendError("ACTION_OUTCOME_UNKNOWN", "Mutation response was lost",
+                raise BackendError("ACTION_OUTCOME_UNKNOWN", "Mutation outcome must be checked",
                                    retryable=False, trace_id=trace_id) from None
-            raise BackendError("TEMPORARY_UNAVAILABLE", "Backend read timed out",
-                               retryable=True, trace_id=trace_id) from None
-        except httpx.RequestError as error:
             raise BackendError(
                 "TEMPORARY_UNAVAILABLE",
                 "Backend request could not be completed",
                 retryable=True,
                 trace_id=trace_id,
-            ) from error
+            ) from None
 
         if not response.is_success:
             self._raise_response_error(response, trace_id)
 
         try:
             result = response.json()
-        except ValueError as error:
+        except ValueError:
             raise BackendError(
-                "TEMPORARY_UNAVAILABLE",
+                "ACTION_OUTCOME_UNKNOWN" if method == "POST" else "TEMPORARY_UNAVAILABLE",
                 "Backend returned an invalid JSON response",
-                retryable=True,
+                retryable=method != "POST",
                 trace_id=trace_id,
-            ) from error
+            ) from None
 
         if not isinstance(result, dict):
             raise BackendError(
-                "TEMPORARY_UNAVAILABLE",
+                "ACTION_OUTCOME_UNKNOWN" if method == "POST" else "TEMPORARY_UNAVAILABLE",
                 "Backend response must be a JSON object",
-                retryable=True,
+                retryable=method != "POST",
                 trace_id=trace_id,
             )
         data = result.get("data", result)
         if not isinstance(data, dict):
             raise BackendError(
-                "TEMPORARY_UNAVAILABLE",
+                "ACTION_OUTCOME_UNKNOWN" if method == "POST" else "TEMPORARY_UNAVAILABLE",
                 "Backend data must be a JSON object",
-                retryable=True,
+                retryable=method != "POST",
                 trace_id=trace_id,
             )
         return data
