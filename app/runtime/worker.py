@@ -154,6 +154,21 @@ class GraphWorker:
         await asyncio.to_thread(self.store.retry_unstarted, guard.job,
             max_attempts=self.settings.max_attempts, backoff_seconds=self.settings.backoff_seconds)
 
+    async def _retry_recovery_read(self, guard, read):
+        try:
+            await read
+        except AgentToolError as error:
+            if error.code != "BACKEND_DELIVERY_UNKNOWN":
+                raise
+            await guard.check()
+            if guard.job["attempts"] >= self.settings.max_attempts:
+                await self._finish(guard, "UNKNOWN", "DECISION_REVALIDATION_UNAVAILABLE")
+            else:
+                await asyncio.to_thread(self.store.retry_recovery, guard.job,
+                    backoff_seconds=self.settings.backoff_seconds)
+            return False
+        return True
+
     async def _execute(self, guard):
         token = current_lease.set(guard)
         job = guard.job
@@ -273,7 +288,9 @@ class GraphWorker:
                         and guard.job["attempts"] <= self.settings.max_attempts):
                     # Crash before consuming the approval: validate again and
                     # deliver only this same durable operation, never a new one.
-                    await self._prepare_resume(guard, task, snapshot)
+                    if not await self._retry_recovery_read(
+                            guard, self._prepare_resume(guard, task, snapshot)):
+                        return
                     await resume_review(self.graph, review_kind=task.review_kind,
                         thread_id=task.thread_id, review_id=task.review_id,
                         decision_id=task.decision_id, case_id=task.case_id)
@@ -292,11 +309,12 @@ class GraphWorker:
                         await self._finish(guard, "UNKNOWN", "CHECKPOINT_BINDING_UNVERIFIED")
                         return
                     values = snapshot.values
-                    await self._verify_decision(guard, task, {
+                    if not await self._retry_recovery_read(guard, self._verify_decision(guard, task, {
                         "reviewId": str(task.review_id), "caseId": values["case_id"],
                         "liveId": values["live_id"], "snapshotId": values["snapshot_id"],
                         "evidenceVersion": values["evidence_version"],
-                        "policyVersion": values["policy_version"], "threadId": values["thread_id"]})
+                        "policyVersion": values["policy_version"], "threadId": values["thread_id"]})):
+                        return
                 # Continue durable pending nodes, never re-invoke the initial
                 # task. Mutation intent rules out replay.
                 await self.graph.ainvoke(None, thread_config(task.thread_id))

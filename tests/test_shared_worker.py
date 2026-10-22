@@ -454,6 +454,63 @@ os._exit(9)
         self.assertEqual(self.row()["status"], "SUCCEEDED")
         self.assertEqual(sum(c[0] == "apply" for c in self.backend.calls), 1)
 
+    async def test_transient_recovery_decision_read_retries_without_resetting_started_state(self):
+        await self.worker().run_one()
+        task = self.decision()
+        self.store.accept(task)
+        job = self.store.claim("dead")
+        self.store.mark_started(job)
+        before = await self.graph.aget_state(self.config)
+        original = self.backend.get_decision
+        calls = 0
+
+        async def transient_once(**kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise AgentToolError("BACKEND_DELIVERY_UNKNOWN", trace_id=str(task.trace_id))
+            return await original(**kwargs)
+
+        self.backend.get_decision = transient_once
+        self.expire()
+        replacement = await self.independent_worker()
+        self.assertTrue(await replacement.run_one())
+        self.assertEqual(self.row()["status"], "QUEUED")
+        self.assertTrue(self.row()["started"])
+        self.assertFalse(self.row()["mutation_started"])
+        self.assertEqual((await self.graph.aget_state(self.config)).config, before.config)
+        with self.store.connection() as db:
+            db.execute(sql.SQL("UPDATE {} SET available_at=clock_timestamp()").format(self.store._jobs))
+        self.assertTrue(await replacement.run_one())
+        self.assertEqual(self.row()["status"], "SUCCEEDED")
+        self.assertEqual(calls, 2)
+
+    async def test_transient_recovery_decision_read_stops_after_max_attempts(self):
+        await self.worker().run_one()
+        task = self.decision()
+        self.store.accept(task)
+        job = self.store.claim("dead")
+        self.store.mark_started(job)
+        before = await self.graph.aget_state(self.config)
+
+        async def unavailable(**kwargs):
+            raise AgentToolError("BACKEND_DELIVERY_UNKNOWN", trace_id=str(task.trace_id))
+
+        self.backend.get_decision = unavailable
+        self.expire()
+        replacement = await self.independent_worker()
+        self.assertTrue(await replacement.run_one())
+        self.assertEqual(self.row()["status"], "QUEUED")
+        with self.store.connection() as db:
+            db.execute(sql.SQL("UPDATE {} SET available_at=clock_timestamp()").format(self.store._jobs))
+        self.assertTrue(await replacement.run_one())
+        self.assertEqual(self.row()["status"], "UNKNOWN")
+        self.assertEqual(self.row()["code"], "DECISION_REVALIDATION_UNAVAILABLE")
+        self.assertTrue(self.row()["started"])
+        self.assertFalse(self.row()["mutation_started"])
+        self.assertEqual(self.row()["attempts"], self.settings.max_attempts)
+        self.assertEqual((await self.graph.aget_state(self.config)).config, before.config)
+
     async def test_resume_pending_readonly_checkpoint_continues_without_redelivery(self):
         await self.worker().run_one()
         task = self.decision()
@@ -466,9 +523,25 @@ os._exit(9)
             review_id=task.review_id, decision_id=task.decision_id, case_id=task.case_id))
         self.assertEqual((await self.graph.aget_state(self.config)).next, ("apply_context_decision",))
         self.expire()
+        original = self.backend.get_decision
+        calls = 0
+
+        async def transient_once(**kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise AgentToolError("BACKEND_DELIVERY_UNKNOWN", trace_id=str(task.trace_id))
+            return await original(**kwargs)
+
+        self.backend.get_decision = transient_once
         replacement = await self.independent_worker()
         self.assertTrue(await replacement.run_one())
+        self.assertEqual(self.row()["status"], "QUEUED")
+        with self.store.connection() as db:
+            db.execute(sql.SQL("UPDATE {} SET available_at=clock_timestamp()").format(self.store._jobs))
+        self.assertTrue(await replacement.run_one())
         self.assertEqual(self.row()["status"], "SUCCEEDED")
+        self.assertEqual(calls, 2)
         self.assertEqual(sum(c[0] == "apply" for c in self.backend.calls), 1)
 
     async def test_defer_then_final_queued_decision_and_duplicates_survive_replacement(self):

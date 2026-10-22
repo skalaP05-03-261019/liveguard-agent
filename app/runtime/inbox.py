@@ -254,6 +254,22 @@ class PostgresInbox:
             """).format(self._jobs), ("FAILED" if exhausted else "QUEUED",
                 "ATTEMPTS_EXHAUSTED" if exhausted else "RETRY_BACKOFF", delay, job["operation_id"])))
 
+    def retry_recovery(self, job, *, backoff_seconds=1):
+        with self.connection() as db:
+            self._owned(db, job)
+            current = db.execute(sql.SQL("SELECT started FROM {} WHERE operation_id=%s").format(
+                self._jobs), (job["operation_id"],)).fetchone()
+            if not current["started"]:
+                raise ValueError("Unstarted execution must use retry_unstarted")
+            delay = min(300, backoff_seconds * 2 ** min(job["attempts"] - 1, 16))
+            self._updated(db.execute(sql.SQL("""
+                UPDATE {} SET status='QUEUED',code='RETRY_BACKOFF',
+                worker_id=NULL,lease_token=NULL,lease_expires_at=NULL,
+                available_at=clock_timestamp()+(%s * interval '1 second'),
+                updated_at=clock_timestamp() WHERE operation_id=%s
+                AND lease_expires_at>clock_timestamp()
+            """).format(self._jobs), (delay, job["operation_id"])))
+
 
 @asynccontextmanager
 async def configured_inbox():
