@@ -1,0 +1,26 @@
+{
+  "analysis": {
+    "caseId": "00000000-0000-4000-8000-000000000003",
+    "snapshotId": "00000000-0000-4000-8000-000000000004",
+    "evidenceVersion": 1,
+    "policyVersion": "fixture-policy-v1",
+    "messageFindings": [
+      {
+        "messageId": "00000000-0000-4000-8000-000000000006",
+        "verdict": "NEEDS_REVIEW",
+        "categories": [],
+        "policyIds": [],
+        "evidenceMessageIds": [
+          "00000000-0000-4000-8000-000000000006"
+        ],
+        "reason": "신규 집단 혐오 유형의 정책 적용 확인 필요",
+        "missingFacts": [
+          "팀이 합의한 집단 혐오 정책과 위반 유형"
+        ]
+      }
+    ]
+  },
+  "policyEvidence": [],
+  "harnessBudget": {},
+  "executionAuthorized": false
+}
