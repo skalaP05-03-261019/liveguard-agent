@@ -6,6 +6,8 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 from uuid import UUID, uuid4
@@ -24,7 +26,7 @@ from app.runtime.worker import GraphWorker, WorkerSettings
 from app.runtime.store import TaskConflict
 from test_investigation import Policies
 import test_workflow_integration as workflow
-from test_workflow_integration import REVIEW, DECISION
+from test_workflow_integration import REVIEW, DECISION, KICK, USER
 
 
 URL = os.getenv("AGENT_TEST_CHECKPOINT_DB_URL")
@@ -529,3 +531,116 @@ os._exit(9)
                 self.assertIsInstance(worker.graph.checkpointer, FencedPostgresSaver)
                 self.assertTrue(await worker.run_one())
         self.assertEqual(self.store.get(self.task.task_id)["status"], "WAITING_REVIEW")
+
+    def process_args(self, audit, *extra):
+        return [sys.executable, 'tests/fixtures/worker_process.py', '--schema', self.schema,
+                '--checkpoint-schema', self.checkpoint_schema, '--audit', str(audit), *extra]
+
+    async def run_process(self, audit, *extra):
+        result = await asyncio.to_thread(subprocess.run, self.process_args(audit, *extra),
+                                         capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+
+    @staticmethod
+    def process_events(audit):
+        return [json.loads(line) for line in audit.read_text().splitlines()]
+
+    async def test_restart_processes_preserve_ai_reason_context_and_separate_kick_once(self):
+        with tempfile.TemporaryDirectory() as directory:
+            audit = Path(directory)/'controlled-events.jsonl'
+            await self.run_process(audit)
+            self.assertEqual(self.store.get(self.task.task_id)['status'], 'WAITING_REVIEW')
+            events = self.process_events(audit)
+            card = next(row['value'] for row in events if row['event'] == 'create')
+            self.assertTrue(card['findings'][0]['reason'])
+            self.assertTrue(card['findings'][0]['policyIds'])
+            self.assertEqual(card['findings'][0]['evidenceMessageIds'],
+                             [str(self.state['target_messages'][0]['messageId'])])
+            self.assertEqual(card['caseId'], str(self.task.case_id))
+            self.store.accept(self.decision())
+            await self.run_process(audit)
+            self.assertEqual(self.store.get(self.task.task_id)['status'], 'WAITING_REVIEW')
+            self.assertNotIn('kick', [row['event'] for row in self.process_events(audit)])
+            pending = (await self.graph.aget_state(self.config)).interrupts[0].value
+            self.assertEqual(pending['reviewKind'], 'KICK')
+            kick_task = self.decision().model_copy(update={
+                'review_kind': 'KICK', 'review_id': UUID(KICK), 'decision_id': UUID(USER)})
+            self.store.accept(kick_task)
+            await self.run_process(audit)
+            self.assertEqual(self.store.get(self.task.task_id)['status'], 'SUCCEEDED')
+            self.assertFalse(self.store.accept(kick_task)[1])
+            await self.run_process(audit)
+            events = self.process_events(audit)
+            self.assertEqual(sum(row['event'] == 'model' for row in events), 2)
+            self.assertEqual(sum(row['event'] == 'create' for row in events), 1)
+            self.assertEqual(sum(row['event'] == 'apply' for row in events), 1)
+            commands = [row['value'] for row in events if row['event'] == 'kick']
+            self.assertEqual(len(commands), 1)
+            self.assertEqual(commands[0]['actionId'], DECISION)
+            self.assertEqual(commands[0]['idempotencyKey'], DECISION)
+            state = (await self.graph.aget_state(self.config)).values
+            self.assertEqual(state['message_findings'][0].verdict, 'NO_VIOLATION')
+            self.assertEqual(state['context_result']['decision'], 'CONFIRM_VIOLATION')
+            self.assertEqual(state['kick_result']['decisionId'], USER)
+            self.assertTrue(state['kick_result']['kicked'])
+
+    async def test_restart_kick_rejection_never_executes_kick(self):
+        with tempfile.TemporaryDirectory() as directory:
+            audit = Path(directory)/'controlled-events.jsonl'
+            await self.run_process(audit)
+            self.store.accept(self.decision())
+            await self.run_process(audit)
+            task = self.decision().model_copy(update={
+                'review_kind': 'KICK', 'review_id': UUID(KICK), 'decision_id': UUID(USER)})
+            self.store.accept(task)
+            await self.run_process(audit, '--kick-status', 'REJECTED')
+            self.assertEqual(self.store.get(self.task.task_id)['status'], 'SUCCEEDED')
+            state = (await self.graph.aget_state(self.config)).values
+            self.assertEqual(state['kick_result']['status'], 'REJECTED')
+            self.assertFalse(state['kick_result']['kicked'])
+            self.assertNotIn('kick', [row['event'] for row in self.process_events(audit)])
+
+    async def test_killed_process_during_review_mutation_is_read_not_replayed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            audit = Path(directory)/'controlled-events.jsonl'
+            process = subprocess.Popen(self.process_args(audit, '--block-create'),
+                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                for _ in range(500):
+                    if audit.exists() and any(row['event'] == 'create' for row in self.process_events(audit)):
+                        break
+                    if process.poll() is not None:
+                        self.fail('Controlled worker exited before mutation')
+                    await asyncio.sleep(.01)
+                else:
+                    self.fail('Controlled worker did not enter mutation')
+                self.assertTrue(self.row()['mutation_started'])
+                process.kill()
+                await asyncio.to_thread(process.wait, timeout=5)
+                self.expire()
+                await self.run_process(audit)
+                events = self.process_events(audit)
+                self.assertEqual(sum(row['event'] == 'create' for row in events), 1)
+                self.assertEqual(sum(row['event'] == 'read_case' for row in events), 1)
+                self.assertEqual(self.store.get(self.task.task_id)['status'], 'UNKNOWN')
+                self.assertFalse(await self.worker('after-recovery').run_one())
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    await asyncio.to_thread(process.wait, timeout=5)
+
+    async def test_defer_and_wrong_review_keep_waiting_without_reinvestigation(self):
+        await self.worker().run_one()
+        wrong = self.decision().model_copy(update={'review_kind': 'KICK'})
+        self.store.accept(wrong)
+        await self.worker('second').run_one()
+        self.assertEqual(self.store.get(self.task.task_id)['status'], 'WAITING_REVIEW')
+        self.assertEqual(self.store.get(self.task.task_id)['code'], 'REVIEW_KIND_MISMATCH')
+        self.backend.decision = 'DEFER'
+        deferred = self.decision().model_copy(update={'decision_id': uuid4()})
+        self.store.accept(deferred)
+        await self.worker('third').run_one()
+        self.assertEqual(self.store.get(self.task.task_id)['status'], 'WAITING_REVIEW')
+        self.assertEqual(sum(row[0] == 'create' for row in self.backend.calls), 1)
+        self.assertEqual(sum(row[0] == 'apply' for row in self.backend.calls), 0)
+        self.assertEqual(len(self.model.inputs), 2)
