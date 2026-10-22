@@ -1,0 +1,35 @@
+{
+  "issue": 61,
+  "scope": "Phase 2 independent candidate module; existing service untouched",
+  "baseMain": "bc43759ece52ff37557d28958d7e29e63861eb29",
+  "sourceIntegrity": "capstone.py check baseline_ready; not a grading result",
+  "targeted": {
+    "ran": 10,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "fullPostgreSQLTCP": {
+    "ran": 281,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "database": "isolated ephemeral phase2test; no production DB"
+  },
+  "liveModelReports": [
+    "live-candidates-2026-10-22.json",
+    "live-candidates-r2-2026-10-22.json"
+  ],
+  "sourceSha256": {
+    "app/candidate_detection/contracts.py": "ee8e6ee2fd369db4bc7e0d420cd27971b441641359da2eb8c3308548b3e4e304",
+    "app/candidate_detection/screen.py": "22b761ad30bc22f134441d1e5af61ab932de2cb4f2bf5fe240c94e51a4195844",
+    "app/candidate_detection/evaluate.py": "3addb2231eb6202c8d6877c72cc02b2217a379b3abaf2e51b6171dba11f92714",
+    "prompts/candidate-screen.md": "21d01675e94f76361f37fb89288d6412dfd0459318b8943db023663bf80b5225",
+    "tests/test_candidate_detection.py": "f2a237d17f83fcb364a1d7251574077e7b66ef5ff6471ba8bc99a1e20fd49801"
+  },
+  "limits": [
+    "No BE/FE/Worker #60 integration or deployment",
+    "No phase1-end tag or Phase 1 improvement claim",
+    "Developer-authored diagnostic set, not UnSmile or an independent holdout"
+  ]
+}

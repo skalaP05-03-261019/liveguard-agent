@@ -1,0 +1,90 @@
+{
+  "contractVersion": "phase2-investigation-v1",
+  "screening": {
+    "contractVersion": "phase2-screen-v1",
+    "requestId": "00000000-0000-4000-8000-000000000012",
+    "liveId": "00000000-0000-4000-8000-000000000010",
+    "targetMessageId": "00000000-0000-4000-8000-000000000006",
+    "experiment": "clear-or-possible",
+    "selected": true,
+    "assessment": {
+      "signals": [
+        {
+          "kind": "REGION_DISPARAGEMENT",
+          "strength": "CLEAR",
+          "evidence": [
+            {
+              "messageId": "00000000-0000-4000-8000-000000000006",
+              "text": "그 지역 사람들은 원래 다 수준이 낮아"
+            }
+          ],
+          "reason": "집단 일반화·비하 신호의 직접 작성 예시"
+        }
+      ],
+      "missingFacts": []
+    },
+    "usage": {},
+    "executionAuthorized": false
+  },
+  "task": {
+    "eventId": "00000000-0000-4000-8000-000000000001",
+    "taskId": "00000000-0000-4000-8000-000000000002",
+    "caseId": "00000000-0000-4000-8000-000000000003",
+    "kind": "ANALYZE",
+    "threadId": "case:00000000-0000-4000-8000-000000000003:analysis:1",
+    "snapshotId": "00000000-0000-4000-8000-000000000004",
+    "expectedEvidenceVersion": 1,
+    "decisionId": null,
+    "reviewKind": null,
+    "reviewId": null,
+    "traceId": "00000000-0000-4000-8000-000000000005"
+  },
+  "snapshot": {
+    "caseId": "00000000-0000-4000-8000-000000000003",
+    "snapshotId": "00000000-0000-4000-8000-000000000004",
+    "evidenceVersion": 1,
+    "policyVersion": "fixture-policy-v1",
+    "targetMessageIds": [
+      "00000000-0000-4000-8000-000000000006"
+    ],
+    "targetVersions": {
+      "00000000-0000-4000-8000-000000000006": 1
+    },
+    "targets": [
+      {
+        "messageId": "00000000-0000-4000-8000-000000000006",
+        "visibility": "HELD",
+        "version": 1
+      }
+    ],
+    "liveId": "00000000-0000-4000-8000-000000000010",
+    "userId": "00000000-0000-4000-8000-000000000011",
+    "handlingRoute": "CONTEXT_REVIEW",
+    "ruleId": null,
+    "filterVersion": null,
+    "matchingTags": [
+      "CONTEXT_PENDING"
+    ],
+    "kickReview": null,
+    "confirmationStatus": "UNCONFIRMED"
+  },
+  "messages": [
+    {
+      "messageId": "00000000-0000-4000-8000-000000000006",
+      "authorAlias": "U1",
+      "text": "그 지역 사람들은 원래 다 수준이 낮아",
+      "sentAt": "2026-10-20T01:00:00Z",
+      "visibility": "HELD",
+      "replyToId": null
+    },
+    {
+      "messageId": "00000000-0000-4000-8000-000000000007",
+      "authorAlias": "U2",
+      "text": "누구를 말하는 건가요?",
+      "sentAt": "2026-10-20T01:00:01Z",
+      "visibility": "PUBLIC",
+      "replyToId": null
+    }
+  ],
+  "executionAuthorized": false
+}

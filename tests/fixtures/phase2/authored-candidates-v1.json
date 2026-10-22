@@ -1,0 +1,289 @@
+[
+  {
+    "id": "P2-01",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "b86be728-a8e9-51d8-9434-f629dfde82e4",
+        "text": "그 지역 사람들은 여기서 말하지 마"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "REGION_DISPARAGEMENT"
+    ]
+  },
+  {
+    "id": "P2-02",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "ea9c38ea-e4d8-59a7-ad19-d5d324144d33",
+        "text": "그 지역 출신은 전부 수준이 낮아"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "REGION_DISPARAGEMENT"
+    ]
+  },
+  {
+    "id": "P2-03",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "3557dc30-53d6-5270-b3d3-e67bd4c01171",
+        "text": "나이 많은 사람들은 게임에 끼지 마"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "GROUP_HATE"
+    ]
+  },
+  {
+    "id": "P2-04",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "c1fd4c92-2aad-5220-b3d3-33600fc7f59d",
+        "text": "외국인은 우리 채팅방에서 나가라"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "GROUP_HATE"
+    ]
+  },
+  {
+    "id": "P2-05",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "1c9e1a22-7783-58ea-8bf5-37e3d1859a3e",
+        "text": "여자는 게임할 자격이 없어"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "GROUP_HATE"
+    ]
+  },
+  {
+    "id": "P2-06",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "e3eab8af-58fd-5faf-8314-d9217eee2ed4",
+        "text": "씨바 너는 이것도 못하냐"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "PROFANITY_VARIANT",
+      "TARGETED_ATTACK"
+    ]
+  },
+  {
+    "id": "P2-07",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "36cbc7ef-1c70-51f5-8777-ff58abadec6b",
+        "text": "민수야 넌 팀에 필요 없는 쓰레기야"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "TARGETED_ATTACK"
+    ]
+  },
+  {
+    "id": "P2-08",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "b7446a6e-42b5-5797-94aa-f3e4811fb7a9",
+        "text": "너네 동네 사람들은 다 속이 좁더라"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "REGION_DISPARAGEMENT"
+    ]
+  },
+  {
+    "id": "P2-09",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "1bd8d3d7-c156-5383-bea2-7bc3577906d4",
+        "text": "지역별 맛집 추천 부탁해요"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2-10",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "6497f82e-6fe7-5c72-8619-ed197ccc171c",
+        "text": "나이와 상관없이 누구나 같이 해요"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2-11",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "b1cb9e2e-9e94-5bd8-88a9-cd23c04b9523",
+        "text": "그런 지역비하는 하지 맙시다"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2-12",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "44cd8b30-1189-53e5-a602-7676e88de1e1",
+        "text": "우리 채팅방은 외국인도 환영해요"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2-13",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "df18f061-87ac-5a0a-865d-93a0c6caeeaf",
+        "text": "이 게임의 지역 서버 연결이 느려요"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2-14",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "3dc44d8c-d2be-5d9f-bb12-ecbe6955de16",
+        "text": "오늘 경기 운영은 아쉬웠어요"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2-15",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "a8ea2fa4-3b11-52f0-946b-225335edd69d",
+        "text": "프로젝트의 시발점은 이 문제야"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2-16",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "ebb80fcf-8473-5967-ab1d-6a2567ffaed1",
+        "text": "게임 캐릭터가 또 쓰러졌네"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2-17",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "3b2185b6-86c8-5be7-aeae-35807f647bd1",
+        "text": "역시 저쪽은 다 똑같네"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": null
+  },
+  {
+    "id": "P2-18",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "0b53328c-ed6b-5f39-8346-6a49f0f0e756",
+        "text": "여기에는 끼지 마"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": null
+  },
+  {
+    "id": "P2-19",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "7bf960cd-0935-54cb-82d5-66128237f3dc",
+        "text": "그런 지역 일반화는 동의 못 해"
+      },
+      "context": [
+        {
+          "messageId": "81d287ee-f94b-5232-ac06-b3a9df419f62",
+          "text": "누가 저 지역 출신은 다 수준 낮다고 했어"
+        }
+      ]
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2-20",
+    "input": {
+      "liveId": "2ebac6b9-a0c6-51ac-9f1a-337f4c320941",
+      "target": {
+        "messageId": "c6a09369-e938-59d6-bcae-977de3b4d444",
+        "text": "그 말은 차별이야 하지 마"
+      },
+      "context": [
+        {
+          "messageId": "654118df-7f61-5308-92b7-dfcc8611bcd9",
+          "text": "외국인은 모두 나가야 해"
+        }
+      ]
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  }
+]

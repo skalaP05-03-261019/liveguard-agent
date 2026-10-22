@@ -1,5 +1,51 @@
 # Agent HTTP 실행기·작업 저장·인증 (#10)
 
+## #58 공유 Inbox / API 전용 모드 (2026-10-22)
+
+`AGENT_INBOX_DB_URL`을 설정하면 API는 PostgreSQL `agent_inbox` 스키마의
+`threads`/`jobs`만 사용한다. 모든 API 인스턴스가 같은 DB를 사용해야 한다.
+이 모드에서는 `AGENT_GATEWAY_FACTORY`, 모델, MCP, checkpointer 설정 없이도 접수와
+상태 조회가 가능하며, API가 `TaskRunner`나 Graph를 생성/시작하지 않는다.
+`/health.readyForTasks`는 **접수 DB와 서비스 인증의 준비 상태**이며 실행 Worker의 준비 상태가 아니다.
+
+- run 중복 키는 `run:{taskId}`, resume 중복 키는 `resume:{decisionId}`다.
+- operation 단위 PostgreSQL transaction advisory lock과 DB unique 제약으로
+  서로 다른 프로세스/호스트의 동시 접수를 직렬화한다.
+- 같은 논리 요청은 저장된 상태와 200/duplicate=true, 신규는 커밋 후 202/duplicate=false다.
+  eventId/traceId 변경만으로 새 작업을 만들지 않는다. 다른 payload는 409다.
+- thread의 taskId/caseId/snapshotId/evidenceVersion 바인딩은 변경하지 않는다.
+  resume 접수 시 thread 행을 잠그고 최신 작업이 WAITING_REVIEW인지 확인한다.
+  서로 다른 결정이 동시에 도착해도 하나만 QUEUED가 된다.
+- GET은 어느 API에서도 같은 최신 operation을 조회한다. 응답에는 envelope/원문/인증정보를 넣지 않는다.
+- DB 연결/트랜잭션 실패는 503/TASK_STORE_UNAVAILABLE로 반환하며 성공 영수증을 만들지 않는다.
+  커밋 응답 유실로 결과가 불확실하면 동일 요청을 재전송해 중복 판별한다.
+- DB I/O는 thread pool에서 실행해 API event loop를 막지 않는다.
+
+배포 예시: 비밀값 관리 방식으로 `AGENT_INBOX_DB_URL`과 `AGENT_SERVICE_TOKEN`을 주입하고
+기존 `uvicorn app.main:app` 명령으로 여러 API를 실행한다.
+시작 시 스키마를 트랜잭션으로 준비하며 최초 동시 시작도 advisory lock으로 보호한다.
+DB 계정에는 해당 스키마의 DDL/DML 권한이 필요하다. 스키마 준비 실패 시 시작을 중단한다.
+
+**범위 경계:** PostgreSQL Inbox의 claim/lease/실행/복구 Worker는 후속 이슈다.
+이 모드 단독으로는 작업이 QUEUED에 남으며, 기존 SQLite TaskRunner가 이를 소비하지 않는다.
+Worker 준비 전에는 실제 운영 트래픽을 전환하지 않는다. BE Outbox/RabbitMQ는 변경하지 않는다.
+별도 결과 백엔드나 Celery/Taskiq도 추가하지 않는다.
+
+`AGENT_INBOX_DB_URL` 미설정 시 아래의 기존 SQLite+Graph 결합 모드를 유지한다.
+새 공유 모드가 실패해도 SQLite로 자동 대체하지 않는다.
+기존 SQLite 파일의 작업/승인 대기를 자동 이관하지 않는다. 전환 전에 접수를 멈추고
+QUEUED/RUNNING/UNKNOWN/WAITING_REVIEW 및 checkpoint를 확인해 drain/명시적 이관을 계획해야 한다.
+기존 DB 파일을 삭제하거나 두 저장소를 동시에 정본으로 사용하지 않는다.
+
+검증: `AGENT_TEST_INBOX_DB_URL`을 격리 PostgreSQL DB로 설정하고
+`PYTHONPATH=tests uv run --locked python -m unittest test_shared_inbox -v`를 실행한다.
+테스트마다 고유 스키마를 만들고 해당 스키마만 정리한다. CI의 기존 PostgreSQL 서비스에서도 실행한다.
+실제 PostgreSQL을 사용하는 두 API 동시 접수, 응답 유실 후 다른 API 재전송,
+별도 API 프로세스의 비정상 종료 후 영속성, resume 경쟁/바인딩 충돌,
+DB 실패 및 트랜잭션 롤백을 검증한다. Graph 실행과 실제 BE 집행 증거는 아니다.
+
+---
+
 2026-10-21, 김태관(AI1). 기준 main `cd86bc8`. 작업 브랜치 `feat/agent-10-task-runtime`.
 
 ## 변경 범위

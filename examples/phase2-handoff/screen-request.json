@@ -1,0 +1,13 @@
+{
+  "contractVersion": "phase2-screen-v1",
+  "requestId": "00000000-0000-4000-8000-000000000012",
+  "experiment": "clear-or-possible",
+  "input": {
+    "liveId": "00000000-0000-4000-8000-000000000010",
+    "target": {
+      "messageId": "00000000-0000-4000-8000-000000000006",
+      "text": "그 지역 사람들은 원래 다 수준이 낮아"
+    },
+    "context": []
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "contractVersion": "phase2-screen-v1",
+  "requestId": "00000000-0000-4000-8000-000000000012",
+  "liveId": "00000000-0000-4000-8000-000000000010",
+  "targetMessageId": "00000000-0000-4000-8000-000000000006",
+  "experiment": "clear-or-possible",
+  "selected": true,
+  "assessment": {
+    "signals": [
+      {
+        "kind": "REGION_DISPARAGEMENT",
+        "strength": "CLEAR",
+        "evidence": [
+          {
+            "messageId": "00000000-0000-4000-8000-000000000006",
+            "text": "그 지역 사람들은 원래 다 수준이 낮아"
+          }
+        ],
+        "reason": "집단 일반화·비하 신호의 직접 작성 예시"
+      }
+    ],
+    "missingFacts": []
+  },
+  "usage": {},
+  "executionAuthorized": false
+}

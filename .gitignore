@@ -7,3 +7,7 @@ __pycache__/
 *.sqlite3-wal
 *.sqlite3-shm
 *.recovery.lock
+.DS_Store
+
+# Local datasets, predictions and reports may contain customer/source data.
+local-data/
