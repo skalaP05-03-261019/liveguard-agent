@@ -1,5 +1,6 @@
 # LIVE:GUARD Phase 2
 
+- [태관 역할 총정리·후보 비교/오탐 개선·다음 우선순위](taegwan-workplan-75.md)
 - [제안서 v2.1](proposal.html) · HTML 원본은 내려받아 브라우저에서 열면 버튼 예시와 인쇄 기능을 사용할 수 있습니다. GitHub 파일 화면은 HTML 실행 화면이 아닙니다.
 - [태관·세원님 역할과 인계 기준](roles-sewon.md)
 - [사용자 결정·팀 공유 자료·미정 항목](decisions.md)

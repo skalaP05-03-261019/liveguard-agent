@@ -1,0 +1,78 @@
+{
+  "version": "candidate-groups-v1",
+  "datasetSha256": "609933a4d69b840d305da4ab7ff3ec7ce35366c14b11586e7dbe12cf36152b0e",
+  "cases": {
+    "P2-01": [
+      "region"
+    ],
+    "P2-02": [
+      "region"
+    ],
+    "P2-03": [
+      "group"
+    ],
+    "P2-04": [
+      "group"
+    ],
+    "P2-05": [
+      "group"
+    ],
+    "P2-06": [
+      "profanity-variant"
+    ],
+    "P2-07": [
+      "targeted-attack"
+    ],
+    "P2-08": [
+      "region"
+    ],
+    "P2-09": [
+      "region",
+      "normal-protection"
+    ],
+    "P2-10": [
+      "group",
+      "normal-protection"
+    ],
+    "P2-11": [
+      "region",
+      "counter-speech",
+      "normal-protection"
+    ],
+    "P2-12": [
+      "group",
+      "normal-protection"
+    ],
+    "P2-13": [
+      "region",
+      "normal-protection"
+    ],
+    "P2-14": [
+      "normal-criticism",
+      "normal-protection"
+    ],
+    "P2-15": [
+      "word-overlap",
+      "normal-protection"
+    ],
+    "P2-16": [
+      "normal-protection"
+    ],
+    "P2-17": [
+      "ambiguous-context"
+    ],
+    "P2-18": [
+      "ambiguous-context"
+    ],
+    "P2-19": [
+      "region",
+      "counter-speech",
+      "normal-protection"
+    ],
+    "P2-20": [
+      "group",
+      "counter-speech",
+      "normal-protection"
+    ]
+  }
+}
