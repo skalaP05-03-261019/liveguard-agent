@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "app/**"
+      - "prompts/**"
       - "tests/**"
       - "pyproject.toml"
       - "uv.lock"
@@ -12,6 +13,7 @@ on:
     branches: [main]
     paths:
       - "app/**"
+      - "prompts/**"
       - "tests/**"
       - "pyproject.toml"
       - "uv.lock"

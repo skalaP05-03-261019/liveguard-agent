@@ -58,7 +58,7 @@ def tool_definitions():
     descriptions = {
         "get_chat_context": "현재 사건의 주변 대화. 다른 사건 조회 불가.",
         "get_user_history": "현재 사건 사용자의 유형별 확정 이력. 조회 기간은 서버 정책이며 강퇴 집계로 사용 금지.",
-        "get_stream_info": "현재 방송의 공식 이벤트와 방송 맥락 조회.",
+        "get_stream_info": "방송 맥락·이벤트와 작성자의 현재 역할 조회. UNKNOWN은 역할 미확인, 공식 여부 false는 VIEWER 확정이 아님.",
         "get_official_links": "현재 방송에 등록된 공식 링크 조회. 외부 링크 방문 안 함.",
         "get_security_facts": "개인정보/공식 연락처 여부의 서버 검증 사실 및 UNKNOWN 조회.",
     }

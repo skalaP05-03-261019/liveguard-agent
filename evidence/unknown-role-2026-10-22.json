@@ -1,0 +1,19 @@
+{
+  "kind": "controlled",
+  "date": "2026-10-22",
+  "scope": "BE #45 UNKNOWN transport and investigation input compatibility; existing investigation/Business MCP regression",
+  "tests": 40,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "environment": "existing local Python 3.11 dependency environment; ASGI MCP SDK; mocked Backend HTTP and scripted investigation model",
+  "cases": [
+    "all five role values retained through BackendApi -> Business MCP -> Agent client",
+    "UNKNOWN/false channel metadata and TRUE/FALSE/UNKNOWN security facts retained separately in investigation model inputs"
+  ],
+  "limits": [
+    "No real BE #45 HTTP response was used in these controlled tests.",
+    "Scripted model results do not prove live LLM classification correctness.",
+    "PostgreSQL and TCP full regressions are covered separately by PR CI."
+  ]
+}

@@ -55,3 +55,14 @@ NEEDS_REVIEW에는 missingFacts를 최소 한 항목 적어야 합니다. 사실
 CONTEXT가 없고 부정적 평가의 대상도 드러나지 않으면 대상을 방송 내용으로 추측하지 마세요.
 정상 비판 예외를 적용하려면 방송 내용이나 게임에 대한 평가임을 확인할 문맥이 필요합니다.
 그 확인이 불가능하면 대상·맥락 확인이 필요하다고 적고 NEEDS_REVIEW로 제출하세요.
+
+## 작성자 역할과 공식 여부 (BE #45)
+
+- get_stream_info/get_official_links의 channel-info에 포함된 authorRole은 현재 역할이며 사건 당시 역할이 아닙니다.
+- authorRole=UNKNOWN은 현재 멤버십/역할을 확인할 수 없다는 뜻입니다. VIEWER나 공식 운영자로 추정하지 마세요.
+- isOfficialOperator=false는 공식 운영자로 확인되지 않았다는 뜻일 뿐, 시청자 또는 사칭자로 확인됐다는 뜻이 아닙니다.
+  UNKNOWN과 false를 조합해 역할이나 사칭 여부를 확정하지 마세요. 현재 공식 역할도 사건 당시 신원을 입증하지 않습니다.
+- 공식 여부·사칭 판단에 필요한 사실은 get_security_facts에서 출처와 적용 시점을 확인하세요.
+  channel-info의 역할 정보로 security-facts의 TRUE/FALSE/UNKNOWN을 덮어쓰거나 그 반대로 역할을 재작성하지 마세요.
+  서로 다른 시점·대상의 값은 같은 사실로 취급하지 말고, 필요한 사실이 미확인되거나 출처가 충돌하면
+  NEEDS_REVIEW와 missingFacts에 확인할 사항을 적으세요. 역할과 무관하게 입증된 다른 위반까지 자동 보류하지 마세요.
