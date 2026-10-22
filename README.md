@@ -2,10 +2,14 @@
 
 # LIVE:GUARD Agent 골격
 
+[Phase 1 Worker 인수 검증(#68)](docs/phase1-worker-acceptance-68.md): #66을 최신 main과 대조하고 별도 프로세스 승인·강퇴 중복 방지·강제 종료 복구 시험을 보강했습니다. 실제 PostgreSQL 시험과 BE/FE 공동 미검증 항목을 구분합니다.
+
 김태관 / AI1 Agent의 조사·정책 검증·승인 흐름 연결 서비스다.
 Business/RAG MCP 조회와 실제 OpenAI 검증 결과는 각 이슈의 증거와 문서를 참조한다.
 
 ## Phase 2 · 공유 기획과 태관 후보 판별 개발
+
+[태관 역할·최신 경계·후보 비교 개발(#75)](docs/phase2/taegwan-workplan-75.md)에 완료/대기/후속과 같은 사례 전후 오탐·누락을 정리했습니다. 독립 후보 프롬프트 변경이며 기존 조사·승인·BE/FE 흐름은 수정하지 않습니다.
 
 [조사 초안 API/CLI](docs/phase2/draft-service-65.md)는 기존 조사 Harness와 Business/RAG 조회를 연결합니다. 결과 제출·승인·집행 없이 검증된 초안만 반환합니다.
 

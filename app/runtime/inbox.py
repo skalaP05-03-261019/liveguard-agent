@@ -36,6 +36,7 @@ class PostgresInbox:
 
     def setup(self):
         with self.connection() as db:
+            # Serialize first-boot DDL across API and Worker instances.
             db.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
                        (f"inbox-setup:{self._schema}",))
             db.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(self._schema)))
@@ -85,6 +86,7 @@ class PostgresInbox:
         refs = (task.thread_id, str(task.task_id), str(task.case_id),
                 str(task.snapshot_id), task.expected_evidence_version)
         with self.connection() as db:
+            # Also serialize reused decision IDs across different threads.
             db.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
                        (f"inbox-operation:{self._schema}:{key}",))
             old = db.execute(sql.SQL("SELECT * FROM {} WHERE operation_id=%s").format(self._jobs),

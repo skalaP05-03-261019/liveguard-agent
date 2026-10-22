@@ -1,0 +1,63 @@
+{
+  "issue": 75,
+  "agentBase": "cb0fff6cc54759a784b83bd225bf941bf7448ea5",
+  "backendInspected": "ee6b9f4c94aa29a49fc30ce26b9a19c41c22a94e",
+  "frontendInspected": "5a1bb560ff09cd8d961a67ea8b9cd35605a75e01",
+  "tests": {
+    "run": 352,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0,
+    "seconds": 37.708,
+    "database": "isolated PostgreSQL/pgvector",
+    "tcpEnabled": true
+  },
+  "realModel": {
+    "model": "gpt-5.4-mini",
+    "before": {
+      "total": 20,
+      "assessed": 20,
+      "errors": 0,
+      "promptSha256": "21d01675e94f76361f37fb89288d6412dfd0459318b8943db023663bf80b5225"
+    },
+    "after": {
+      "total": 20,
+      "assessed": 20,
+      "errors": 0,
+      "promptSha256": "dfaba6af1d2b12e5ba2e1af2183e223a768ee05d1ab27fa04c92c239c852cd57"
+    },
+    "newRegression": {
+      "total": 16,
+      "assessed": 16,
+      "errors": 0
+    },
+    "interpretation": "Authored development diagnostics only, not held-out/UnSmile/Phase1 improvement/production throughput proof"
+  },
+  "unchanged": [
+    "Backend code/PR/runtime",
+    "Frontend code/PR/runtime",
+    "Investigation prompt/policy/summary owned by Sewon",
+    "Worker/thread serialization owned by iihlolo",
+    "Human approval and enforcement Graph"
+  ],
+  "notDone": [
+    "UnSmile local curation and service-label review",
+    "Phase1 tag and same-case baseline",
+    "New BE candidate ingress",
+    "Customer profile policy approval",
+    "Production deployment and FE E2E"
+  ],
+  "sha256": {
+    "app/candidate_detection/compare.py": "092bb0b50b097a561307caf2c83f8a87ba8c167c87cf96fe0a45c552a3561db2",
+    "prompts/candidate-screen.md": "dfaba6af1d2b12e5ba2e1af2183e223a768ee05d1ab27fa04c92c239c852cd57",
+    "tests/test_candidate_comparison.py": "4e0009854649c477911781f6070ada0348b087bcf8036f97ec330d522351f9c0",
+    "tests/fixtures/phase2/authored-candidates-v1.json": "c57c3826c5a2ffc84ed3ddf959f649d9361f30f767b90103f5fa2a79aea9d5a0",
+    "tests/fixtures/phase2/authored-candidate-groups-v1.json": "e01ec36768ddd7bc2f52986a30fd13d11be95d141c43023eaf7ed526cc12f7bc",
+    "tests/fixtures/phase2/authored-regression-75.json": "adb297a06b2cb78ec303c252d710418e1379433add5a2c935f27cb69ebb9179d",
+    "evidence/phase2/candidate-before-75.json": "bbfcdd3145ce4a199c7100cabc23030ca1a4abe1b33415086675a2ad07945a43",
+    "evidence/phase2/candidate-after-75.json": "422dbcbb7a6b4b8d77346b0d32b6a5e5b26e4ae27737fb133577279fab1e0002",
+    "evidence/phase2/candidate-comparison-75.json": "9a87b4932db45c6fcfbe038bd57d822895c91e7f5badfe2f078369448f00ae63",
+    "evidence/phase2/candidate-regression-75.json": "a15d293d23dd15b0c4c90405326fad9046e321d34f0bfc7039aca2695e639d3f",
+    "evidence/phase2/candidate-prompt-before-75.md": "21d01675e94f76361f37fb89288d6412dfd0459318b8943db023663bf80b5225"
+  }
+}

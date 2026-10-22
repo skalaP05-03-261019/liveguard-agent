@@ -1,0 +1,838 @@
+{
+  "kind": "paired-candidate-comparison",
+  "datasetSha256": "609933a4d69b840d305da4ab7ff3ec7ce35366c14b11586e7dbe12cf36152b0e",
+  "total": 20,
+  "pairedAssessed": 20,
+  "pairedCoverage": 1.0,
+  "sources": {
+    "before": {
+      "mode": "live-model",
+      "model": "gpt-5.4-mini",
+      "promptSha256": "21d01675e94f76361f37fb89288d6412dfd0459318b8943db023663bf80b5225"
+    },
+    "after": {
+      "mode": "live-model",
+      "model": "gpt-5.4-mini",
+      "promptSha256": "dfaba6af1d2b12e5ba2e1af2183e223a768ee05d1ab27fa04c92c239c852cd57"
+    }
+  },
+  "errors": {
+    "becameError": [],
+    "recoveredFromError": [],
+    "stayedError": []
+  },
+  "experiments": {
+    "clear-only": {
+      "beforeAssessedOnly": {
+        "tp": 6,
+        "fp": 0,
+        "tn": 10,
+        "fn": 4,
+        "precision": 1.0,
+        "recall": 0.6,
+        "f1": 0.75,
+        "normalCandidateRate": 0.0
+      },
+      "afterAssessedOnly": {
+        "tp": 7,
+        "fp": 0,
+        "tn": 10,
+        "fn": 3,
+        "precision": 1.0,
+        "recall": 0.7,
+        "f1": 0.8235,
+        "normalCandidateRate": 0.0
+      },
+      "pairedBefore": {
+        "tp": 6,
+        "fp": 0,
+        "tn": 10,
+        "fn": 4,
+        "precision": 1.0,
+        "recall": 0.6,
+        "f1": 0.75,
+        "normalCandidateRate": 0.0
+      },
+      "pairedAfter": {
+        "tp": 7,
+        "fp": 0,
+        "tn": 10,
+        "fn": 3,
+        "precision": 1.0,
+        "recall": 0.7,
+        "f1": 0.8235,
+        "normalCandidateRate": 0.0
+      },
+      "changes": {
+        "fixedFalsePositives": [],
+        "newFalsePositives": [],
+        "fixedFalseNegatives": [
+          "P2-01"
+        ],
+        "newFalseNegatives": []
+      },
+      "slices": {
+        "ambiguous-context": {
+          "total": 2,
+          "pairedAssessed": 2,
+          "before": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 0,
+            "fn": 2,
+            "precision": null,
+            "recall": 0.0,
+            "f1": 0.0,
+            "normalCandidateRate": null
+          },
+          "after": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 0,
+            "fn": 2,
+            "precision": null,
+            "recall": 0.0,
+            "f1": 0.0,
+            "normalCandidateRate": null
+          }
+        },
+        "counter-speech": {
+          "total": 3,
+          "pairedAssessed": 3,
+          "before": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 3,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          },
+          "after": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 3,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          }
+        },
+        "group": {
+          "total": 6,
+          "pairedAssessed": 6,
+          "before": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 3,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": 0.0
+          },
+          "after": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 3,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": 0.0
+          }
+        },
+        "normal-criticism": {
+          "total": 1,
+          "pairedAssessed": 1,
+          "before": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 1,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          },
+          "after": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 1,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          }
+        },
+        "normal-protection": {
+          "total": 10,
+          "pairedAssessed": 10,
+          "before": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 10,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          },
+          "after": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 10,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          }
+        },
+        "profanity-variant": {
+          "total": 1,
+          "pairedAssessed": 1,
+          "before": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": null
+          },
+          "after": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": null
+          }
+        },
+        "region": {
+          "total": 7,
+          "pairedAssessed": 7,
+          "before": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 4,
+            "fn": 2,
+            "precision": 1.0,
+            "recall": 0.3333,
+            "f1": 0.5,
+            "normalCandidateRate": 0.0
+          },
+          "after": {
+            "tp": 2,
+            "fp": 0,
+            "tn": 4,
+            "fn": 1,
+            "precision": 1.0,
+            "recall": 0.6667,
+            "f1": 0.8,
+            "normalCandidateRate": 0.0
+          }
+        },
+        "targeted-attack": {
+          "total": 1,
+          "pairedAssessed": 1,
+          "before": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": null
+          },
+          "after": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": null
+          }
+        },
+        "word-overlap": {
+          "total": 1,
+          "pairedAssessed": 1,
+          "before": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 1,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          },
+          "after": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 1,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          }
+        }
+      }
+    },
+    "clear-or-possible": {
+      "beforeAssessedOnly": {
+        "tp": 7,
+        "fp": 1,
+        "tn": 9,
+        "fn": 3,
+        "precision": 0.875,
+        "recall": 0.7,
+        "f1": 0.7778,
+        "normalCandidateRate": 0.1
+      },
+      "afterAssessedOnly": {
+        "tp": 8,
+        "fp": 0,
+        "tn": 10,
+        "fn": 2,
+        "precision": 1.0,
+        "recall": 0.8,
+        "f1": 0.8889,
+        "normalCandidateRate": 0.0
+      },
+      "pairedBefore": {
+        "tp": 7,
+        "fp": 1,
+        "tn": 9,
+        "fn": 3,
+        "precision": 0.875,
+        "recall": 0.7,
+        "f1": 0.7778,
+        "normalCandidateRate": 0.1
+      },
+      "pairedAfter": {
+        "tp": 8,
+        "fp": 0,
+        "tn": 10,
+        "fn": 2,
+        "precision": 1.0,
+        "recall": 0.8,
+        "f1": 0.8889,
+        "normalCandidateRate": 0.0
+      },
+      "changes": {
+        "fixedFalsePositives": [
+          "P2-15"
+        ],
+        "newFalsePositives": [],
+        "fixedFalseNegatives": [
+          "P2-01"
+        ],
+        "newFalseNegatives": []
+      },
+      "slices": {
+        "ambiguous-context": {
+          "total": 2,
+          "pairedAssessed": 2,
+          "before": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 0,
+            "fn": 2,
+            "precision": null,
+            "recall": 0.0,
+            "f1": 0.0,
+            "normalCandidateRate": null
+          },
+          "after": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 0,
+            "fn": 2,
+            "precision": null,
+            "recall": 0.0,
+            "f1": 0.0,
+            "normalCandidateRate": null
+          }
+        },
+        "counter-speech": {
+          "total": 3,
+          "pairedAssessed": 3,
+          "before": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 3,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          },
+          "after": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 3,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          }
+        },
+        "group": {
+          "total": 6,
+          "pairedAssessed": 6,
+          "before": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 3,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": 0.0
+          },
+          "after": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 3,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": 0.0
+          }
+        },
+        "normal-criticism": {
+          "total": 1,
+          "pairedAssessed": 1,
+          "before": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 1,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          },
+          "after": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 1,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          }
+        },
+        "normal-protection": {
+          "total": 10,
+          "pairedAssessed": 10,
+          "before": {
+            "tp": 0,
+            "fp": 1,
+            "tn": 9,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": null,
+            "f1": 0.0,
+            "normalCandidateRate": 0.1
+          },
+          "after": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 10,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          }
+        },
+        "profanity-variant": {
+          "total": 1,
+          "pairedAssessed": 1,
+          "before": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": null
+          },
+          "after": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": null
+          }
+        },
+        "region": {
+          "total": 7,
+          "pairedAssessed": 7,
+          "before": {
+            "tp": 2,
+            "fp": 0,
+            "tn": 4,
+            "fn": 1,
+            "precision": 1.0,
+            "recall": 0.6667,
+            "f1": 0.8,
+            "normalCandidateRate": 0.0
+          },
+          "after": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 4,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": 0.0
+          }
+        },
+        "targeted-attack": {
+          "total": 1,
+          "pairedAssessed": 1,
+          "before": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": null
+          },
+          "after": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": null
+          }
+        },
+        "word-overlap": {
+          "total": 1,
+          "pairedAssessed": 1,
+          "before": {
+            "tp": 0,
+            "fp": 1,
+            "tn": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": null,
+            "f1": 0.0,
+            "normalCandidateRate": 1.0
+          },
+          "after": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 1,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          }
+        }
+      }
+    },
+    "include-uncertain": {
+      "beforeAssessedOnly": {
+        "tp": 10,
+        "fp": 1,
+        "tn": 9,
+        "fn": 0,
+        "precision": 0.9091,
+        "recall": 1.0,
+        "f1": 0.9524,
+        "normalCandidateRate": 0.1
+      },
+      "afterAssessedOnly": {
+        "tp": 10,
+        "fp": 0,
+        "tn": 10,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "normalCandidateRate": 0.0
+      },
+      "pairedBefore": {
+        "tp": 10,
+        "fp": 1,
+        "tn": 9,
+        "fn": 0,
+        "precision": 0.9091,
+        "recall": 1.0,
+        "f1": 0.9524,
+        "normalCandidateRate": 0.1
+      },
+      "pairedAfter": {
+        "tp": 10,
+        "fp": 0,
+        "tn": 10,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "normalCandidateRate": 0.0
+      },
+      "changes": {
+        "fixedFalsePositives": [
+          "P2-15"
+        ],
+        "newFalsePositives": [],
+        "fixedFalseNegatives": [],
+        "newFalseNegatives": []
+      },
+      "slices": {
+        "ambiguous-context": {
+          "total": 2,
+          "pairedAssessed": 2,
+          "before": {
+            "tp": 2,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": null
+          },
+          "after": {
+            "tp": 2,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": null
+          }
+        },
+        "counter-speech": {
+          "total": 3,
+          "pairedAssessed": 3,
+          "before": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 3,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          },
+          "after": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 3,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          }
+        },
+        "group": {
+          "total": 6,
+          "pairedAssessed": 6,
+          "before": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 3,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": 0.0
+          },
+          "after": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 3,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": 0.0
+          }
+        },
+        "normal-criticism": {
+          "total": 1,
+          "pairedAssessed": 1,
+          "before": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 1,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          },
+          "after": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 1,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          }
+        },
+        "normal-protection": {
+          "total": 10,
+          "pairedAssessed": 10,
+          "before": {
+            "tp": 0,
+            "fp": 1,
+            "tn": 9,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": null,
+            "f1": 0.0,
+            "normalCandidateRate": 0.1
+          },
+          "after": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 10,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          }
+        },
+        "profanity-variant": {
+          "total": 1,
+          "pairedAssessed": 1,
+          "before": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": null
+          },
+          "after": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": null
+          }
+        },
+        "region": {
+          "total": 7,
+          "pairedAssessed": 7,
+          "before": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 4,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": 0.0
+          },
+          "after": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 4,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": 0.0
+          }
+        },
+        "targeted-attack": {
+          "total": 1,
+          "pairedAssessed": 1,
+          "before": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": null
+          },
+          "after": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "normalCandidateRate": null
+          }
+        },
+        "word-overlap": {
+          "total": 1,
+          "pairedAssessed": 1,
+          "before": {
+            "tp": 0,
+            "fp": 1,
+            "tn": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": null,
+            "f1": 0.0,
+            "normalCandidateRate": 1.0
+          },
+          "after": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 1,
+            "fn": 0,
+            "precision": null,
+            "recall": null,
+            "f1": null,
+            "normalCandidateRate": 0.0
+          }
+        }
+      }
+    }
+  },
+  "limits": [
+    "Paired metrics exclude errors; show total/coverage and error transitions together.",
+    "Overlapping group counts must not be summed.",
+    "Development cases and repeated runs do not establish held-out quality or causal improvement.",
+    "Selection is not a violation, customer policy, Backend delivery or enforcement."
+  ]
+}
