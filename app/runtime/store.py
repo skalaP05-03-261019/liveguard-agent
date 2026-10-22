@@ -25,6 +25,13 @@ def operation_id(task):
     return f"resume:{task.decision_id}" if task.kind == "RESUME_REVIEW" else f"run:{task.task_id}"
 
 
+def task_payload(task):
+    payload = task.model_dump(mode="json", by_alias=True)
+    logical = {k: v for k, v in payload.items() if k not in {"eventId", "traceId"}}
+    fingerprint = hashlib.sha256(json.dumps(logical, sort_keys=True).encode()).hexdigest()
+    return payload, fingerprint
+
+
 class TaskStore:
     def __init__(self, path):
         if not path or path == ":memory:":
@@ -78,9 +85,7 @@ class TaskStore:
                 fcntl.flock(lock, fcntl.LOCK_UN)
 
     def accept(self, task: TaskEnvelope):
-        payload = task.model_dump(mode="json", by_alias=True)
-        logical = {k: v for k, v in payload.items() if k not in {"eventId", "traceId"}}
-        fingerprint = hashlib.sha256(json.dumps(logical, sort_keys=True).encode()).hexdigest()
+        payload, fingerprint = task_payload(task)
         key = operation_id(task)
         refs = (task.thread_id, str(task.task_id), str(task.case_id), str(task.snapshot_id),
                 task.expected_evidence_version)
