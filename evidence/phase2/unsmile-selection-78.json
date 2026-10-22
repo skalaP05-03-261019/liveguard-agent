@@ -1,0 +1,75 @@
+{
+  "kind": "local-source-selection-only",
+  "sourceUrl": "https://github.com/smilegate-ai/korean_unsmile_dataset",
+  "sourceRevision": "569ab5f495e046911898805d3bee92469988dcd9",
+  "sourceSha256": {
+    "train": "f560a2f624d98f7cd9dc5ec6e5368efb7edd9bfc01cfa963538facfad9fc6001",
+    "valid": "b391af71ab352eea27cecac0ff059fe2ed72d7c99585c10e86ce77a75bd12e42"
+  },
+  "seed": "liveguard-phase2-20261022-v1",
+  "perBucket": 4,
+  "development": {
+    "sourceRows": 15005,
+    "selected": 40,
+    "primaryBuckets": {
+      "지역": 4,
+      "여성/가족": 4,
+      "남성": 4,
+      "성소수자": 4,
+      "인종/국적": 4,
+      "연령": 4,
+      "종교": 4,
+      "기타 혐오": 4,
+      "악플/욕설": 4,
+      "clean": 4
+    },
+    "excludedNormalizedOverlap": 0,
+    "withinSourceDuplicates": 1
+  },
+  "confirmation": {
+    "sourceRows": 3737,
+    "selected": 40,
+    "primaryBuckets": {
+      "지역": 4,
+      "여성/가족": 4,
+      "남성": 4,
+      "성소수자": 4,
+      "인종/국적": 4,
+      "연령": 4,
+      "종교": 4,
+      "기타 혐오": 4,
+      "악플/욕설": 4,
+      "clean": 4
+    },
+    "excludedNormalizedOverlap": 0,
+    "withinSourceDuplicates": 0
+  },
+  "authoredDevelopmentInputsExcluded": 36,
+  "serviceLabelsAssigned": 0,
+  "modelCalls": 0,
+  "humanReviewCompleted": false,
+  "limits": [
+    "Stratified review sample, not source prevalence or performance evidence.",
+    "Normalized overlap checks do not detect paraphrases; review groupId manually.",
+    "Source labels are not service candidate/violation labels.",
+    "Confirmation text must not be used for prompt tuning."
+  ],
+  "issue": 78,
+  "aiDevelopmentDrafts": {
+    "candidate": 28,
+    "normal": 5,
+    "needsDiscussion": 7
+  },
+  "finalReviewOwner": "team-policy-and-QA",
+  "approvedServiceCases": 0,
+  "confirmationDrafts": 0,
+  "sourceBindingPassed": true,
+  "pendingExportRejected": true,
+  "verification": {
+    "tests": 363,
+    "skipped": 0,
+    "transport": "ASGI + TCP",
+    "database": "isolated PostgreSQL/pgvector test container",
+    "model": "controlled test doubles; no real model quality evaluation"
+  }
+}
