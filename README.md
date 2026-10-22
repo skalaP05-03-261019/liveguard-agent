@@ -19,6 +19,12 @@ HTTP 실행기·영속 inbox·서비스 인증은 [#10 실행기 문서](docs/AI
 
 ## 실행
 
+다중 API 접수는 [#58 공유 Inbox 모드](docs/AI1-10-task-runtime.md)를 사용한다.
+`AGENT_INBOX_DB_URL`과 `AGENT_SERVICE_TOKEN`을 설정하면 같은 PostgreSQL Inbox에
+접수·중복 판별·상태 조회를 수행하고, API 프로세스는 Graph를 시작하지 않는다.
+공유 Inbox의 실행 Worker/lease는 후속 범위이므로 이 모드만으로 검사가 실행되지는 않는다.
+미설정 시 기존 로컬 SQLite+Graph 실행 모드를 유지한다.
+
 ```bash
 cd liveguard-agent
 uv sync
