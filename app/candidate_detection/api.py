@@ -25,11 +25,12 @@ def failure(status, code, request_id=None):
 
 class RequestBoundary:
     """Authenticate before reading chat; bound streamed bodies before JSON parsing."""
-    def __init__(self, app, *, token):
+    def __init__(self, app, *, token, prefix='/agent/candidates', body_path=PATH, max_body_bytes=32768):
         self.app, self._token = app, token
+        self.prefix, self.body_path, self.max_body_bytes = prefix, body_path, max_body_bytes
 
     async def __call__(self, scope, receive, send):
-        if scope['type'] != 'http' or not scope.get('path', '').startswith('/agent/candidates'):
+        if scope['type'] != 'http' or not scope.get('path', '').startswith(self.prefix):
             return await self.app(scope, receive, send)
         expected = self._token
         if not expected.strip():
@@ -38,14 +39,14 @@ class RequestBoundary:
         if not authorization.startswith('Bearer ') or not hmac.compare_digest(
                 authorization[7:].encode(), expected.encode()):
             return await failure(401, 'UNAUTHENTICATED')(scope, receive, send)
-        if scope.get('path') == PATH and scope.get('method') == 'POST':
+        if scope.get('path') == self.body_path and scope.get('method') == 'POST':
             body = bytearray()
             while True:
                 event = await receive()
                 if event['type'] == 'http.disconnect':
                     return
                 chunk = event.get('body', b'')
-                if len(body) + len(chunk) > 32768:
+                if len(body) + len(chunk) > self.max_body_bytes:
                     return await failure(413, 'REQUEST_TOO_LARGE')(scope, receive, send)
                 body.extend(chunk)
                 if not event.get('more_body', False):

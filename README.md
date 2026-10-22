@@ -7,6 +7,8 @@ Business/RAG MCP 조회와 실제 OpenAI 검증 결과는 각 이슈의 증거�
 
 ## Phase 2 · 공유 기획과 태관 후보 판별 개발
 
+[조사 초안 API/CLI](docs/phase2/draft-service-65.md)는 기존 조사 Harness와 Business/RAG 조회를 연결합니다. 결과 제출·승인·집행 없이 검증된 초안만 반환합니다.
+
 [후보 API·BE 사건 검증·세원 조사 인계 계약/예제](docs/phase2/handoff-63.md)를 추가했습니다. 독립 서비스이며 기존 Worker와 승인 Graph에는 아직 연결하지 않습니다.
 
 [기획·역할·미정 사항](docs/phase2/README.md)과 [후보 판별/평가기 실행법](docs/phase2/implementation-61.md)을 추가했습니다. 새 모듈은 독립 실험용이며 기본 서비스 API·조사/승인·공유 Inbox/Worker에 연결하지 않습니다. 요약 기술은 세원님 담당으로 진행하되 이용 역할·시점은 추후 결정합니다. 실험용 신호 선택을 고객사 정책 확정이나 실제 제재로 해석하지 않습니다.
