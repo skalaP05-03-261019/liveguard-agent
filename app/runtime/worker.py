@@ -75,7 +75,7 @@ class GraphWorker:
 
     async def close(self):
         self.stop_claiming()
-        if self.worker is None:
+        if self.worker is None or self.worker.cancelled():
             return
         try:
             await asyncio.wait_for(asyncio.shield(self.worker), self.settings.shutdown_seconds)
