@@ -1,0 +1,226 @@
+[
+  {
+    "id": "P2R-01",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "c53621e7-30da-5eab-822b-2886fa2e7f85",
+        "text": "씨바 너는 매번 남 탓만 하는구나"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "PROFANITY_VARIANT"
+    ]
+  },
+  {
+    "id": "P2R-02",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "66a47607-122e-5400-bd18-3aac562d2ba1",
+        "text": "fuck you, get out of our chat"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "PROFANITY_VARIANT"
+    ]
+  },
+  {
+    "id": "P2R-03",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "f84edbb1-e1d3-53a5-b4e6-743bd1f1d0c3",
+        "text": "저 지역에서 왔다는 이유만으로 다 멍청해 보인다"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "REGION_DISPARAGEMENT"
+    ]
+  },
+  {
+    "id": "P2R-04",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "ff1d90b0-46fd-50ca-9b52-145a72cbf639",
+        "text": "그 나라 출신이면 여기서 의견 낼 자격 없어"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "GROUP_HATE"
+    ]
+  },
+  {
+    "id": "P2R-05",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "e6f7217b-fb3b-57f4-a9b5-d7844afead57",
+        "text": "나이 많은 시청자는 이해력이 없으니 전부 나가"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "GROUP_HATE"
+    ]
+  },
+  {
+    "id": "P2R-06",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "83bc5e34-6da6-5562-9563-acbe3d87ff9d",
+        "text": "여성이라는 이유로 이 대회에는 참가하면 안 돼"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "GROUP_HATE"
+    ]
+  },
+  {
+    "id": "P2R-07",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "5f035252-fa4b-5cdc-83dd-85c881ed8caa",
+        "text": "준호야 넌 도움이 안 되는 인간이야 채팅 그만해"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "TARGETED_ATTACK"
+    ]
+  },
+  {
+    "id": "P2R-08",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "e4bb5783-4ac2-57b5-b1a7-0c6748e5d0c5",
+        "text": "그 동네 사람은 누구든 우리 방송에서 받아주지 말자"
+      },
+      "context": []
+    },
+    "expectedCandidate": true,
+    "expectedKinds": [
+      "REGION_DISPARAGEMENT"
+    ]
+  },
+  {
+    "id": "P2R-09",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "83309241-9f1d-58f2-87c7-4c510f1ac257",
+        "text": "시바견 산책시키고 방송 보러 왔어요"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2R-10",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "814888b8-72f7-5b36-907a-51a4256e7d25",
+        "text": "이번 기획의 시발점은 고객 인터뷰였습니다"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2R-11",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "7b46cc93-54be-58e4-80bc-323770df29ce",
+        "text": "표에 적힌 시발역과 종착역을 확인해 주세요"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2R-12",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "abf723ad-7c77-591a-9cf3-d9d8dba27221",
+        "text": "지역마다 서버 지연 시간이 다른지 궁금해요"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2R-13",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "3651c8c2-3a48-576b-bd25-f1105fb1eef6",
+        "text": "출신 지역으로 사람을 배제하면 안 됩니다"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2R-14",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "0b3bab49-876f-551c-8394-0fdf07112ad4",
+        "text": "이번 경기 운영은 아쉬웠지만 다음 경기를 응원해요"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2R-15",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "e59b717e-a430-5f29-b545-4d0b8b9bafd1",
+        "text": "어느 나라에서 왔든 함께 방송을 즐겨요"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  },
+  {
+    "id": "P2R-16",
+    "input": {
+      "liveId": "85776706-a098-5bf9-ad04-d9ad96116884",
+      "target": {
+        "messageId": "7d185bf4-fc76-5e92-9ecb-0e34026080c9",
+        "text": "연령에 상관없이 게임을 즐길 권리가 있어요"
+      },
+      "context": []
+    },
+    "expectedCandidate": false,
+    "expectedKinds": []
+  }
+]

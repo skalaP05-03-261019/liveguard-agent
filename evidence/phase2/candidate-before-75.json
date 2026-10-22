@@ -1,0 +1,461 @@
+{
+  "kind": "candidate-screening-only",
+  "datasetSha256": "609933a4d69b840d305da4ab7ff3ec7ce35366c14b11586e7dbe12cf36152b0e",
+  "total": 20,
+  "assessed": 20,
+  "errors": 0,
+  "coverage": 1.0,
+  "experiments": {
+    "clear-only": {
+      "assessedOnly": {
+        "tp": 6,
+        "fp": 0,
+        "tn": 10,
+        "fn": 4,
+        "precision": 1.0,
+        "recall": 0.6,
+        "f1": 0.75,
+        "normalCandidateRate": 0.0
+      },
+      "candidateCount": 6,
+      "missedExpectedCandidatesIncludingErrors": 4
+    },
+    "clear-or-possible": {
+      "assessedOnly": {
+        "tp": 7,
+        "fp": 1,
+        "tn": 9,
+        "fn": 3,
+        "precision": 0.875,
+        "recall": 0.7,
+        "f1": 0.7778,
+        "normalCandidateRate": 0.1
+      },
+      "candidateCount": 8,
+      "missedExpectedCandidatesIncludingErrors": 3
+    },
+    "include-uncertain": {
+      "assessedOnly": {
+        "tp": 10,
+        "fp": 1,
+        "tn": 9,
+        "fn": 0,
+        "precision": 0.9091,
+        "recall": 1.0,
+        "f1": 0.9524,
+        "normalCandidateRate": 0.1
+      },
+      "candidateCount": 11,
+      "missedExpectedCandidatesIncludingErrors": 0
+    }
+  },
+  "riskKindLabeledAssessed": 18,
+  "riskKindsAssessedOnly": {
+    "REGION_DISPARAGEMENT": {
+      "tp": 3,
+      "fp": 0,
+      "tn": 15,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "normalCandidateRate": 0.0
+    },
+    "GROUP_HATE": {
+      "tp": 3,
+      "fp": 0,
+      "tn": 15,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "normalCandidateRate": 0.0
+    },
+    "TARGETED_ATTACK": {
+      "tp": 2,
+      "fp": 0,
+      "tn": 16,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "normalCandidateRate": 0.0
+    },
+    "PROFANITY_VARIANT": {
+      "tp": 1,
+      "fp": 1,
+      "tn": 16,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.6667,
+      "normalCandidateRate": 0.0588
+    }
+  },
+  "latencyMs": {
+    "p50": 1187.04,
+    "p95": 1793.15
+  },
+  "usage": {
+    "inputTokens": 20248,
+    "outputTokens": 1785
+  },
+  "results": [
+    {
+      "id": "P2-01",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "REGION_DISPARAGEMENT"
+      ],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": true
+      },
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 163
+      },
+      "latencyMs": 2226.62
+    },
+    {
+      "id": "P2-02",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "REGION_DISPARAGEMENT"
+      ],
+      "candidates": {
+        "clear-only": true,
+        "clear-or-possible": true,
+        "include-uncertain": true
+      },
+      "usage": {
+        "inputTokens": 1004,
+        "outputTokens": 112
+      },
+      "latencyMs": 1533.19
+    },
+    {
+      "id": "P2-03",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "GROUP_HATE"
+      ],
+      "candidates": {
+        "clear-only": true,
+        "clear-or-possible": true,
+        "include-uncertain": true
+      },
+      "usage": {
+        "inputTokens": 1004,
+        "outputTokens": 123
+      },
+      "latencyMs": 1187.04
+    },
+    {
+      "id": "P2-04",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "GROUP_HATE"
+      ],
+      "candidates": {
+        "clear-only": true,
+        "clear-or-possible": true,
+        "include-uncertain": true
+      },
+      "usage": {
+        "inputTokens": 1008,
+        "outputTokens": 121
+      },
+      "latencyMs": 1286.75
+    },
+    {
+      "id": "P2-05",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "GROUP_HATE"
+      ],
+      "candidates": {
+        "clear-only": true,
+        "clear-or-possible": true,
+        "include-uncertain": true
+      },
+      "usage": {
+        "inputTokens": 1008,
+        "outputTokens": 119
+      },
+      "latencyMs": 1225.09
+    },
+    {
+      "id": "P2-06",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "PROFANITY_VARIANT",
+        "TARGETED_ATTACK"
+      ],
+      "candidates": {
+        "clear-only": true,
+        "clear-or-possible": true,
+        "include-uncertain": true
+      },
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 191
+      },
+      "latencyMs": 1636.02
+    },
+    {
+      "id": "P2-07",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "TARGETED_ATTACK"
+      ],
+      "candidates": {
+        "clear-only": true,
+        "clear-or-possible": true,
+        "include-uncertain": true
+      },
+      "usage": {
+        "inputTokens": 1008,
+        "outputTokens": 131
+      },
+      "latencyMs": 1386.51
+    },
+    {
+      "id": "P2-08",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "REGION_DISPARAGEMENT"
+      ],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": true,
+        "include-uncertain": true
+      },
+      "usage": {
+        "inputTokens": 1014,
+        "outputTokens": 129
+      },
+      "latencyMs": 1214.08
+    },
+    {
+      "id": "P2-09",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 22
+      },
+      "latencyMs": 955.63
+    },
+    {
+      "id": "P2-10",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 1002,
+        "outputTokens": 22
+      },
+      "latencyMs": 840.0
+    },
+    {
+      "id": "P2-11",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 1012,
+        "outputTokens": 22
+      },
+      "latencyMs": 932.79
+    },
+    {
+      "id": "P2-12",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 1010,
+        "outputTokens": 22
+      },
+      "latencyMs": 1065.63
+    },
+    {
+      "id": "P2-13",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 1006,
+        "outputTokens": 22
+      },
+      "latencyMs": 849.56
+    },
+    {
+      "id": "P2-14",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 1002,
+        "outputTokens": 22
+      },
+      "latencyMs": 826.96
+    },
+    {
+      "id": "P2-15",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "PROFANITY_VARIANT"
+      ],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": true,
+        "include-uncertain": true
+      },
+      "usage": {
+        "inputTokens": 1004,
+        "outputTokens": 151
+      },
+      "latencyMs": 1580.36
+    },
+    {
+      "id": "P2-16",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 22
+      },
+      "latencyMs": 764.89
+    },
+    {
+      "id": "P2-17",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "GROUP_HATE"
+      ],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": true
+      },
+      "usage": {
+        "inputTokens": 1006,
+        "outputTokens": 183
+      },
+      "latencyMs": 1767.27
+    },
+    {
+      "id": "P2-18",
+      "expectedCandidate": true,
+      "status": "ASSESSED",
+      "riskKinds": [
+        "TARGETED_ATTACK"
+      ],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": true
+      },
+      "usage": {
+        "inputTokens": 1002,
+        "outputTokens": 164
+      },
+      "latencyMs": 1793.15
+    },
+    {
+      "id": "P2-19",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 1083,
+        "outputTokens": 22
+      },
+      "latencyMs": 753.34
+    },
+    {
+      "id": "P2-20",
+      "expectedCandidate": false,
+      "status": "ASSESSED",
+      "riskKinds": [],
+      "candidates": {
+        "clear-only": false,
+        "clear-or-possible": false,
+        "include-uncertain": false
+      },
+      "usage": {
+        "inputTokens": 1075,
+        "outputTokens": 22
+      },
+      "latencyMs": 692.15
+    }
+  ],
+  "limits": [
+    "Selection experiments are not customer policy or calibrated probabilities.",
+    "Metrics are conditional on assessed rows; coverage and errors must also be shown.",
+    "Candidate classification is not a violation finding or human decision.",
+    "No Backend delivery, hiding, enforcement, production throughput or Phase 1 baseline is proven.",
+    "Token counts are not monetary cost; pricing is not inferred."
+  ],
+  "execution": {
+    "mode": "live-model",
+    "sourceModel": "gpt-5.4-mini",
+    "promptSha256": "21d01675e94f76361f37fb89288d6412dfd0459318b8943db023663bf80b5225",
+    "timeoutSeconds": 20.0
+  }
+}
