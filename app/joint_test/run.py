@@ -171,18 +171,36 @@ def decide(operator, review, decision, message_id):
 
 
 def provenance(environment):
-    def image(value):
-        raw = checked(["docker", "image", "inspect", "--format",
-                       '{{json .Id}}', value])
-        label = checked(["docker", "image", "inspect", "--format",
-                         '{{index .Config.Labels "liveguard.test.source-sha256"}}', value])
-        return {"tag": value, "id": json.loads(raw), "sourceFingerprint": label}
+    services = (
+        "controlled-fixture", "agent-api", "worker-1", "worker-2",
+        "mcp-1", "mcp-2", "backend",
+    )
+    images = {}
+    for service in services:
+        containers = environment.compose("ps", "-q", service).splitlines()
+        if not containers:
+            raise JointError("TESTED_CONTAINER_REQUIRED_" + service.upper().replace("-", "_"))
+        images[service] = []
+        for container in containers:
+            image_id = checked(["docker", "inspect", "--format", "{{.Image}}", container])
+            fingerprint = checked(["docker", "image", "inspect", "--format",
+                                   '{{index .Config.Labels "liveguard.test.source-sha256"}}',
+                                   image_id])
+            images[service].append({"id": image_id, "sourceFingerprint": fingerprint})
+
+    for replicas, code in (
+        (("worker-1", "worker-2"), "MIXED_WORKER_IMAGES"),
+        (("mcp-1", "mcp-2"), "MIXED_MCP_IMAGES"),
+    ):
+        image_ids = {image["id"] for service in replicas for image in images[service]}
+        if len(image_ids) != 1:
+            raise JointError(code)
+
     return {
         "agentRevision": checked(["git", "rev-parse", "HEAD"], cwd=ROOT),
         "agentDirty": bool(checked(["git", "status", "--porcelain", "--untracked-files=normal"], cwd=ROOT)),
         "backendRevision": environment.environment["BE_REVISION"],
-        "agentImage": image(environment.environment["AGENT_IMAGE"]),
-        "backendImage": image(environment.environment["BE_IMAGE"]),
+        "services": images,
         "backendTestAssetsRevision": checked(["git", "rev-parse", "HEAD"], cwd=environment.be),
         "policySha256": hashlib.sha256(
             (ROOT / "app/rag_mcp/policies/policy-v3.1.md").read_bytes()).hexdigest(),

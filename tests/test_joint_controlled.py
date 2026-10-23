@@ -21,7 +21,7 @@ from app.harness.checkpoint import state_serializer
 from app.integration.workflow import build_moderation_graph
 from app.investigation.model import ModelTurn, ToolCall
 from app.joint_test.fixture import controlled_call, create_app, PolicyFixture, NoEmbedding
-from app.joint_test.run import init, JointEnvironment, JointError, wait_job, poll
+from app.joint_test.run import init, JointEnvironment, JointError, wait_job, poll, provenance
 from app.joint_test.remaining import receipt_loss, load, deadlines
 from app.rag_mcp.tools import register_tools
 from app.schemas import TaskEnvelope
@@ -97,6 +97,50 @@ class ControlledTests(unittest.TestCase):
             self.assertEqual(wait_job(None, str(uuid4()), {"UNKNOWN", "NEEDS_REVIEW"}), safe)
             with self.assertRaises(JointError):
                 wait_job(None, str(uuid4()), "SUCCEEDED")
+
+    def test_provenance_uses_running_container_images_and_rejects_mixed_replicas(self):
+        service_containers = {
+            "controlled-fixture": ["fixture-container"],
+            "agent-api": ["api-container"],
+            "worker-1": ["worker-1-container"],
+            "worker-2": ["worker-2-container"],
+            "mcp-1": ["mcp-1-container"],
+            "mcp-2": ["mcp-2-container"],
+            "backend": ["backend-container"],
+        }
+        container_images = {
+            container: "sha256:backend" if service == "backend" else "sha256:agent"
+            for service, containers in service_containers.items()
+            for container in containers
+        }
+        environment = MagicMock()
+        environment.compose.side_effect = lambda *args: "\n".join(service_containers[args[-1]])
+        environment.environment = {"BE_REVISION": "backend-revision"}
+        environment.be = Path(".")
+
+        def inspect(command, **kwargs):
+            if command[:2] == ["git", "rev-parse"]:
+                return "revision"
+            if command[:2] == ["git", "status"]:
+                return ""
+            if command[:2] == ["docker", "inspect"]:
+                return container_images[command[-1]]
+            return "fingerprint-" + command[-1]
+
+        with patch("app.joint_test.run.checked", side_effect=inspect) as checked_command:
+            result = provenance(environment)
+        self.assertEqual(set(result["services"]), set(service_containers))
+        self.assertEqual(result["services"]["worker-1"][0]["id"], "sha256:agent")
+        self.assertEqual(result["services"]["backend"][0]["id"], "sha256:backend")
+        image_inspections = [call.args[0] for call in checked_command.call_args_list
+                             if call.args[0][:3] == ["docker", "image", "inspect"]]
+        self.assertTrue(image_inspections)
+        self.assertTrue(all(command[-1].startswith("sha256:") for command in image_inspections))
+
+        container_images["worker-2-container"] = "sha256:mixed"
+        with patch("app.joint_test.run.checked", side_effect=inspect):
+            with self.assertRaisesRegex(JointError, "MIXED_WORKER_IMAGES"):
+                provenance(environment)
 
     def test_real_intake_proxy_loses_only_committed_receipt_and_preserves_auth(self):
         with patch.dict(os.environ, {
