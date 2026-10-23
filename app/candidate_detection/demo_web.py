@@ -39,7 +39,7 @@ class LocalDemoBoundary:
         name = host.partition(':')[0]
         if name not in {'127.0.0.1', 'localhost'}:
             return await fail(403, 'LOCAL_HOST_REQUIRED')(scope, receive, send)
-        if scope.get('path') == '/api/screen':
+        if scope.get('path') in {'/api/screen', '/api/compare'}:
             if scope.get('method') != 'POST':
                 return await fail(405, 'METHOD_NOT_ALLOWED')(scope, receive, send)
             if headers.get('origin') != 'http://' + host:

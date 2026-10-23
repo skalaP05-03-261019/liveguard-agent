@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LIVE:GUARD · GPT / UnSmile 비교 실험</title>
+  <link rel="stylesheet" href="/compare.css">
+  <script src="/compare.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div class="eyebrow">LIVE:GUARD / LOCAL EXPERIMENT</div>
+      <h1>같은 채팅, 두 모델</h1>
+      <p>GPT 후보 조사와 UnSmile 문장 분류를 나란히 봅니다. 어느 쪽도 운영 정책 위반을 확정하거나 채팅을 가리지 않습니다.</p>
+    </header>
+    <section class="composer" aria-label="채팅 입력">
+      <label for="message">시험할 채팅</label>
+      <textarea id="message" maxlength="500" rows="3" placeholder="채팅 내용을 입력하세요"></textarea>
+      <div class="actions"><span id="count">0 / 500</span><button id="submit" type="button">두 모델 비교</button></div>
+      <div class="examples">
+        <button type="button" data-example="오늘 경기 정말 재밌네요">일상 대화</button>
+        <button type="button" data-example="씨바 너 때문에 졌잖아">변형 욕설</button>
+        <button type="button" data-example="저 지역에서 왔다는 이유만으로 다 멍청해 보인다">지역 비하</button>
+      </div>
+    </section>
+    <p id="notice" role="status">모델 연결을 확인 중입니다…</p>
+    <section class="results" aria-label="비교 결과">
+      <article class="card" id="gpt-card">
+        <div class="card-head"><h2>GPT 후보 탐지</h2><span id="gpt-time">—</span></div>
+        <strong id="gpt-verdict">입력을 기다리는 중</strong>
+        <p id="gpt-detail">대상 채팅과 앞선 문맥을 보고 위험 신호와 근거를 제안합니다.</p>
+        <div id="gpt-signals" class="signals"></div>
+      </article>
+      <article class="card" id="unsmile-card">
+        <div class="card-head"><h2>UnSmile .pkl</h2><span id="unsmile-time">—</span></div>
+        <strong id="unsmile-verdict">입력을 기다리는 중</strong>
+        <p id="unsmile-detail">대상 문장 하나의 다중 라벨 점수입니다. 문맥·정책 근거는 포함하지 않습니다.</p>
+        <div id="unsmile-scores" class="scores"></div>
+      </article>
+    </section>
+    <aside>비교 기준: 같은 대상 문장 / GPT는 최대 8개 이전 채팅도 사용 / UnSmile은 단일 문장만 사용. 라벨 점수는 확률 보정이나 서비스 정확도 수치가 아닙니다.</aside>
+  </main>
+</body>
+</html>
