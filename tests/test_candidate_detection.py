@@ -58,8 +58,28 @@ class CandidateTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([t['function']['name'] for t in model.calls[0][1]], ['report_candidate_signals'])
         schema = model.calls[0][1][0]['function']['parameters']['$defs']['Quote']['properties']
         self.assertIn(TARGET, schema['messageId']['enum'])
-        self.assertIn(data.target.text, schema['text']['enum'])
+        self.assertNotIn('text', schema)
         self.assertEqual(usage, {'inputTokens': 20, 'outputTokens': 10})
+
+    async def test_message_references_restore_only_supplied_exact_chat_text(self):
+        data = sample()
+        before = data.model_dump()
+        body = signal()
+        body['signals'][0]['evidence'] = [{'messageId': TARGET}, {'messageId': CONTEXT}]
+        model = Model(body)
+        assessment, _ = await CandidateScreen(model).assess(data, trace_id=TRACE)
+        self.assertEqual([(str(q.message_id), q.text) for q in assessment.signals[0].evidence],
+                         [(TARGET, data.target.text), (CONTEXT, data.context[0].text)])
+        self.assertEqual(data.model_dump(), before)
+        self.assertNotIn('text', model.arguments['signals'][0]['evidence'][0])
+
+    async def test_unknown_reference_and_context_only_reference_stay_rejected(self):
+        for refs in ([{'messageId': TRACE}], [{'messageId': CONTEXT}]):
+            body = signal()
+            body['signals'][0]['evidence'] = refs
+            with self.subTest(refs=refs), self.assertRaises(AgentToolError) as error:
+                await CandidateScreen(Model(body)).assess(sample(), trace_id=TRACE)
+            self.assertEqual(error.exception.code, 'INVALID_MODEL_OUTPUT')
 
     async def test_missing_or_invented_evidence_and_extra_action_are_rejected(self):
         invented = signal(); invented['signals'][0]['evidence'][0]['text'] = '없는 발언'
