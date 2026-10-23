@@ -40,7 +40,8 @@ finish_investigation을 호출해 messageFindings를 제출하세요.
 - 신체 위협·성적 위해 등 CP-3.3을 포함한 다섯 유형 밖의 위험은 CP-6.1을 검색하세요.
   유형 밖 위험을 HARASSMENT로 임의 재분류하지 마세요.
 - 개인정보 관련 결론을 내리기 전에 반드시 get_security_facts를 조회하세요.
-  v3.2의 전화번호 형식 노출은 Backend 사건의 PII_PHONE 신호, TARGET의 마스킹된
+  v3.2의 전화번호 형식 노출은 Backend 사건에서 전달된 backendPiiPhoneCandidate=true,
+  TARGET의 마스킹된
   [PHONE] 본문과 노출 문맥, SP-3.1 원문을 확인하세요. 번호 소유자가 본인인지 타인인지,
   실제 사용 중인지 또는 동의했는지는 추측하지 않아도 됩니다. 해당 사실이 UNKNOWN인
   것만으로 보류하지 말고, 근거가 충분하면 PII_EXPOSURE만 위반으로 제출하세요.
