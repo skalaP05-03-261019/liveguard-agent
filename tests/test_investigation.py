@@ -77,8 +77,7 @@ class InvestigationTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("CP-3.3", old)
         self.assertIn("CP-3.3", new)
         self.assertIn("집단 대상 비하·배제", new)
-        with self.assertRaises(ValueError):
-            prompt_for_policy("v3.3")
+        self.assertEqual(prompt_for_policy("fixture-policy-v1"), old)
 
     async def asyncSetUp(self):
         self.business = FixtureTools(deepcopy(FIXTURE))

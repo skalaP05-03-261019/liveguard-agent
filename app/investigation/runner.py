@@ -31,12 +31,9 @@ PROMPT_V32 = PROMPT.with_name("investigator-v3.2.md")
 
 
 def prompt_for_policy(version: str) -> str:
-    """Keep legacy case instructions intact when a newer policy is deployed."""
-    if version == "v3.1":
-        return PROMPT.read_text(encoding="utf-8")
-    if version == "v3.2":
-        return PROMPT_V32.read_text(encoding="utf-8")
-    raise ValueError(f"Unsupported investigation policy version: {version}")
+    """Use new instructions only for v3.2; preserve all prior snapshot behavior."""
+    source = PROMPT_V32 if version == "v3.2" else PROMPT
+    return source.read_text(encoding="utf-8")
 
 
 class SearchRequest(Contract):
@@ -175,11 +172,7 @@ async def run_investigation(state: dict, *, model: InvestigationModel, business,
     if len(initial) > 48_000:
         raise AgentToolError("MODEL_CONTEXT_LIMIT", trace_id=trace_id)
     incomplete_context = "[TRUNCATED]" in initial
-    try:
-        system_prompt = prompt_for_policy(working["policy_version"])
-    except ValueError:
-        raise AgentToolError("INVALID_INPUT", trace_id=trace_id) from None
-    messages = [{"role": "system", "content": system_prompt},
+    messages = [{"role": "system", "content": prompt_for_policy(working["policy_version"])},
                 {"role": "user", "content": initial}]
     usage = []
     seen_calls = set()
