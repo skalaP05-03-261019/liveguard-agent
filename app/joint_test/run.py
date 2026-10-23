@@ -434,6 +434,8 @@ def main():
             else:
                 if not args.report:
                     raise JointError("REPORT_PATH_REQUIRED")
+                if args.report.exists():
+                    raise JointError("REPORT_ALREADY_EXISTS")
                 execute(environment, report)
         print("JOINT96_" + ("PASS" if args.command != "run" else report["status"]))
         return 0
@@ -444,9 +446,10 @@ def main():
         print("JOINT96_FAILED: " + report["errorCode"])
         return 1
     finally:
-        if args.command == "run" and args.report:
+        if args.command == "run" and args.report and not args.report.exists():
             args.report.parent.mkdir(parents=True, exist_ok=True)
-            args.report.write_text(json.dumps(report, indent=2, ensure_ascii=True) + "\n")
+            with args.report.open("x") as file:
+                file.write(json.dumps(report, indent=2, ensure_ascii=True) + "\n")
 
 
 if __name__ == "__main__":
