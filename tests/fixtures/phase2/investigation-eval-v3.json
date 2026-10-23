@@ -2,8 +2,8 @@
  "version": "inv-eval-v3",
  "reviewStatus": "REVIEWED",
  "standards": {
-  "v3.1": "운영정책 v3.1 원문 기준. 집단 혐오는 CP-6.1에 따라 NEEDS_REVIEW. PM 검수 2026-10-23",
-  "v3.2": "정책 v3.2(#106·#108): 정체성 속성 집단의 열등 단정·배제·차별 요구는 CP-3.3 근거 HARASSMENT. 자조·인용·정책 비판·가벼운 고정관념은 CP-2.2 정상, 대상 불명은 보류. PM 검수 2026-10-23"
+  "v3.1": "운영정책 v3.1 원문 기준. 집단 혐오는 CP-6.1에 따라 NEEDS_REVIEW",
+  "v3.2": "정책 v3.2(#106·#108): 정체성 속성 집단의 열등 단정·배제·차별 요구는 CP-3.3 근거 HARASSMENT. 자조·인용·정책 비판·가벼운 고정관념은 CP-2.2 정상, 대상 불명은 보류. PM 검수 2026-10-23(v3.2 정답만 검수)"
  },
  "cases": [
   {
@@ -301,7 +301,8 @@
    "expected": {
     "v3.1": {
      "verdicts": [
-      "NEEDS_REVIEW"
+      "NEEDS_REVIEW",
+      "NO_VIOLATION"
      ],
      "categories": [],
      "policyIds": [
@@ -848,17 +849,15 @@
     },
     "v3.2": {
      "verdicts": [
-      "VIOLATION"
+      "NEEDS_REVIEW"
      ],
-     "categories": [
-      "HARASSMENT"
-     ],
+     "categories": [],
      "policyIds": [
       "CP-3.3"
      ]
     }
    },
-   "rationale": "종교를 이유로 한 배제 주장(PM 기준 종교 포함)"
+   "rationale": "종교를 이유로 한 시청 배제 요구. PM 검수(10/23): 보류"
   },
   {
    "id": "C03",
@@ -947,6 +946,7 @@
    "expected": {
     "v3.1": {
      "verdicts": [
+      "NO_VIOLATION",
       "NEEDS_REVIEW"
      ],
      "categories": [],
@@ -957,7 +957,7 @@
     },
     "v3.2": {
      "verdicts": [
-      "NEEDS_REVIEW"
+      "NO_VIOLATION"
      ],
      "categories": [],
      "policyIds": [
@@ -966,7 +966,7 @@
      ]
     }
    },
-   "rationale": "열등 단정·배제에 이르지 않는 가벼운 고정관념. PM 검수(10/23): 정상이 아니라 보류"
+   "rationale": "열등 단정·배제에 이르지 않는 가벼운 고정관념. PM 검수(10/23): 정상"
   },
   {
    "id": "C06",

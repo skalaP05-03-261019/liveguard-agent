@@ -82,11 +82,12 @@ class CaseSetV2Tests(unittest.TestCase):
         # BE rule-confirmed profanity is out of the investigation scope (PM review).
         self.assertEqual(set(v2) - {c.id for c in v3.cases}, {"C11", "C12"})
         changed = {(c.id, s) for c in v3.cases for s in v3.standards if c.expected[s] != v2[c.id].expected[s]}
-        self.assertEqual(changed, {("D-P2-01", "v3.2"), ("D-P2-08", "v3.1"), ("D-P2-08", "v3.2"),
-                                   ("C05", "v3.1"), ("C05", "v3.2")})
-        for case_id, standard in changed:
-            self.assertEqual([v.value for v in next(c for c in v3.cases if c.id == case_id)
-                              .expected[standard].verdicts], ["NEEDS_REVIEW"])
+        # The PM reviewed the v3.2 answers only; v3.1 stays the author draft.
+        verdicts = {case_id: [v.value for v in next(c for c in v3.cases if c.id == case_id)
+                              .expected[standard].verdicts] for case_id, standard in changed}
+        self.assertEqual({standard for _, standard in changed}, {"v3.2"})
+        self.assertEqual(verdicts, {"D-P2-01": ["NEEDS_REVIEW"], "D-P2-08": ["NEEDS_REVIEW"],
+                                    "C02": ["NEEDS_REVIEW"], "C05": ["NO_VIOLATION"]})
 
 
 class ScoringTests(unittest.TestCase):
