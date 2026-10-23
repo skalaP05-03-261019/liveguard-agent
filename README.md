@@ -49,6 +49,15 @@ legacy 공정성 버킷으로 처리하며 방송별 공정성을 보장하는 �
 영속 대기한다. #74의 결정 검증·대기 슬롯 해제·복구 절차는 위 운영 문서를 따른다.
 미설정 시 기존 로컬 SQLite+Graph 실행 모드를 유지한다.
 
+### 실제 Spring BE 공동 통제 시험 (#96)
+
+BE #76의 공동 Compose를 그대로 재사용하며, 모델과 정책 조회만 로컬 통제 fixture를 쓴다.
+외부 모델/임베딩 키 없이 실제 채팅 → Outbox → 공유 Worker 조사 → CONTEXT/DEFER →
+별도 KICK 승인 흐름을 실행한다. Worker 교체·모델 429/timeout·변경 응답 유실의
+실행 명령, 이미지 고정, 안전한 보고서 수집은
+[#96 공동 시험 실행법](docs/AI1-96-joint-controlled.md)을 따른다.
+이 시험의 PASS는 통제 시나리오 충족이며 실제 모델 정확도나 #96 전체 부하 인증을 뜻하지 않는다.
+
 ```bash
 cd liveguard-agent
 uv sync
@@ -182,7 +191,10 @@ fixture 전체는 HTTP 요청이 아니다. POST에는 새 fixture의 `task`만 
 - 입력은 snapshotId·expectedEvidenceVersion 기반이다. 구 expectedCaseVersion·attempt·NOTIFY는 더 이상 받지 않는다.
 - AnalysisResult는 5개 유형의 메시지별 판정을 표현하며 제재 기간은 포함하지 않는다. 기존 단일 판단/300초 후보는 아직 미구현인 legacy Graph에만 남아 있으며 다음 PR에서 교체한다.
 - 활성 정책 버전·기간표, 실제 Backend 응답/결과 통지, 모델·RAG·Harness 연결은 합의/후속 구현 대상이다.
-- Agent의 Business MCP 접속은 연결했으며 실제 Spring 내부 API 계약과의 통합 검증은 남아 있다.
+- 실제 Spring BE와의 합성 공동 시험은 [#96 검증 범위](docs/AI1-96-joint-controlled.md)에서 확인했다.
+  `app.joint_test.remaining`은 접수 응답 유실/GET 복구, 조기 resume, 살아 있는 이전 Worker,
+  유한 burst/steady 부하, 기본 3분 fallback/handoff와 기존 BE Rabbit 조합을 재현한다.
+  운영 부하·업무 멱등성 전체 검증은 skalaP05-03-261019/liveguard-be#78과 구분한다.
 - 수업 PDF 실제 72쪽은 변경 전 승인을 요구하지만 기획서는 최초 자동 조치다.
   현재 실행 기능은 없으며, 구현 전 팀·강사 확인 결과에 맞춰 실행 직전 경계를 확정한다.
 - PDF 74쪽 Agent 설계·구현: Graph/State, 모델 도구 선택·근거, 저장·재개·진행 이벤트 증거가 필요하다.

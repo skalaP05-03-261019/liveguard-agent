@@ -1,0 +1,26 @@
+# Append to BE deploy/integration/{compose,normal}.yaml. No duplicate BE/DB/API stack.
+services:
+  controlled-fixture:
+    image: ${AGENT_IMAGE:?Set tested Agent image}
+    command: ["uvicorn", "app.joint_test.fixture:create_app", "--factory", "--host", "0.0.0.0", "--port", "8090", "--no-access-log"]
+    environment:
+      JOINT_TEST_ENABLED: synthetic-only
+      JOINT_TEST_TOKEN: ${MODEL_API_KEY:?Set synthetic fixture credential}
+      RAG_MCP_AGENT_TOKEN: ${RAG_MCP_AGENT_TOKEN:?Set fixture policy credential}
+      LANGSMITH_TRACING: "false"
+    ports:
+      - "127.0.0.1:${JOINT_FIXTURE_PORT:-18004}:8090"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    stop_grace_period: 5s
+  worker-1:
+    depends_on:
+      controlled-fixture:
+        condition: service_healthy
+  worker-2:
+    depends_on:
+      controlled-fixture:
+        condition: service_healthy

@@ -1,0 +1,8 @@
+# Optional transparent fault proxy: real Spring is still the only business authority.
+services:
+  mcp-1:
+    environment:
+      BUSINESS_BACKEND_BASE_URL: http://controlled-fixture:8090/backend
+  mcp-2:
+    environment:
+      BUSINESS_BACKEND_BASE_URL: http://controlled-fixture:8090/backend
