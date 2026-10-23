@@ -28,6 +28,7 @@
     {"id": "Q24", "query": "작성자에게 제재 사유를 안내할 때 무엇을 알려주고 판단 기록에는 무엇을 남기나", "category": null, "expected": ["MM-1.1"]},
     {"id": "Q25", "query": "특정 지역 사람들은 열등하니 이 방송에서 모두 내보내야 한다는 집단 대상 배제", "category": "HARASSMENT", "expected": ["CP-3.3"]},
     {"id": "Q26", "query": "집단을 언급했지만 차별 발언을 비판하려는 인용이나 자조인 경우의 정상 예외", "category": null, "expected": ["CP-2.2", "CP-3.3"]},
-    {"id": "Q27", "query": "집단 대상이 불명확한 공격성 표현을 위반으로 확정해도 되나", "category": "HARASSMENT", "expected": ["CP-3.3", "CP-2.2"]}
+    {"id": "Q27", "query": "집단 대상이 불명확한 공격성 표현을 위반으로 확정해도 되나", "category": "HARASSMENT", "expected": ["CP-3.3", "CP-2.2"]},
+    {"id": "Q28", "query": "작성자가 연락 달라며 자기 전화번호를 채팅에 직접 올렸다", "category": "PII_EXPOSURE", "expected": ["SP-3.1"]}
   ]
 }
