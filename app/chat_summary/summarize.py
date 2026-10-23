@@ -12,7 +12,7 @@ from pydantic import Field, ValidationError
 
 from app.clients.business_mcp import AgentToolError
 from app.investigation.model import InvestigationModel, ModelRequest
-from app.investigation.runner import basic_presentation
+from app.harness.safety import safe_presentation
 from app.schemas import Contract
 from .schemas import MIN_CONTENT_MESSAGES, SummaryInput, SummaryItem, SummaryResult, SummaryStatus
 
@@ -77,7 +77,7 @@ async def summarize(request: SummaryInput, *, model: InvestigationModel | None, 
             "messages": [{"messageId": str(m.message_id), "sentAt": m.sent_at.isoformat(), "text": m.text}
                          for m in messages]}
     conversation = [{"role": "system", "content": PROMPT.read_text(encoding="utf-8")},
-                    {"role": "user", "content": json.dumps(basic_presentation(data), ensure_ascii=False)}]
+                    {"role": "user", "content": json.dumps(safe_presentation(data), ensure_ascii=False)}]
     tools = tool_definitions()
     code = "INVALID_MODEL_OUTPUT"
     try:
