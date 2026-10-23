@@ -168,6 +168,16 @@ async def run_investigation(state: dict, *, model: InvestigationModel, business,
     first_input = {"dataKind": "UNTRUSTED_CHAT_DATA", "targetMessages": working["target_messages"],
                    "contextMessages": working.get("context_messages", []),
                    "policyVersion": working["policy_version"]}
+    if (working["policy_version"] == "v3.2"
+            and working.get("handling_route") == "PII_INVESTIGATION"):
+        # Forward only BE's allowlisted PII form signals. The masked TARGET
+        # retains the form label, while no raw contact value reaches the model.
+        snapshot = working.get("case_snapshot") or {}
+        tags = snapshot.get("matchingTags") if isinstance(snapshot, dict) else None
+        first_input["backendPiiCandidateTags"] = [
+            tag for tag in ("PII_PHONE", "PII_ACCOUNT", "PII_EMAIL")
+            if isinstance(tags, list) and tag in tags
+        ]
     if extra_input is not None:
         if not isinstance(extra_input, dict) or set(extra_input) & set(first_input):
             raise AgentToolError("INVALID_INPUT", trace_id=trace_id)
