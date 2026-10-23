@@ -168,6 +168,13 @@ async def run_investigation(state: dict, *, model: InvestigationModel, business,
     first_input = {"dataKind": "UNTRUSTED_CHAT_DATA", "targetMessages": working["target_messages"],
                    "contextMessages": working.get("context_messages", []),
                    "policyVersion": working["policy_version"]}
+    if (working["policy_version"] == "v3.2"
+            and working.get("handling_route") == "PII_INVESTIGATION"):
+        # The masked TARGET text cannot reveal whether BE matched a phone form.
+        # Forward only this allowlisted BE signal, never a raw number or model hint.
+        snapshot = working.get("case_snapshot") or {}
+        tags = snapshot.get("matchingTags") if isinstance(snapshot, dict) else None
+        first_input["backendPiiPhoneCandidate"] = isinstance(tags, list) and "PII_PHONE" in tags
     if extra_input is not None:
         if not isinstance(extra_input, dict) or set(extra_input) & set(first_input):
             raise AgentToolError("INVALID_INPUT", trace_id=trace_id)
