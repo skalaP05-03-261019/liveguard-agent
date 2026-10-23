@@ -1,7 +1,7 @@
 """Phase 2 context investigation (#71) on the existing read-only loop and Harness budget.
 
-Adds candidate hints and the Phase 2 prompt section to the Phase 1 investigator. The
-output contract, policy validation and execution limits are unchanged; no Backend writes.
+Adds candidate hints and the Phase 2 prompt section to the case's policy-version investigator
+prompt. The output contract, policy validation and execution limits are unchanged; no Backend writes.
 """
 
 from pathlib import Path
@@ -9,16 +9,26 @@ from pathlib import Path
 from app.clients.business_mcp import AgentToolError
 from app.harness.execution import HarnessGate, default_observer, run_guarded
 from app.harness.safety import safe_presentation
-from app.investigation.runner import PROMPT, run_investigation
+from app.investigation.runner import prompt_for_policy, run_investigation
 from app.phase2_bridge.contracts import InvestigationDraft, InvestigationHandoff, ScreenResult
 from app.schemas import AnalysisResult
 
-ADDENDUM = Path(__file__).resolve().parents[2] / "prompts" / "investigator-phase2.md"
+PROMPTS = Path(__file__).resolve().parents[2] / "prompts"
+ADDENDUM = PROMPTS / "investigator-phase2.md"
+VERSION_MARKER = "<!-- policy-version-section -->"
+# v3.1 keeps CP-6.1 review for pure group hate; v3.2 investigates it under CP-3.3. Never backported.
+VERSION_SECTIONS = {"v3.2": PROMPTS / "investigator-phase2-v3.2.md"}
+DEFAULT_SECTION = PROMPTS / "investigator-phase2-v3.1.md"
 
 
-def system_prompt() -> str:
-    # Phase 1 rules stay first so shared fixes (e.g. role semantics) apply to both investigators.
-    return PROMPT.read_text().rstrip() + "\n\n" + ADDENDUM.read_text()
+def addendum_for(version: str) -> str:
+    section = VERSION_SECTIONS.get(version, DEFAULT_SECTION).read_text(encoding="utf-8").rstrip()
+    return ADDENDUM.read_text(encoding="utf-8").replace(VERSION_MARKER, section)
+
+
+def system_prompt(version: str) -> str:
+    # The case's policy-version rules stay first so shared fixes apply to both investigators.
+    return prompt_for_policy(version).rstrip() + "\n\n" + addendum_for(version)
 
 
 def candidate_hints(screening: ScreenResult) -> dict:
@@ -37,7 +47,7 @@ class Phase2Investigator:
         gate = HarnessGate.from_state(state, observer=self.observer or default_observer())
         patch = await run_guarded(state, lambda g: run_investigation(
             state, model=self.model, business=self.business, policy=self.policy, gate=g,
-            present_data=safe_presentation, prompt=system_prompt(),
+            present_data=safe_presentation, prompt=system_prompt(state["policy_version"]),
             extra_input={"candidateHints": candidate_hints(request.screening)}), gate=gate)
         if patch.get("task_outcome") or patch.get("error"):
             error = patch.get("error") or {}

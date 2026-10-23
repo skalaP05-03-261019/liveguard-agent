@@ -9,7 +9,9 @@ from app.investigation.runner import PROMPT, run_investigation
 from app.investigation_eval.cases import FixtureBusiness, build_fixture, build_handoff, load_case_set
 from app.investigation_eval.evaluate import evaluate
 from app.phase2_bridge.handoff import ExistingInvestigator, run_readonly_investigation
-from app.phase2_investigation.investigator import ADDENDUM, Phase2Investigator, candidate_hints, system_prompt
+from app.investigation.runner import prompt_for_policy
+from app.phase2_investigation.investigator import (DEFAULT_SECTION, VERSION_MARKER, VERSION_SECTIONS,
+                                                  Phase2Investigator, candidate_hints, system_prompt)
 from test_investigation import Policies, ScriptedModel, finish
 from test_investigation_eval import CASES, POLICY_VERSION, target_finding
 
@@ -33,9 +35,11 @@ class Phase2InvestigatorTests(unittest.IsolatedAsyncioTestCase):
         finding = target_finding(item, "NEEDS_REVIEW", missing=["'저쪽'이 가리키는 대상"])
         draft, model = await self.run_one(Phase2Investigator, item, [finding])
         messages, _, _ = model.inputs[0]
-        self.assertEqual(messages[0]["content"], system_prompt())
+        self.assertEqual(messages[0]["content"], system_prompt(POLICY_VERSION))
         self.assertTrue(messages[0]["content"].startswith(PROMPT.read_text().rstrip()))
-        self.assertIn(ADDENDUM.read_text().strip(), messages[0]["content"])
+        # Non-v3.2 cases keep the v3.1 section (pure group hate stays CP-6.1 review).
+        self.assertIn(DEFAULT_SECTION.read_text().strip(), messages[0]["content"])
+        self.assertNotIn(VERSION_MARKER, messages[0]["content"])
         first = json.loads(messages[1]["content"])
         self.assertEqual(first["candidateHints"]["signals"], [{"kind": "GROUP_HATE", "strength": "UNCERTAIN"}])
         self.assertEqual(first["candidateHints"]["missingFacts"], ["'저쪽'이 가리키는 대상"])
@@ -83,6 +87,16 @@ class Phase2InvestigatorTests(unittest.IsolatedAsyncioTestCase):
         report, _ = await evaluate(data, [item], "v3.1", policy_version=POLICY_VERSION, investigator_factory=factory)
         self.assertEqual((report["structuredReasons"], report["results"][0]["outcome"]), (1, "MATCH"))
         self.assertNotIn(STRUCTURED, json.dumps(report, ensure_ascii=False))
+
+    def test_v32_cases_use_v32_prompt_and_group_section(self):
+        v31, v32 = system_prompt("v3.1"), system_prompt("v3.2")
+        self.assertTrue(v32.startswith(prompt_for_policy("v3.2").rstrip()))
+        self.assertIn(VERSION_SECTIONS["v3.2"].read_text().strip(), v32)
+        self.assertIn("CP-3.3", v32)
+        self.assertNotIn("집단 혐오를 HARASSMENT로 바꿔 판정하지 마세요", v32)
+        # v3.1 never sees CP-3.3 instructions; the rule is not backported.
+        self.assertIn("집단 혐오를 HARASSMENT로 바꿔 판정하지 마세요", v31)
+        self.assertNotIn("CP-3.3", v31)
 
     def test_hints_carry_kinds_and_strengths_only(self):
         handoff = build_handoff(case("D-P2-06"), POLICY_VERSION)

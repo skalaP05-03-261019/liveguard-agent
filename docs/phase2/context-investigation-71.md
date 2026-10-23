@@ -6,12 +6,15 @@
 
 | 파일 | 내용 |
 | --- | --- |
-| `prompts/investigator-phase2.md` | Phase 2 추가 지침. Phase 1 지침 뒤에 붙인다 |
+| `prompts/investigator-phase2.md` | Phase 2 공통 추가 지침(후보 힌트, 개인 공격, reason 형식). 사건 정책 버전의 기본 지침 뒤에 붙인다 |
+| `prompts/investigator-phase2-v3.1.md`, `-v3.2.md` | 버전별 집단 혐오 절. v3.1은 CP-6.1 보류, v3.2는 CP-3.3 근거 HARASSMENT. 소급하지 않는다 |
 | `app/phase2_investigation/investigator.py` | `Phase2Investigator`: #63 `Investigator` 인터페이스 구현. 기존 Harness 예산·안전 표시·출력 검증 사용 |
 | `app/investigation/runner.py` | `run_investigation`에 `prompt`, `extra_input` 인자 추가. 기본값이면 Phase 1과 동일 |
 | `app/investigation_eval/` | `--investigator phase2` 선택, 지문에 추가 파일 포함, `reason` 형식 준수 수 집계 |
 
 `prompts/investigator.md`(Phase 1 지침)는 바꾸지 않았다. Phase 1 지침의 수정(예: #57 역할 해석)은 두 조사기에 함께 적용된다.
+
+정책 v3.2(#106·#108) 대응: `system_prompt(version)`은 `prompt_for_policy(version)`(#106) 위에 공통 추가 지침과 버전별 절을 합친다. `runner.py`는 #106 버전을 그대로 쓴다. 이 브랜치는 #106 위에 쌓여 있으므로 #106 다음에 병합한다.
 
 ## 추가 지침 요약
 

@@ -62,6 +62,20 @@ class CaseSetTests(unittest.TestCase):
                 CaseSet.model_validate(data)
 
 
+class CaseSetV2Tests(unittest.TestCase):
+    def test_v2_keeps_v31_labels_and_maps_group_hate_to_cp33(self):
+        v1 = {c.id: c for c in case_set().cases}
+        v2 = load_case_set(ROOT / "tests/fixtures/phase2/investigation-eval-v2.json")
+        self.assertEqual(set(v2.standards), {"v3.1", "v3.2"})
+        for case in v2.cases:
+            # v3.1 expectations are unchanged so Phase 1 comparisons stay valid.
+            self.assertEqual(case.expected["v3.1"], v1[case.id].expected["v3.1"])
+            if case.group in {"HATE", "INJECTION"}:
+                expected = case.expected["v3.2"]
+                self.assertEqual(([v.value for v in expected.verdicts], expected.categories, expected.policy_ids),
+                                 (["VIOLATION"], ["HARASSMENT"], ["CP-3.3"]))
+
+
 class ScoringTests(unittest.TestCase):
     def setUp(self):
         self.cases = {c.id: c for c in case_set().cases}

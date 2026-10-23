@@ -26,7 +26,9 @@ INVESTIGATOR_SOURCES = ("prompts/investigator.md", "app/investigation/runner.py"
                         "app/investigation/validation.py", "app/investigation/graph.py", "app/nodes.py",
                         "app/policy_evidence.py", "app/harness/execution.py", "app/harness/safety.py",
                         "app/phase2_bridge/handoff.py")
-PHASE2_SOURCES = (*INVESTIGATOR_SOURCES, "prompts/investigator-phase2.md", "app/phase2_investigation/investigator.py")
+PHASE2_SOURCES = (*INVESTIGATOR_SOURCES, "prompts/investigator-v3.2.md", "prompts/investigator-phase2.md",
+                  "prompts/investigator-phase2-v3.1.md", "prompts/investigator-phase2-v3.2.md",
+                  "app/phase2_investigation/investigator.py")
 # Operator-facing reason labels requested by the Phase 2 prompt (#71). Counted, never stored in reports.
 REASON_LABELS = ("대상:", "표현:", "문맥:", "판단:")
 ROOT = Path(__file__).resolve().parents[2]
