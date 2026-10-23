@@ -75,6 +75,19 @@ class CaseSetV2Tests(unittest.TestCase):
                 self.assertEqual(([v.value for v in expected.verdicts], expected.categories, expected.policy_ids),
                                  (["VIOLATION"], ["HARASSMENT"], ["CP-3.3"]))
 
+    def test_v3_applies_pm_review_only_where_marked(self):
+        v2 = {c.id: c for c in load_case_set(ROOT / "tests/fixtures/phase2/investigation-eval-v2.json").cases}
+        v3 = load_case_set(ROOT / "tests/fixtures/phase2/investigation-eval-v3.json")
+        self.assertEqual((v3.version, v3.review_status), ("inv-eval-v3", "REVIEWED"))
+        # BE rule-confirmed profanity is out of the investigation scope (PM review).
+        self.assertEqual(set(v2) - {c.id for c in v3.cases}, {"C11", "C12"})
+        changed = {(c.id, s) for c in v3.cases for s in v3.standards if c.expected[s] != v2[c.id].expected[s]}
+        self.assertEqual(changed, {("D-P2-01", "v3.2"), ("D-P2-08", "v3.1"), ("D-P2-08", "v3.2"),
+                                   ("C05", "v3.1"), ("C05", "v3.2")})
+        for case_id, standard in changed:
+            self.assertEqual([v.value for v in next(c for c in v3.cases if c.id == case_id)
+                              .expected[standard].verdicts], ["NEEDS_REVIEW"])
+
 
 class ScoringTests(unittest.TestCase):
     def setUp(self):
