@@ -37,14 +37,14 @@ def judgment_body(analysis: dict) -> dict:
 
     Evidence UUIDs stay in Graph/checkpoints and are described in reason as agreed
     with B1. taskId/threadId are not new fields in the BE contract. Never relabel
-    a 3.1 snapshot as v3.1 to bypass the version check.
+    a snapshot as another policy version to bypass the version check.
     """
     result = AnalysisResult.model_validate({k: analysis[k] for k in (
         "caseId", "snapshotId", "evidenceVersion", "policyVersion", "messageFindings")})
     live_id = str(UUID(str(analysis["liveId"])))
     route = analysis["handlingRoute"]
-    if route not in {"CONTEXT_REVIEW", "PII_INVESTIGATION"} or result.policy_version != "v3.1":
-        raise ValueError("OpenAPI v1 requires an AI route and exact policy version v3.1")
+    if route not in {"CONTEXT_REVIEW", "PII_INVESTIGATION"} or result.policy_version not in {"v3.1", "v3.2"}:
+        raise ValueError("AI judgment requires an AI route and a supported exact policy version")
     body = result.model_dump(mode="json", by_alias=True)
     for finding in body["messageFindings"]:
         evidence = finding.pop("evidenceMessageIds")

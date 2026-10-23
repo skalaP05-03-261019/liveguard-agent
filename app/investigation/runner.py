@@ -17,7 +17,7 @@ from typing import Any, Awaitable, Callable, Protocol
 from pydantic import Field, ValidationError
 
 from app.clients.business_mcp import AgentToolError
-from app.clients.rag_mcp import require_trace
+from app.clients.rag_mcp import parse_section, require_trace
 from app.policy_evidence import retrieve_policy_evidence, retrieve_policy_section_evidence
 from app.schemas import Category, Contract, MessageFinding
 from app.investigation.model import InvestigationModel, ModelRequest, ModelTurn
@@ -27,6 +27,13 @@ from app.investigation.validation import validate_analysis
 BUSINESS_TOOLS = frozenset({"get_chat_context", "get_user_history", "get_stream_info",
                             "get_official_links", "get_security_facts"})
 PROMPT = Path(__file__).resolve().parents[2] / "prompts" / "investigator.md"
+PROMPT_V32 = PROMPT.with_name("investigator-v3.2.md")
+
+
+def prompt_for_policy(version: str) -> str:
+    """Use new instructions only for v3.2; preserve all prior snapshot behavior."""
+    source = PROMPT_V32 if version == "v3.2" else PROMPT
+    return source.read_text(encoding="utf-8")
 
 
 class SearchRequest(Contract):
@@ -122,10 +129,14 @@ def basic_presentation(value):
 class _GuardedPolicy:
     def __init__(self, client, gate, observations, trace_id):
         self.client, self.gate, self.observations, self.trace_id = client, gate, observations, trace_id
+        self.section_ids = set()
 
     async def call(self, name, arguments):
         self.observations.append({"toolName": name, "traceId": self.trace_id})
-        return await self.gate.run(name, lambda: self.client.call(name, arguments))
+        response = await self.gate.run(name, lambda: self.client.call(name, arguments))
+        if name == "get_policy_section":
+            self.section_ids.add(arguments["policyId"])
+        return response
 
     async def read_resource(self, uri, **kwargs):
         self.observations.append({"toolName": "read_policy_resource", "traceId": self.trace_id})
@@ -134,7 +145,8 @@ class _GuardedPolicy:
 
 async def run_investigation(state: dict, *, model: InvestigationModel, business, policy,
                             gate: ExecutionGate | None = None,
-                            present_data: Callable[[Any], Any] = basic_presentation) -> dict:
+                            present_data: Callable[[Any], Any] = basic_presentation,
+                            prompt: str | None = None, extra_input: dict | None = None) -> dict:
     """Return an atomic patch; errors do not publish model findings or mutate input.
 
     Backend IDs, version and trace are bound by runtime, never accepted from model.
@@ -157,15 +169,30 @@ async def run_investigation(state: dict, *, model: InvestigationModel, business,
     active_gate = gate if gate is not None else StandaloneGate(working, trace_id)
     observations = list(working.get("tool_observations", []))
     policies = _GuardedPolicy(policy, active_gate, observations, trace_id)
-    initial = json.dumps(present_data({
-                    "dataKind": "UNTRUSTED_CHAT_DATA", "targetMessages": working["target_messages"],
-                    "contextMessages": working.get("context_messages", []),
-                    "policyVersion": working["policy_version"],
-                }), ensure_ascii=False)
+    verified_policy_ids = set()
+    first_input = {"dataKind": "UNTRUSTED_CHAT_DATA", "targetMessages": working["target_messages"],
+                   "contextMessages": working.get("context_messages", []),
+                   "policyVersion": working["policy_version"]}
+    if (working["policy_version"] == "v3.2"
+            and working.get("handling_route") == "PII_INVESTIGATION"):
+        # Forward only BE's allowlisted PII form signals. The masked TARGET
+        # retains the form label, while no raw contact value reaches the model.
+        snapshot = working.get("case_snapshot") or {}
+        tags = snapshot.get("matchingTags") if isinstance(snapshot, dict) else None
+        first_input["backendPiiCandidateTags"] = [
+            tag for tag in ("PII_PHONE", "PII_ACCOUNT", "PII_EMAIL")
+            if isinstance(tags, list) and tag in tags
+        ]
+    if extra_input is not None:
+        if not isinstance(extra_input, dict) or set(extra_input) & set(first_input):
+            raise AgentToolError("INVALID_INPUT", trace_id=trace_id)
+        first_input.update(deepcopy(extra_input))
+    initial = json.dumps(present_data(first_input), ensure_ascii=False)
     if len(initial) > 48_000:
         raise AgentToolError("MODEL_CONTEXT_LIMIT", trace_id=trace_id)
     incomplete_context = "[TRUNCATED]" in initial
-    messages = [{"role": "system", "content": PROMPT.read_text()},
+    messages = [{"role": "system", "content": prompt if prompt is not None
+                 else prompt_for_policy(working["policy_version"])},
                 {"role": "user", "content": initial}]
     usage = []
     seen_calls = set()
@@ -211,8 +238,18 @@ async def run_investigation(state: dict, *, model: InvestigationModel, business,
         try:
             if call.name == "get_policy_section":
                 args = SectionRequest.model_validate(call.arguments)
-                working.update(await retrieve_policy_section_evidence(
-                    working, policy_id=args.policy_id, tools=policies))
+                if args.policy_id in verified_policy_ids:
+                    # Reuse only evidence verified during this run, never a
+                    # checkpoint's unverified/stale section. No MCP budget spent.
+                    if not any(parse_section(item, working["policy_version"], trace_id,
+                                             policy_id=args.policy_id).policy_id == args.policy_id
+                               for item in working["policy_evidence"]
+                               if item.get("policyId") == args.policy_id):
+                        raise AgentToolError("INVALID_POLICY_EVIDENCE", trace_id=trace_id)
+                else:
+                    working.update(await retrieve_policy_section_evidence(
+                        working, policy_id=args.policy_id, tools=policies))
+                    verified_policy_ids.add(args.policy_id)
                 body = {"policyEvidence": working["policy_evidence"]}
             elif call.name == "search_policy":
                 args = SearchRequest.model_validate(call.arguments)
@@ -220,6 +257,7 @@ async def run_investigation(state: dict, *, model: InvestigationModel, business,
                 working.update(await retrieve_policy_evidence(
                     working, query=present_data(args.query), category=args.category,
                     top_k=args.top_k, tools=policies))
+                verified_policy_ids.update(policies.section_ids)
                 body = {"policyEvidence": working["policy_evidence"]}
             else:
                 if call.arguments:

@@ -83,6 +83,23 @@ class JudgmentHttpTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.requests, [])
         self.assertEqual(payload["policyVersion"], "3.1")
 
+    async def test_v32_preserves_exact_snapshot_version_and_old_version_still_works(self):
+        for version in ("v3.1", "v3.2"):
+            with self.subTest(version=version):
+                payload = analysis("CONTEXT_REVIEW", "VIOLATION")
+                payload["policyVersion"] = version
+                await self.invoke(payload)
+                body = json.loads(self.requests[0].content)
+                self.assertEqual(body["policyVersion"], version)
+
+    async def test_unknown_future_version_is_not_submitted(self):
+        payload = analysis()
+        payload["policyVersion"] = "v3.3"
+        with self.assertRaises(AgentToolError) as raised:
+            await self.invoke(payload)
+        self.assertEqual(raised.exception.code, "INVALID_INPUT")
+        self.assertEqual(self.requests, [])
+
     async def test_lost_response_never_retries_judgment(self):
         with self.assertRaises(AgentToolError) as raised:
             await self.invoke(analysis(), failure=httpx.ReadTimeout)
