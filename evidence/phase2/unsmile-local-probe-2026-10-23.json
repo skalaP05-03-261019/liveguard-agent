@@ -1,0 +1,339 @@
+{
+  "kind": "development-smoke-not-golden-set",
+  "date": "2026-10-23",
+  "model": {
+    "source": "smilegate-ai/kor_unsmile",
+    "format": "user-exported-pickle",
+    "pickleBytes": 435805720,
+    "pickleSha256": "d65e741a3a6a902f5573b204f5c27ea5caad1b83a46669d8271ac78ad1627a83",
+    "threshold": 0.5,
+    "torchVersion": "2.14.1",
+    "transformersVersion": "4.57.6"
+  },
+  "request": {
+    "experiment": "clear-or-possible",
+    "contextMessages": 0,
+    "caseCount": 8
+  },
+  "summary": {
+    "unsmileAssessed": 8,
+    "unsmileCandidates": 4,
+    "unsmileElapsedMsMedian": 12.95,
+    "qualityMetrics": null,
+    "existingGptDemoAssessed": 8,
+    "existingGptDemoCandidates": 4,
+    "candidateAgreement": 6,
+    "existingGptDemoHttpMedianMs": 1500.04,
+    "directInProcessGptAssessed": 0,
+    "directInProcessGptFailureCode": "MODEL_UNAVAILABLE on direct in-process comparison; existing demo at localhost:8765 returned 8/8"
+  },
+  "cases": [
+    {
+      "id": "normal-greeting",
+      "text": "안녕하세요",
+      "gptStatus": "UNAVAILABLE",
+      "unsmileStatus": "OK",
+      "unsmileSelected": false,
+      "unsmileMatchedLabels": [],
+      "unsmileScores": {
+        "여성/가족": 0.0146,
+        "남성": 0.0109,
+        "성소수자": 0.0113,
+        "인종/국적": 0.0144,
+        "연령": 0.009,
+        "지역": 0.0164,
+        "종교": 0.0142,
+        "기타 혐오": 0.0081,
+        "악플/욕설": 0.0783,
+        "clean": 0.8983
+      },
+      "unsmileElapsedMs": 126.66,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": false,
+        "signals": [],
+        "usage": {
+          "inputTokens": 1138,
+          "outputTokens": 22
+        },
+        "httpElapsedMs": 1236.05
+      }
+    },
+    {
+      "id": "normal-information",
+      "text": "서울 아파트는 기본 10억이야. 그런데 세금으로 중부세를 계산하는 건 다르잖아.",
+      "gptStatus": "UNAVAILABLE",
+      "unsmileStatus": "OK",
+      "unsmileSelected": false,
+      "unsmileMatchedLabels": [],
+      "unsmileScores": {
+        "여성/가족": 0.0162,
+        "남성": 0.0108,
+        "성소수자": 0.0138,
+        "인종/국적": 0.0149,
+        "연령": 0.0105,
+        "지역": 0.02,
+        "종교": 0.012,
+        "기타 혐오": 0.0103,
+        "악플/욕설": 0.0585,
+        "clean": 0.915
+      },
+      "unsmileElapsedMs": 13.26,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": false,
+        "signals": [],
+        "usage": {
+          "inputTokens": 1182,
+          "outputTokens": 22
+        },
+        "httpElapsedMs": 1180.159
+      }
+    },
+    {
+      "id": "normal-homograph",
+      "text": "프로젝트의 시발점은 요구사항 정리였어요.",
+      "gptStatus": "UNAVAILABLE",
+      "unsmileStatus": "OK",
+      "unsmileSelected": false,
+      "unsmileMatchedLabels": [],
+      "unsmileScores": {
+        "여성/가족": 0.0165,
+        "남성": 0.011,
+        "성소수자": 0.0144,
+        "인종/국적": 0.0132,
+        "연령": 0.0101,
+        "지역": 0.0146,
+        "종교": 0.0116,
+        "기타 혐오": 0.0101,
+        "악플/욕설": 0.069,
+        "clean": 0.9071
+      },
+      "unsmileElapsedMs": 12.64,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": false,
+        "signals": [],
+        "usage": {
+          "inputTokens": 1153,
+          "outputTokens": 22
+        },
+        "httpElapsedMs": 949.922
+      }
+    },
+    {
+      "id": "profanity-variant",
+      "text": "씨바, 너는 이것도 못하냐",
+      "gptStatus": "UNAVAILABLE",
+      "unsmileStatus": "OK",
+      "unsmileSelected": true,
+      "unsmileMatchedLabels": [
+        "악플/욕설"
+      ],
+      "unsmileScores": {
+        "여성/가족": 0.0194,
+        "남성": 0.0109,
+        "성소수자": 0.0109,
+        "인종/국적": 0.025,
+        "연령": 0.0096,
+        "지역": 0.0146,
+        "종교": 0.0196,
+        "기타 혐오": 0.0194,
+        "악플/욕설": 0.899,
+        "clean": 0.0716
+      },
+      "unsmileElapsedMs": 14.02,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": true,
+        "signals": [
+          {
+            "kind": "PROFANITY_VARIANT",
+            "strength": "CLEAR"
+          },
+          {
+            "kind": "TARGETED_ATTACK",
+            "strength": "CLEAR"
+          }
+        ],
+        "usage": {
+          "inputTokens": 1153,
+          "outputTokens": 215
+        },
+        "httpElapsedMs": 2072.608
+      }
+    },
+    {
+      "id": "targeted-insult",
+      "text": "너는 진짜 멍청해. 채팅에서 꺼져.",
+      "gptStatus": "UNAVAILABLE",
+      "unsmileStatus": "OK",
+      "unsmileSelected": true,
+      "unsmileMatchedLabels": [
+        "악플/욕설"
+      ],
+      "unsmileScores": {
+        "여성/가족": 0.018,
+        "남성": 0.0114,
+        "성소수자": 0.0113,
+        "인종/국적": 0.0157,
+        "연령": 0.0119,
+        "지역": 0.0124,
+        "종교": 0.0123,
+        "기타 혐오": 0.0288,
+        "악플/욕설": 0.8889,
+        "clean": 0.0775
+      },
+      "unsmileElapsedMs": 11.63,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": true,
+        "signals": [
+          {
+            "kind": "TARGETED_ATTACK",
+            "strength": "CLEAR"
+          }
+        ],
+        "usage": {
+          "inputTokens": 1161,
+          "outputTokens": 123
+        },
+        "httpElapsedMs": 1525.186
+      }
+    },
+    {
+      "id": "region-disparagement",
+      "text": "저 지역에서 왔다는 이유만으로 다 멍청해 보인다.",
+      "gptStatus": "UNAVAILABLE",
+      "unsmileStatus": "OK",
+      "unsmileSelected": false,
+      "unsmileMatchedLabels": [],
+      "unsmileScores": {
+        "여성/가족": 0.0065,
+        "남성": 0.0077,
+        "성소수자": 0.0099,
+        "인종/국적": 0.0131,
+        "연령": 0.0094,
+        "지역": 0.2838,
+        "종교": 0.0102,
+        "기타 혐오": 0.0242,
+        "악플/욕설": 0.4824,
+        "clean": 0.0821
+      },
+      "unsmileElapsedMs": 11.93,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": true,
+        "signals": [
+          {
+            "kind": "REGION_DISPARAGEMENT",
+            "strength": "CLEAR"
+          }
+        ],
+        "usage": {
+          "inputTokens": 1152,
+          "outputTokens": 117
+        },
+        "httpElapsedMs": 1474.899
+      }
+    },
+    {
+      "id": "quoted-term",
+      "text": "'한남'이라는 단어를 사용하지 말아 주세요.",
+      "gptStatus": "UNAVAILABLE",
+      "unsmileStatus": "OK",
+      "unsmileSelected": true,
+      "unsmileMatchedLabels": [
+        "남성"
+      ],
+      "unsmileScores": {
+        "여성/가족": 0.0473,
+        "남성": 0.9049,
+        "성소수자": 0.0265,
+        "인종/국적": 0.0319,
+        "연령": 0.0168,
+        "지역": 0.0224,
+        "종교": 0.0207,
+        "기타 혐오": 0.0144,
+        "악플/욕설": 0.0563,
+        "clean": 0.0482
+      },
+      "unsmileElapsedMs": 11.32,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": false,
+        "signals": [
+          {
+            "kind": "GROUP_HATE",
+            "strength": "UNCERTAIN"
+          }
+        ],
+        "usage": {
+          "inputTokens": 1158,
+          "outputTokens": 221
+        },
+        "httpElapsedMs": 2469.654
+      }
+    },
+    {
+      "id": "group-hostility",
+      "text": "한남은 죽여주세요.",
+      "gptStatus": "UNAVAILABLE",
+      "unsmileStatus": "OK",
+      "unsmileSelected": true,
+      "unsmileMatchedLabels": [
+        "남성"
+      ],
+      "unsmileScores": {
+        "여성/가족": 0.0472,
+        "남성": 0.9203,
+        "성소수자": 0.0172,
+        "인종/국적": 0.0417,
+        "연령": 0.0211,
+        "지역": 0.0236,
+        "종교": 0.0266,
+        "기타 혐오": 0.0161,
+        "악플/욕설": 0.058,
+        "clean": 0.0408
+      },
+      "unsmileElapsedMs": 13.63,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": true,
+        "signals": [
+          {
+            "kind": "GROUP_HATE",
+            "strength": "CLEAR"
+          }
+        ],
+        "usage": {
+          "inputTokens": 1137,
+          "outputTokens": 133
+        },
+        "httpElapsedMs": 1713.691
+      }
+    }
+  ],
+  "limitations": [
+    "Ad hoc probes are not a policy/QA-approved golden set.",
+    "No accuracy or model superiority is claimed.",
+    "Target-text-only UnSmile output has no quote-span, conversation context, or approved policy verdict.",
+    "No Backend, FE, moderation, or sanction command was executed.",
+    "Direct in-process GPT comparison failed with MODEL_UNAVAILABLE, but a pre-existing local GPT demo returned 8/8 results through its HTTP API.",
+    "The running GPT demo container version and model name could not be independently verified.",
+    "Latency values use different paths (UnSmile in-process versus GPT demo HTTP/network) and are not a service performance benchmark."
+  ],
+  "comparison": {
+    "source": "pre-existing local GPT candidate demo at http://127.0.0.1:8765/api/screen",
+    "modelName": "not independently verified from running container",
+    "sameTargetText": true,
+    "contextMessages": 0,
+    "experiment": "clear-or-possible",
+    "sameExecutionPath": false,
+    "differentCandidateIds": [
+      "region-disparagement",
+      "quoted-term"
+    ],
+    "interpretation": "observations only; no independently reviewed expected outcomes or quality metrics"
+  }
+}

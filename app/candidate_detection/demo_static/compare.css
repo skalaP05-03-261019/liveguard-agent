@@ -1,0 +1,34 @@
+:root { font-family: system-ui, -apple-system, "Apple SD Gothic Neo", sans-serif; color: #f0f2f6; background: #111318; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.shell { width: min(1120px, 100%); margin: auto; padding: 32px 20px 64px; }
+.eyebrow { color: #fc676b; font-size: 12px; font-weight: 800; letter-spacing: .14em; }
+h1 { margin: 10px 0; font-size: clamp(30px, 5vw, 48px); letter-spacing: -.04em; }
+header p, aside { color: #adb3bd; line-height: 1.6; }
+.composer, .card { background: #1c2028; border: 1px solid #343945; border-radius: 16px; padding: 22px; }
+.composer { margin-top: 28px; }
+label { display: block; font-weight: 700; margin-bottom: 12px; }
+textarea { width: 100%; resize: vertical; border: 1px solid #505765; border-radius: 9px; padding: 14px; font: inherit; color: inherit; background: #12151b; }
+textarea:focus { outline: 2px solid #ef4149; }
+.actions { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: #aeb4bf; }
+button { cursor: pointer; font: inherit; }
+#submit { background: #ee3e46; color: white; border: 0; border-radius: 9px; padding: 12px 18px; font-weight: 800; }
+#submit:disabled { opacity: .55; cursor: wait; }
+.examples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.examples button { background: #292e38; color: #dce0e7; border: 1px solid #424956; border-radius: 20px; padding: 7px 12px; }
+#notice { min-height: 24px; color: #b6bdc9; }
+.results { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.card { min-height: 270px; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+h2 { font-size: 18px; margin: 0 0 20px; }
+.card-head span { color: #aeb4bf; }
+.card strong { display: block; font-size: 27px; margin-bottom: 12px; }
+.card p { color: #b7bdc6; line-height: 1.55; }
+.flag { color: #ff6e74; }
+.clear { color: #6ad69f; }
+.signals, .scores { display: grid; gap: 8px; margin-top: 16px; }
+.signal, .score { padding: 10px 12px; background: #252a33; border-radius: 8px; line-height: 1.45; }
+.signal b { display: block; margin-bottom: 4px; }
+.score { display: flex; justify-content: space-between; gap: 12px; }
+aside { margin-top: 20px; font-size: 13px; }
+@media (max-width: 720px) { .results { grid-template-columns: 1fr; } .shell { padding: 22px 14px 48px; } }
