@@ -130,6 +130,10 @@ class ControlledTests(unittest.TestCase):
                     observed = client.get("/control", headers=model).json()
             self.assertEqual(len(observed["receipts"]), 1)
             self.assertEqual(len(observed["receiptGets"]), 1)
+            self.assertEqual(len(observed["intakePosts"]), 2)
+            self.assertEqual([(row["taskId"], row["operation"])
+                              for row in observed["intakePosts"]],
+                             [("test", "run"), ("test", "run")])
             self.assertEqual(upstream.request.call_count, 3)
             headers = upstream.request.call_args_list[0].kwargs["headers"]
             self.assertEqual(headers["authorization"], "Bearer agent-token")
@@ -184,6 +188,7 @@ class ControlledTests(unittest.TestCase):
         case = {"taskId": str(uuid4())}
         operation = "run:" + case["taskId"]
         observed = {"receiptGets": [{"operationId": operation}],
+                    "intakePosts": [{"taskId": case["taskId"], "operation": "run"}],
                     "receipts": [{"operationId": operation}]}
         with patch("app.joint_test.remaining.arm"), \
              patch("app.joint_test.remaining.produce", return_value=case), \
@@ -195,7 +200,7 @@ class ControlledTests(unittest.TestCase):
              patch("app.joint_test.remaining.single_count", return_value={"jobs": 1}):
             result = receipt_loss(None, None, None, None, ["live"])
             self.assertEqual((result["intakePosts"], result["statusGets"]), (1, 1))
-            observed["receipts"].append({"operationId": operation})
+            observed["intakePosts"].append({"taskId": case["taskId"], "operation": "run"})
             with self.assertRaisesRegex(JointError, "MUST_NOT_REPOST"):
                 receipt_loss(None, None, None, None, ["live"])
 

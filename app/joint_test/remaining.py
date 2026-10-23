@@ -78,7 +78,8 @@ def receipt_loss(environment, viewer, operator, fixture, lives):
         (value := outbox(environment, task))["status"] == "ACCEPTED" else None)
     execution = wait_job(environment, task, "SUCCEEDED")
     observed = metrics(fixture)
-    posts = [row for row in observed["receipts"] if row["operationId"] == operation]
+    posts = [row for row in observed["intakePosts"]
+             if row["taskId"] == task and row["operation"] == "run"]
     gets = [row for row in observed["receiptGets"] if row["operationId"] == operation]
     require(len(posts) == 1 and len(gets) >= 1, "RECEIPT_RECONCILIATION_MUST_NOT_REPOST")
     # BE retains delivery_uncertain as history (OR update), including after ACCEPTED.

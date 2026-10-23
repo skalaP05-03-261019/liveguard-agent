@@ -96,7 +96,8 @@ def create_app():
         ),
     )
     state = {"modelCalls": 0, "rateLimits": 0, "timeouts": 0, "lostResponses": 0,
-             "executions": [], "actionReads": [], "receipts": [], "receiptGets": [],
+             "executions": [], "actionReads": [], "intakePosts": [],
+             "receipts": [], "receiptGets": [],
              "judgments": [], "modelActive": 0, "modelPeak": 0,
              "modelBlocked": 0, "modelReturned": 0, "judgmentBlocked": 0,
              "fault": None}
@@ -245,6 +246,10 @@ def create_app():
 
     @app.api_route("/agent/tasks/{path:path}", methods=["GET", "POST"])
     async def forward_intake(path: str, request: Request):
+        if request.method == "POST":
+            task_id, _, operation = path.partition("/")
+            state["intakePosts"].append({"taskId": task_id, "operation": operation,
+                                         "at": time.time()})
         # Root path is intentional: BE URI resolution does not retain a base prefix.
         async with httpx.AsyncClient(base_url="http://agent-api:8001", trust_env=False,
                                      timeout=10, follow_redirects=False) as http:
