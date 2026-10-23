@@ -192,7 +192,9 @@ fixture 전체는 HTTP 요청이 아니다. POST에는 새 fixture의 `task`만 
 - AnalysisResult는 5개 유형의 메시지별 판정을 표현하며 제재 기간은 포함하지 않는다. 기존 단일 판단/300초 후보는 아직 미구현인 legacy Graph에만 남아 있으며 다음 PR에서 교체한다.
 - 활성 정책 버전·기간표, 실제 Backend 응답/결과 통지, 모델·RAG·Harness 연결은 합의/후속 구현 대상이다.
 - 실제 Spring BE와의 합성 공동 시험은 [#96 검증 범위](docs/AI1-96-joint-controlled.md)에서 확인했다.
-  운영 부하·업무 멱등성 전체 검증은 BE #78과 계속 진행한다.
+  `app.joint_test.remaining`은 접수 응답 유실/GET 복구, 조기 resume, 살아 있는 이전 Worker,
+  유한 burst/steady 부하, 기본 3분 fallback/handoff와 기존 BE Rabbit 조합을 재현한다.
+  운영 부하·업무 멱등성 전체 검증은 skalaP05-03-261019/liveguard-be#78과 구분한다.
 - 수업 PDF 실제 72쪽은 변경 전 승인을 요구하지만 기획서는 최초 자동 조치다.
   현재 실행 기능은 없으며, 구현 전 팀·강사 확인 결과에 맞춰 실행 직전 경계를 확정한다.
 - PDF 74쪽 Agent 설계·구현: Graph/State, 모델 도구 선택·근거, 저장·재개·진행 이벤트 증거가 필요하다.

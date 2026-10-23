@@ -5,6 +5,7 @@ import json
 import os
 import asyncio
 from uuid import uuid4
+import time
 
 import httpx
 from fastapi import FastAPI, Request
@@ -95,7 +96,12 @@ def create_app():
         ),
     )
     state = {"modelCalls": 0, "rateLimits": 0, "timeouts": 0, "lostResponses": 0,
-             "executions": [], "actionReads": [], "fault": None}
+             "executions": [], "actionReads": [], "receipts": [], "receiptGets": [],
+             "judgments": [], "modelActive": 0, "modelPeak": 0,
+             "modelBlocked": 0, "modelReturned": 0, "judgmentBlocked": 0,
+             "fault": None}
+    model_release = asyncio.Event()
+    judgment_release = asyncio.Event()
 
     @asynccontextmanager
     async def lifespan(app):
@@ -110,8 +116,15 @@ def create_app():
         path = request.url.path
         if path == "/health":
             return await call_next(request)
-        if path.startswith("/backend/"):
+        if path.startswith(("/backend/", "/internal/")):
             # Internal service credentials are validated by Spring, not replaced here.
+            return await call_next(request)
+        if path.startswith("/agent/tasks/"):
+            expected = os.environ.get("AGENT_SERVICE_TOKEN", "")
+            supplied = request.headers.get("authorization", "")
+            if not expected or not hmac.compare_digest(
+                    supplied.encode(), f"Bearer {expected}".encode()):
+                return JSONResponse(status_code=401, content={"code": "UNAUTHENTICATED"})
             return await call_next(request)
         expected = rag_token if path.startswith("/mcp") else token
         supplied = request.headers.get("authorization", "")
@@ -130,9 +143,19 @@ def create_app():
     @app.post("/control")
     async def arm(request: Request):
         body = await request.json()
+        if "release" in body:
+            if body["release"] not in {"model", "judgment"}:
+                return JSONResponse(status_code=400, content={"code": "INVALID_GATE"})
+            (model_release if body["release"] == "model" else judgment_release).set()
+            return {"released": body["release"]}
         fault = body.get("fault")
-        if fault not in {None, "model429", "model-timeout", "action-response-loss"}:
+        if fault not in {None, "model429", "model-timeout", "action-response-loss",
+                         "receipt-loss", "judgment-gate", "model-gate"}:
             return JSONResponse(status_code=400, content={"code": "INVALID_FAULT"})
+        if fault == "model-gate":
+            model_release.clear()
+        if fault == "judgment-gate":
+            judgment_release.clear()
         state["fault"] = fault
         return {"armed": fault}
 
@@ -149,10 +172,22 @@ def create_app():
             state["rateLimits"] += 1
             return JSONResponse(status_code=429, headers={"Retry-After": "1"},
                                 content={"error": {"message": "CONTROLLED_RATE_LIMIT"}})
-        if state["fault"] == "model-timeout":
+        fault = state["fault"]
+        if fault in {"model-timeout", "model-gate"}:
             state["fault"] = None
-            state["timeouts"] += 1
-            await asyncio.sleep(35)
+        state["modelActive"] += 1
+        state["modelPeak"] = max(state["modelPeak"], state["modelActive"])
+        try:
+            if fault == "model-timeout":
+                state["timeouts"] += 1
+                await asyncio.sleep(35)
+            if fault == "model-gate":
+                state["modelBlocked"] += 1
+                # A bounded fixture hold; never an unbounded orphan request.
+                await asyncio.wait_for(model_release.wait(), 240)
+            state["modelReturned"] += 1
+        finally:
+            state["modelActive"] -= 1
         return {"id": f"controlled-{uuid4()}", "object": "chat.completion", "created": 0,
                 "model": "joint-controlled-v1",
                 "choices": [{"index": 0, "finish_reason": "tool_calls", "message": {
@@ -176,6 +211,15 @@ def create_app():
                          if key in {"x-service-token", "x-trace-id", "content-type"}},
             )
         execute = request.method == "POST" and path.startswith("internal/actions/") and path.endswith("/execute")
+        judgment = request.method == "POST" and path.endswith("/judgment")
+        if judgment:
+            state["judgments"].append({"caseId": path.split("/")[2],
+                                      "httpStatus": response.status_code})
+        if judgment and response.is_success and state["fault"] == "judgment-gate":
+            state["fault"] = None
+            state["judgmentBlocked"] += 1
+            # Spring committed the review; Graph has not yet received the receipt.
+            await asyncio.wait_for(judgment_release.wait(), 8)
         if execute:
             action_id = path.split("/")[2]
             state["executions"].append({"actionId": action_id, "httpStatus": response.status_code,
@@ -191,7 +235,42 @@ def create_app():
                 raise RuntimeError("CONTROLLED_RESPONSE_LOSS")
 
             return StreamingResponse(broken_response(), media_type="application/json")
-        return JSONResponse(status_code=response.status_code, content=response.json())
+        return JSONResponse(status_code=response.status_code, content=response.json(),
+                            headers={"Retry-After": response.headers["retry-after"]}
+                            if "retry-after" in response.headers else None)
+
+    @app.api_route("/internal/{path:path}", methods=["GET", "POST"])
+    async def forward_gateway(path: str, request: Request):
+        return await forward("internal/" + path, request)
+
+    @app.api_route("/agent/tasks/{path:path}", methods=["GET", "POST"])
+    async def forward_intake(path: str, request: Request):
+        # Root path is intentional: BE URI resolution does not retain a base prefix.
+        async with httpx.AsyncClient(base_url="http://agent-api:8001", trust_env=False,
+                                     timeout=10, follow_redirects=False) as http:
+            response = await http.request(
+                request.method, "/agent/tasks/" + path,
+                content=await request.body(),
+                headers={key: value for key, value in request.headers.items()
+                         if key in {"authorization", "content-type", "x-trace-id"}},
+            )
+        body = response.json()
+        operation = body.get("operationId")
+        if operation and response.is_success:
+            counter = "receipts" if request.method == "POST" else "receiptGets"
+            state[counter].append({"operationId": operation, "httpStatus": response.status_code,
+                                   "at": time.time()})
+        if request.method == "POST" and response.is_success and state["fault"] == "receipt-loss":
+            state["fault"] = None
+
+            async def lost_receipt():
+                yield b'{"taskId":'
+                raise RuntimeError("CONTROLLED_RECEIPT_LOSS")
+
+            return StreamingResponse(lost_receipt(), media_type="application/json")
+        return JSONResponse(status_code=response.status_code, content=body,
+                            headers={"Retry-After": response.headers["retry-after"]}
+                            if "retry-after" in response.headers else None)
 
     app.mount("/", transport)
     return app

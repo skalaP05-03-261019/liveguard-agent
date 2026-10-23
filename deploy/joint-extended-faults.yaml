@@ -1,0 +1,14 @@
+# Transparent fault boundaries. The real API/BE remain the only state authorities.
+services:
+  backend:
+    environment:
+      AGENT_BASE_URL: http://controlled-fixture:8090
+  controlled-fixture:
+    environment:
+      AGENT_SERVICE_TOKEN: ${AGENT_SERVICE_TOKEN:?Set Agent credential}
+  worker-1:
+    environment:
+      BACKEND_BASE_URL: http://controlled-fixture:8090
+  worker-2:
+    environment:
+      BACKEND_BASE_URL: http://controlled-fixture:8090

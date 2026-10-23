@@ -59,10 +59,18 @@ class JointEnvironment:
         self.environment = {**os.environ, **read_env(self.setup / "versions.env"), **self.values}
 
     def compose(self, *arguments, timeout=120):
-        files = [self.setup / "compose.yaml", self.setup / "normal.yaml",
+        scenario = getattr(self.args, "be_scenario", "normal")
+        transport = getattr(self.args, "transport", "db")
+        if scenario not in {"normal", "fallback"} or transport not in {"db", "rabbit"}:
+            raise JointError("INVALID_JOINT_COMPOSITION")
+        files = [self.setup / "compose.yaml", self.setup / f"{scenario}.yaml",
                  ROOT / "deploy/joint-controlled.yaml"]
+        if transport == "rabbit":
+            files.append(self.setup / "rabbit.yaml")
         if self.args.action_loss:
             files.append(ROOT / "deploy/joint-action-loss.yaml")
+        if getattr(self.args, "extended_faults", False):
+            files.append(ROOT / "deploy/joint-extended-faults.yaml")
         command = ["docker", "compose", "--project-name", self.args.project,
                    "--env-file", str(self.setup / "versions.env"),
                    "--env-file", str(self.args.env_file.resolve())]
@@ -175,6 +183,7 @@ def provenance(environment):
         "backendRevision": environment.environment["BE_REVISION"],
         "agentImage": image(environment.environment["AGENT_IMAGE"]),
         "backendImage": image(environment.environment["BE_IMAGE"]),
+        "backendTestAssetsRevision": checked(["git", "rev-parse", "HEAD"], cwd=environment.be),
         "policySha256": hashlib.sha256(
             (ROOT / "app/rag_mcp/policies/policy-v3.1.md").read_bytes()).hexdigest(),
     }
@@ -360,7 +369,7 @@ def init(args):
     versions = read_env(args.be_repo / "deploy/integration/versions.env")
     values = {key: secrets.token_hex(24) for key in (
         "BE_DB_PASSWORD", "AGENT_DB_PASSWORD", "INTERNAL_SERVICE_TOKEN", "AGENT_SERVICE_TOKEN",
-        "BUSINESS_MCP_AGENT_TOKEN", "RAG_MCP_AGENT_TOKEN", "MODEL_API_KEY")}
+        "BUSINESS_MCP_AGENT_TOKEN", "RAG_MCP_AGENT_TOKEN", "MODEL_API_KEY", "RABBITMQ_PASSWORD")}
     revision = checked(["git", "rev-parse", "HEAD"], cwd=ROOT)
     values.update(
         AGENT_IMAGE=f"liveguard-agent:joint96-{revision[:12]}-{secrets.token_hex(3)}",
@@ -383,6 +392,9 @@ def main():
     parser.add_argument("--suite", choices=["smoke", "full"], default="smoke")
     parser.add_argument("--handoff", action="store_true")
     parser.add_argument("--action-loss", action="store_true")
+    parser.add_argument("--extended-faults", action="store_true")
+    parser.add_argument("--transport", choices=["db", "rabbit"], default="db")
+    parser.add_argument("--be-scenario", choices=["normal", "fallback"], default="normal")
     parser.add_argument("--model-fault", choices=["model429", "model-timeout"])
     parser.add_argument("--target", choices=["worker-1", "worker-2", "mcp-1", "mcp-2"])
     parser.add_argument("--fault", choices=["kill", "stop", "start"])

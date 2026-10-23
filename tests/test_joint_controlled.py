@@ -1,15 +1,17 @@
 import asyncio
 from argparse import Namespace
 from copy import deepcopy
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
+import httpx
 from mcp import Client
 from mcp.server import MCPServer
 from langgraph.checkpoint.memory import InMemorySaver
@@ -19,7 +21,8 @@ from app.harness.checkpoint import state_serializer
 from app.integration.workflow import build_moderation_graph
 from app.investigation.model import ModelTurn, ToolCall
 from app.joint_test.fixture import controlled_call, create_app, PolicyFixture, NoEmbedding
-from app.joint_test.run import init, JointEnvironment, JointError, wait_job
+from app.joint_test.run import init, JointEnvironment, JointError, wait_job, poll
+from app.joint_test.remaining import receipt_loss, load, deadlines
 from app.rag_mcp.tools import register_tools
 from app.schemas import TaskEnvelope
 from test_agent_read import FIXTURE, FixtureTools
@@ -56,6 +59,8 @@ class ControlledTests(unittest.TestCase):
                 headers = {"Authorization": "Bearer private-model-token"}
                 self.assertEqual(client.post("/control", headers=headers,
                                             json={"fault": "unknown"}).status_code, 400)
+                self.assertEqual(client.post("/control", headers=headers,
+                                            json={"release": "unknown"}).status_code, 400)
                 client.post("/control", headers=headers, json={"fault": "model429"})
                 message = {"role": "user", "content": json.dumps({"targetMessages": [
                     {"messageId": str(uuid4()), "text": "[JOINT96:NORMAL] synthetic"},
@@ -92,6 +97,118 @@ class ControlledTests(unittest.TestCase):
             self.assertEqual(wait_job(None, str(uuid4()), {"UNKNOWN", "NEEDS_REVIEW"}), safe)
             with self.assertRaises(JointError):
                 wait_job(None, str(uuid4()), "SUCCEEDED")
+
+    def test_real_intake_proxy_loses_only_committed_receipt_and_preserves_auth(self):
+        with patch.dict(os.environ, {
+            "JOINT_TEST_ENABLED": "synthetic-only", "JOINT_TEST_TOKEN": "model-token",
+            "RAG_MCP_AGENT_TOKEN": "rag-token", "AGENT_SERVICE_TOKEN": "agent-token",
+        }):
+            app = create_app()
+            upstream = AsyncMock()
+            upstream.request.side_effect = [
+                httpx.Response(202, json={"operationId": "run:test", "duplicate": False}),
+                httpx.Response(200, json={"operationId": "run:test", "state": "QUEUED"}),
+                httpx.Response(503, headers={"Retry-After": "10"},
+                               json={"detail": {"code": "INBOX_UNAVAILABLE"}}),
+            ]
+            context = MagicMock()
+            context.__aenter__ = AsyncMock(return_value=upstream)
+            context.__aexit__ = AsyncMock()
+            with patch("app.joint_test.fixture.httpx.AsyncClient", return_value=context):
+                with TestClient(app, raise_server_exceptions=False) as client:
+                    model = {"Authorization": "Bearer model-token"}
+                    agent = {"Authorization": "Bearer agent-token", "X-Trace-Id": "trace"}
+                    self.assertEqual(client.post("/agent/tasks/test/run", headers=model).status_code, 401)
+                    client.post("/control", headers=model, json={"fault": "receipt-loss"})
+                    broken = client.post("/agent/tasks/test/run", headers=agent, json={"kind": "ANALYZE"})
+                    with self.assertRaises(ValueError):
+                        broken.json()
+                    self.assertEqual(client.get("/agent/tasks/test", headers=agent).status_code, 200)
+                    unavailable = client.post("/agent/tasks/test/run", headers=agent)
+                    self.assertEqual(unavailable.status_code, 503)
+                    self.assertEqual(unavailable.headers["Retry-After"], "10")
+                    observed = client.get("/control", headers=model).json()
+            self.assertEqual(len(observed["receipts"]), 1)
+            self.assertEqual(len(observed["receiptGets"]), 1)
+            self.assertEqual(upstream.request.call_count, 3)
+            headers = upstream.request.call_args_list[0].kwargs["headers"]
+            self.assertEqual(headers["authorization"], "Bearer agent-token")
+            self.assertEqual(headers["x-trace-id"], "trace")
+            self.assertNotIn("token", json.dumps(observed))
+
+    def test_new_compose_options_preserve_existing_callers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            setup = base / "be/deploy/integration"
+            setup.mkdir(parents=True)
+            (setup / "versions.env").write_text("BE_IMAGE=test-be:fixed\n")
+            args = Namespace(env_file=base / "private.env", be_repo=base / "be",
+                             project="liveguard-joint96-unit", action_loss=False)
+            init(args)
+            environment = JointEnvironment(args)
+            with patch("app.joint_test.run.checked", return_value="") as command:
+                environment.compose("config", "--quiet")
+                baseline = command.call_args.args[0]
+                self.assertIn(str(setup.resolve() / "normal.yaml"), baseline)
+                self.assertNotIn(str(setup.resolve() / "rabbit.yaml"), baseline)
+                args.transport, args.be_scenario, args.extended_faults = "rabbit", "fallback", True
+                environment.compose("config", "--quiet")
+                extended = command.call_args.args[0]
+                self.assertIn(str(setup.resolve() / "rabbit.yaml"), extended)
+                self.assertIn(str(setup.resolve() / "fallback.yaml"), extended)
+                self.assertTrue(any(item.endswith("joint-extended-faults.yaml") for item in extended))
+
+    def test_model_gate_returns_only_after_explicit_release(self):
+        with patch.dict(os.environ, {
+            "JOINT_TEST_ENABLED": "synthetic-only", "JOINT_TEST_TOKEN": "model-token",
+            "RAG_MCP_AGENT_TOKEN": "rag-token",
+        }), TestClient(create_app()) as client:
+            headers = {"Authorization": "Bearer model-token"}
+            client.post("/control", headers=headers, json={"fault": "model-gate"})
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                pending = pool.submit(client.post, "/v1/chat/completions", headers=headers,
+                    json={"messages": [{"role": "user", "content": json.dumps({"targetMessages": [
+                        {"messageId": str(uuid4()), "text": "[JOINT96:NORMAL] synthetic"},
+                    ]})}]})
+                try:
+                    poll(lambda: client.get("/control", headers=headers).json()["modelBlocked"] == 1,
+                         timeout=3)
+                    self.assertFalse(pending.done())
+                finally:
+                    client.post("/control", headers=headers, json={"release": "model"})
+                self.assertEqual(pending.result(timeout=3).status_code, 200)
+            observed = client.get("/control", headers=headers).json()
+            self.assertEqual((observed["modelActive"], observed["modelReturned"]), (0, 1))
+
+    def test_receipt_suite_preserves_uncertainty_history_and_rejects_repost(self):
+        case = {"taskId": str(uuid4())}
+        operation = "run:" + case["taskId"]
+        observed = {"receiptGets": [{"operationId": operation}],
+                    "receipts": [{"operationId": operation}]}
+        with patch("app.joint_test.remaining.arm"), \
+             patch("app.joint_test.remaining.produce", return_value=case), \
+             patch("app.joint_test.remaining.metrics", return_value=observed), \
+             patch("app.joint_test.remaining.poll", side_effect=lambda function, **kw: function()), \
+             patch("app.joint_test.remaining.outbox", return_value={
+                 "status": "ACCEPTED", "attempts": 2, "uncertain": True}), \
+             patch("app.joint_test.remaining.wait_job", return_value={"status": "SUCCEEDED"}), \
+             patch("app.joint_test.remaining.single_count", return_value={"jobs": 1}):
+            result = receipt_loss(None, None, None, None, ["live"])
+            self.assertEqual((result["intakePosts"], result["statusGets"]), (1, 1))
+            observed["receipts"].append({"operationId": operation})
+            with self.assertRaisesRegex(JointError, "MUST_NOT_REPOST"):
+                receipt_loss(None, None, None, None, ["live"])
+
+    def test_remaining_suites_reject_invalid_load_and_short_deadline_composition(self):
+        environment = MagicMock()
+        for count in (0, 7, 121):
+            environment.args.input_count = count
+            with self.assertRaisesRegex(JointError, "FINITE_LOAD"):
+                load(environment, None, None, None, [])
+        environment.args.be_scenario = "normal"
+        with self.assertRaisesRegex(JointError, "DEFAULT_3M"):
+            deadlines(environment, None, None, None, [])
+        environment.compose.assert_not_called()
 
 
 class ControlledGraphTests(unittest.IsolatedAsyncioTestCase):

@@ -1,4 +1,4 @@
-# #96 선행 산출물: 실제 Spring BE 공동 통제 시험
+# #96 실제 Spring BE 공동 통제 시험
 
 관련: skalaP05-03-261019/liveguard-be#76 (환경),
 skalaP05-03-261019/liveguard-be#78 (실제 업무 멱등성).
@@ -30,7 +30,9 @@ BE 저장소 파일은 수정하지 않는다.
   `JOINT_TEST_ENABLED=synthetic-only`와 인증이 필수다. 운영 환경에 배포하지 않는다.
 - 일반 Agent 경로의 BE 판정/handoff 마감은 기존 `normal.yaml`의 15분이다.
   승인·재검증·fallback을 끄지 않는다. 3분 기본값/fallback 시험과 섞지 않는다.
-- 이번 실행기는 **DB polling**을 사용한다. Rabbit·실제 모델 시험은 별도다.
+- 기본 전송은 **DB polling**이다. 잔여 장애 실행기는 BE의 `rabbit.yaml`도 그대로
+  조합한다. Rabbit은 BE 발송 알림 큐이며 Agent가 이 큐를 직접 소비하지 않는다.
+  외부 실제 모델 시험은 별도다.
 
 ## 2. 버전과 이미지
 
@@ -38,9 +40,11 @@ BE의 `deploy/integration/versions.env`에서 BE 커밋·이미지 정본을 읽
 현재 확인한 BE는 `acd3e98f7d2b1a74505d9f89bfb56dffe1082673`,
 `liveguard-be:integration-acd3e98f7d2b`다.
 
-Agent 기준 HEAD는 `af5730dd8948128494d76b08afcdd7d9076e03c9`이며 **이 신규 실행기는
-그 커밋에 아직 포함되지 않은 작업 트리 변경**이다. 이 HEAD만 checkout하면 실행기가
-있다고 오인하지 않는다. BE 담당자에게는 변경이 반영된 Agent 커밋/PR과 빌드 이미지를
+선행 실행기는 Agent `e720ce65f859a0312c4083e17b39974cf42c512d`에 포함되어 있다.
+아래 잔여 장애 실행기는 **그 커밋에 추가한 작업 트리 변경**이다. 해당 HEAD만
+checkout하면 잔여 실행기가 있다고 오인하지 않는다. BE 시험 자산은
+`9a03d1a96dcafe7797a97c7e7d3560c55d3a4c99`를 확인했으며 업무 이미지는 위 고정 BE다.
+BE 담당자에게는 변경이 반영된 Agent 커밋/PR과 빌드 이미지를
 함께 전달하고, 병합 뒤 BE의 버전 파일 갱신은 BE 담당자가 수행한다.
 
 `init`은 `liveguard-agent:joint96-{HEAD 12자리}-{임의 suffix}` 태그를 생성한다.
@@ -180,7 +184,74 @@ KICK 응답 body를 중간에 끊는다. 가짜 action/승인/업무 응답을 �
 Agent 실행/BE 조치 성공을 한 필드로 합치지 않는다.
 BE #78의 업무 중복 방지 전체 보장은 이 한 번의 관측으로 대체하지 않는다.
 
-## 6. 추가 장애 주입과 미완료 범위
+## 6. 잔여 장애 자동 시험
+
+추가 실행기 `python -m app.joint_test.remaining`은 실제 Spring 채팅/승인 API로만
+입력을 만든다. 매 suite는 **비어 있는 새 프로젝트/DB**를 요구한다.
+BE DB 시각·상태·업무 row를 수정하거나 가상 접수/업무 응답을 생성하지 않는다.
+기존 BE 스크립트의 고정 Agent 커밋/clean-source guard를 완화하지 않는다.
+새 Agent 변경이 커밋·고정되기 전에는 아래 실행기를 직접 사용한다.
+
+| suite | 실제 장애/검증 |
+|---|---|
+| `receipt` | 실제 API 202 영속화 뒤 HTTP 응답 절단 → BE 자동 GET → ACCEPTED. POST 1회, GET 1회 이상, Inbox 1개 |
+| `race` | Spring 판정 커밋 뒤 응답을 잠시 보류. ANALYZE RUNNING 중 실제 승인 → resume QUEUED, run/resume 동시 중복 8건, 최종 job 2개·CONTEXT 1개 |
+| `stale` | 모델 호출 중 소유 Worker SIGSTOP. 30초 lease 만료 후 다른 Worker 회수. 보류 응답 반환 및 SIGCONT 후 이전 프로세스가 살아 있어도 job/checkpoint/pending writes/blob 변경 없음 |
+| `load` | 두 실제 live에 PII 정상 입력 24건 burst 또는 초당 1건 steady, 공정 admission·전량 소진, Graph 전체 4/Worker 2/모델 4 상한 및 대기·latency 관측 |
+| `deadline` | 실제 3분 judgment fallback + KICK handoff. 결정 전 늦은 AI는 기존 검토에 반영, 결정 후 도착은 거절, 늦은 KICK 재개는 기존 실행 결과 재사용 |
+
+`joint-extended-faults.yaml`은 BE → 실제 Agent API와 Worker Gateway → 실제 Spring
+구간에만 투명 프록시를 넣는다. Business MCP는 그대로 실제 Spring에 연결한다.
+BE/Gateway는 경로 접두사 없는 origin을 요구하므로 fixture의 `/agent/tasks/**`,
+`/internal/**`가 원래 경로 그대로 중계한다. 인증 헤더는 실제 대상에서 검증된다.
+제어 API는 별도 fixture 키가 필요하며 origin을 임의 입력으로 바꾸지 못한다.
+판정 gate는 8초, 모델 gate는 240초로 유한하다.
+프록시는 대상의 `Retry-After`도 보존한다. 기한은 호스트의 대기 시간만으로 추정하지
+않고 실제 BE의 사건/검토 생성 시각과 승인/실행 시각 차이가 각각 180초 이상인지
+검증한다. Worker를 중지해 기다리는 동안 RUNNING job이 0개인지도 확인한다.
+
+BE는 `delivery_uncertain`을 OR 방식의 **이력**으로 유지한다. 접수 응답 유실 뒤
+성공적으로 GET 조정되어도 `ACCEPTED` + `delivery_uncertain=true`가 정상이다.
+이 필드를 false로 만들거나 다시 POST하는 것을 복구 조건으로 삼지 않는다.
+
+```bash
+# suite마다 새 PROJECT, 저장소 밖 새 ENV_FILE/REPORT를 지정한다.
+PROJECT="liveguard-joint96-receipt-db"
+ENV_FILE="$HOME/.liveguard-joint96-receipt-db.env"
+REPORT="$HOME/liveguard-joint96-receipt-db.json"
+TRANSPORT="db"       # Rabbit 조합은 rabbit. Agent 실행 대기열은 계속 공유 Inbox.
+SCENARIO="normal"    # deadline suite만 fallback (3분), 그 외 normal (15분)
+SUITE="receipt"     # receipt | race | stale | load | deadline
+
+uv run --locked python -m app.joint_test.run init \
+  --be-repo "$BE_REPO" --env-file "$ENV_FILE" --project "$PROJECT"
+uv run --locked python -m app.joint_test.run build \
+  --be-repo "$BE_REPO" --env-file "$ENV_FILE" --project "$PROJECT"
+uv run --locked python -m app.joint_test.run up \
+  --be-repo "$BE_REPO" --env-file "$ENV_FILE" --project "$PROJECT" \
+  --extended-faults --transport "$TRANSPORT" --be-scenario "$SCENARIO"
+uv run --locked python -m app.joint_test.remaining \
+  --be-repo "$BE_REPO" --env-file "$ENV_FILE" --project "$PROJECT" \
+  --suite "$SUITE" --transport "$TRANSPORT" --be-scenario "$SCENARIO" \
+  --report "$REPORT"
+uv run --locked python -m app.joint_test.run down \
+  --be-repo "$BE_REPO" --env-file "$ENV_FILE" --project "$PROJECT" \
+  --extended-faults --transport "$TRANSPORT" --be-scenario "$SCENARIO"
+```
+
+`init`은 Rabbit 전용 임의 `RABBITMQ_PASSWORD`도 만든다. 구 env에는 없으므로 새 env를
+생성한다. Rabbit 관리 포트를 외부 공개하거나 별도 Agent Rabbit 큐를 추가하지 않는다.
+`--input-count`로 부하 입력 수를 8~120 사이에서 지정한다(기본 24).
+`--load-pattern burst`는 Worker를 잠시 중지해 전량 영속 접수한 뒤 실행한다.
+`--load-pattern steady`는 Worker가 실행 중인 상태에서 약 1초 간격으로 입력하며
+생산과 동시 관측을 진행한다. 생산 실패는 즉시 시험 실패로 전파한다.
+부하는 정상 30 RPM/60k TPM을 유지하므로 24건도 quota 대기가 발생할 수 있다.
+최대 480초 소진 한도를 넘기거나 실패·UNKNOWN이 발생하면 PASS로 덮지 않는다.
+소량 유한 부하의 관측이며 장시간 soak/운영 SLO 인증이나 모델 품질 증거가 아니다.
+`remaining --report`는 기존 보고서를 덮어쓰지 않는다. report와 private env는
+서로 다른 경로로 지정하고 새 시험에는 새 보고서명을 사용한다.
+
+### 수동 장애 주입
 
 동일 private env/project를 사용해 다음 명령으로 본인의 Worker/MCP만 제어할 수 있다.
 
@@ -199,12 +270,11 @@ uv run --locked python -m app.joint_test.run fault \
 `kill`은 SIGKILL, `stop`은 유예 종료, `start`는 재기동이다.
 target은 Worker 1/2 또는 MCP 1/2로 제한한다. DB/전체 호스트를 종료하지 않는다.
 
-이번 선행 산출물에서 자동 검증하지 않은 #96 잔여 항목:
-동일 operation 동시 접수/BE 응답 유실 재전송, 같은 thread ANALYZE/resume 경합,
-Worker 실행 중 강제 종료·lease 만료·늦은 결과 fencing, 다중 방송 공정성·대량 유입·
-용량 초과 후 소진·처리량 병목, BE fallback/마감 경합, Rabbit 및 실제 모델 별도 실행.
-기존 단위 검증을 위 실제 BE 시나리오의 통과로 간주하지 않는다.
-이슈 #96 전체 완료/운영 부하 인증을 주장하지 않는다.
+BE #78의 기존 검증은 동시 중복·업무 멱등성·MCP 장애·SIGKILL 회수·두 방송 공정성·
+capacity 2/503 재시도 소진을 담당한다. 위 suite는 그 결과를 대역 시험으로 대체하지 않고
+빠졌던 접수 유실/살아 있는 이전 소유자/실제 기본 기한을 보완한다.
+마감 전후의 가능한 모든 interleaving, 장시간 soak, 대규모 운영 부하,
+Rabbit broker 자체 장애와 실제 외부 모델 호출/품질 검증은 별도 범위로 남는다.
 
 ## 7. 안전한 결과 수집·종료
 
@@ -239,3 +309,51 @@ AI 호출은 각 11회(정상 10회 + 주입 실패/지연 1회)였고 외부 �
 Agent image ID:
 `sha256:f7a7ffc68e3a28da20c6bb00e90a387354399d5474e4f1f4b88ff3dae9445c47`.
 이후 실행기 수정/재빌드 시 새 ID를 보고서에서 확인한다.
+
+## 9. 2026-10-23 잔여 통제 시험 최종 실행
+
+BE 시험 자산 `9a03d1a96dcafe7797a97c7e7d3560c55d3a4c99`의 공동 Compose와
+고정 업무 이미지 `acd3e98f7d2b`를 재사용했다. 매 시험은 독립 프로젝트/새 DB에서
+실행했고, 업무 DB 수정이나 가상 Backend 없이 실제 API·Worker·MCP를 사용했다.
+최종 소스 기준 7개 실행이 모두 PASS다.
+
+| 시험 | 관측 결과 | 기동 제외 전체 시간 |
+|---|---|---|
+| DB 접수 응답 유실 | 실제 202 뒤 절단, POST 1회 → 자동 GET 조정, Inbox 1개, Agent SUCCEEDED | 5.321초 |
+| Rabbit 접수 응답 유실 | 기존 BE Rabbit 알림/HTTP 발송 경로로 같은 복구·중복 방지 확인 | 5.357초 |
+| ANALYZE/조기 resume | ANALYZE RUNNING 중 실제 승인, resume QUEUED, 동시 중복 8건, 총 job 2개/CONTEXT 1개 | 4.966초 |
+| 살아 있는 이전 Worker | SIGSTOP 후 다른 소유자 attempt 2, 지연 응답 반환·SIGCONT 뒤 job/checkpoint/pending writes/blob 불변, 이전 프로세스 생존 | 41.238초 |
+| 두 방송 burst | 24/24 SUCCEEDED, Graph 최대 4/Worker 최대 2, 첫 4 admission에 두 방송 포함 | 78.653초 |
+| 두 방송 steady | 약 초당 1건, 24/24 SUCCEEDED, 같은 동시성/공정성 조건 유지 | 72.586초 |
+| 기본 3분 기한 | fallback·승인 전후 늦은 조사·KICK handoff/늦은 재개, 업무 효과 불변 | 201.130초 |
+
+부하 경로의 생산/소진 측정은 인증·기동 전처리를 제외한다.
+burst P95 latency는 67.569초, 최대 admission 대기는 66.580초였다.
+steady P95는 46.684초, 최대 대기는 42.230초였다.
+통제 모델은 즉시 응답하므로 실제 HTTP 동시 호출 관측 최대는 1이었다.
+이는 4개 동시 모델 호출을 포화시켰다는 증거가 아니며 sLLM/실제 모델 처리량으로
+환산하지 않는다. 모델 30 RPM/60k TPM과 Graph/Worker 제한은 완화하지 않았다.
+
+DB에 기록된 fallback 검토 생성은 사건 생성 **187.394955초 후**,
+KICK 실행 시작은 승인 **180.282773초 후**였다. 둘 다 정확한 180초 하한을 검증했다.
+
+- fallback 검토가 아직 미결정이면 늦은 조사가 기존 검토에 판정을 붙이고 정상 재개했다.
+- 사람이 먼저 확정한 사건은 늦게 실행된 ANALYZE가 모델 호출 전
+  `FAILED/STALE_EVIDENCE`로 종료했고 `CONFIRMED_NORMAL`을 유지했다.
+  이 기대된 거절을 Agent 성공으로 바꾸지 않는다.
+- BE가 넘겨받아 실행한 KICK은 효과 1개였다. 뒤늦은 Agent resume이 성공해도 기존
+  action ID/결과/효과 개수와 실행 시각은 바뀌지 않았다.
+
+최종 Agent 이미지(작업 트리 기준, 아직 별도 커밋 아님):
+
+- tag: `liveguard-agent:joint96-e720ce65f859-75e698`
+- ID: `sha256:3fc3e01950cd364008da2e1781e5b402410f23e6ee69fd9682b7ee3d1f9aa13f`
+- source fingerprint: `3bf4f86ba91976b85a3970caf4c1e419fd16d68f5ca87a61005ec65b28c74c7c`
+
+관련 fixture/Inbox/Worker/복구/MCP 회귀는 임시 실제 PostgreSQL로 **96개 통과,
+skip 0개**였다. Python compileall과 diff whitespace 검증도 통과했다.
+Pylance 구문 도구는 timeout이어서 정적 분석 통과로 기록하지 않는다.
+7개 보고서는 동일 이미지/source fingerprint인지 확인했고, credential·원문 채팅·
+envelope·DSN·lease token이 없는지 검사한 안전한 JSON 증거로 묶었다.
+시험 소유 컨테이너/네트워크/임시 DB 볼륨은 정리했으며 운영 리소스는 건드리지 않았다.
+외부 실제 모델, 장시간 soak/운영 용량 인증, Rabbit broker 자체 장애는 실행하지 않았다.
