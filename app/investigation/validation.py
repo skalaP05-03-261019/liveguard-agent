@@ -4,7 +4,7 @@ from pydantic import ValidationError
 
 from app.clients.business_mcp import AgentToolError
 from app.clients.rag_mcp import parse_section
-from app.schemas import AnalysisResult, Judgment
+from app.schemas import AnalysisResult, Category, Judgment
 
 
 def validate_analysis(state: dict, payload: dict) -> AnalysisResult:
@@ -29,6 +29,14 @@ def validate_analysis(state: dict, payload: dict) -> AnalysisResult:
         section = parse_section(data, result.policy_version, trace_id)
         policies[section.policy_id] = section
     for finding in result.message_findings:
+        if (result.policy_version == "v3.2"
+                and state.get("handling_route") == "PII_INVESTIGATION"
+                and finding.verdict == Judgment.VIOLATION
+                and finding.categories != [Category.PII_EXPOSURE]):
+            # BE v3.2 confirms this route without a human only for PII alone.
+            # Mixed-category output must be investigated as NEEDS_REVIEW, never
+            # submitted to BE as an automatic confirmed violation (422).
+            raise AgentToolError("INVALID_MODEL_OUTPUT", trace_id=trace_id)
         refs = [str(mid) for mid in finding.evidence_message_ids]
         if (len(refs) != len(set(refs)) or not set(refs) <= known
                 or len(finding.policy_ids) != len(set(finding.policy_ids))
