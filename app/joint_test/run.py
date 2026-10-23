@@ -206,8 +206,11 @@ def source_fingerprint():
 def execute(environment, report):
     started = time.monotonic()
     report.update(mode="controlled-model-real-spring", realModelExecuted=False,
-                  backendReplaced=False, deliveryTransport="db", provenance=provenance(environment),
-                  results=[], limits={"scenarioDeadlineSeconds": 90, "normalBeDeadline": "15m"})
+                  backendReplaced=False,
+                  deliveryTransport=getattr(environment.args, "transport", "db"),
+                  provenance=provenance(environment), results=[],
+                  limits={"scenarioDeadlineSeconds": 90,
+                          "normalBeDeadline": "3m" if getattr(environment.args, "be_scenario", "normal") == "fallback" else "15m"})
     for worker in ("worker-1", "worker-2"):
         poll(lambda: environment.worker_ready(worker), timeout=40)
     with ExitStack() as stack:
