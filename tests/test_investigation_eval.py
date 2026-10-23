@@ -137,7 +137,14 @@ class EvaluateTests(unittest.IsolatedAsyncioTestCase):
         report, details = await evaluate(data, [case], "v3.1", policy_version=POLICY_VERSION,
                                          investigator_factory=lambda business: Broken())
         self.assertEqual((report["errors"], report["results"][0]["errorCode"]), (1, "INVESTIGATOR_ERROR"))
-        self.assertEqual(details, [])
+        self.assertEqual(details, [{"id": case.id, "status": "ERROR", "errorCode": "INVESTIGATOR_ERROR"}])
+        # A recorded failure replays as the same failure under another standard.
+        replay = {case.id: {k: v for k, v in details[0].items() if k != "id"}}
+        again, _ = await evaluate(data, [case], "v3.2-draft", policy_version=POLICY_VERSION, predictions=replay)
+        self.assertEqual((again["errors"], again["results"][0]["errorCode"]), (1, "INVESTIGATOR_ERROR"))
+        malformed = {case.id: {"status": "ERROR", "errorCode": "not a code"}}
+        again, _ = await evaluate(data, [case], "v3.1", policy_version=POLICY_VERSION, predictions=malformed)
+        self.assertEqual(again["results"][0]["errorCode"], "INVESTIGATOR_ERROR")
         self.assertNotIn(case.target, json.dumps(report, ensure_ascii=False))
 
     async def test_offline_predictions_and_summary(self):

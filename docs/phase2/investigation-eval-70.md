@@ -76,7 +76,7 @@ uv run --locked --env-file .env python -m app.investigation_eval \
 
 - 기본 묶음은 `development`다. 확인용은 `--split confirmation`을 명시해야 실행된다.
 - `--live`는 `--limit`(1~200)이 필수다. 출력 파일은 새로 만들 때만 쓰고 덮어쓰지 않는다.
-- 같은 결과를 두 기준으로 보려면 `--details-out` 파일의 행(`verdict`, `categories`, `policyIds`, `missingFacts`)을 `{id: 행}` 예측 파일로 바꿔 다른 `--standard`로 재생한다(`reason`은 무시하도록 빼고 넣는다). 모델을 다시 호출하지 않는다.
+- 같은 결과를 두 기준으로 보려면 `--details-out` 파일의 행(`verdict`, `categories`, `policyIds`, `missingFacts`)을 `{id: 행}` 예측 파일로 바꿔 다른 `--standard`로 재생한다(`reason`은 무시하도록 빼고 넣는다). 모델을 다시 호출하지 않는다. 실행 중 오류가 난 사례는 details에 `{"status": "ERROR", "errorCode": …}`로 남고, 재생 때도 같은 오류로 집계된다(판정을 만들어 채우지 않는다).
 
 ## Phase 1 baseline 절차
 
