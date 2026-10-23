@@ -11,7 +11,7 @@
 | `app/investigation_eval/__main__.py` | CLI |
 | `tests/fixtures/phase2/investigation-eval-v1.json` | 평가 사례 36건 (`AUTHOR_DRAFT`) |
 | `tests/fixtures/phase2/investigation-eval-v2.json` | 같은 36건. 기준 `v3.1`(v1과 동일) + `v3.2`(집단 열등 단정·배제 = HARASSMENT, CP-3.3). v1의 `v3.2-draft`(HATE)는 팀 결정으로 미채택 |
-| `tests/fixtures/phase2/investigation-eval-v3.json` | v2에 PM 검수(2026-10-23, v3.2 정답) 반영, `REVIEWED`. D-P2-01·D-P2-08·C02 보류, C05 정상, C11·C12는 BE 확정 욕설 규칙 대상이라 제외(34건). v3.1 정답은 초안 유지 |
+| `tests/fixtures/phase2/investigation-eval-v3.json` | v2에 PM 검수(2026-10-23, v3.2 정답) 반영, `REVIEWED`. D-P2-08·C02 보류, C05 정상(D-P2-01은 CP-3.3 기준 정리로 위반 유지), C11·C12는 BE 확정 욕설 규칙 대상이라 제외(34건). v3.1 정답은 초안 유지 |
 | `tests/test_investigation_eval.py` | 통제 모델·대역 테스트 12개 |
 
 실행 경로는 #63 인계 경로와 같다. 사례마다 결정적 ID로 BE 형태의 작업·사건·문맥·후보 결과를 만들고, `run_readonly_investigation`으로 조사기를 실행한 뒤 기존 출력 검증(`validate_analysis`)을 통과한 결과만 채점한다. Phase 1 조사는 `ExistingInvestigator`(기존 `guarded_investigate`, Harness 예산 포함)로 실행한다. #71의 조사기는 같은 자리에 꽂는다.

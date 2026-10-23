@@ -86,8 +86,8 @@ class CaseSetV2Tests(unittest.TestCase):
         verdicts = {case_id: [v.value for v in next(c for c in v3.cases if c.id == case_id)
                               .expected[standard].verdicts] for case_id, standard in changed}
         self.assertEqual({standard for _, standard in changed}, {"v3.2"})
-        self.assertEqual(verdicts, {"D-P2-01": ["NEEDS_REVIEW"], "D-P2-08": ["NEEDS_REVIEW"],
-                                    "C02": ["NEEDS_REVIEW"], "C05": ["NO_VIOLATION"]})
+        self.assertEqual(verdicts, {"D-P2-08": ["NEEDS_REVIEW"], "C02": ["NEEDS_REVIEW"],
+                                    "C05": ["NO_VIOLATION"]})
 
 
 class ScoringTests(unittest.TestCase):

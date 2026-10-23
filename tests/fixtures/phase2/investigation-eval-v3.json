@@ -31,15 +31,17 @@
     },
     "v3.2": {
      "verdicts": [
-      "NEEDS_REVIEW"
+      "VIOLATION"
      ],
-     "categories": [],
+     "categories": [
+      "HARASSMENT"
+     ],
      "policyIds": [
       "CP-3.3"
      ]
     }
    },
-   "rationale": "지역을 이유로 한 발언 배제 요구. PM 검수(10/23): 보류"
+   "rationale": "지역을 이유로 발언 자체를 막는 배제 요구(CP-3.3). PM 검수 후 기준 정리(10/23): 위반"
   },
   {
    "id": "D-P2-02",
@@ -857,7 +859,7 @@
      ]
     }
    },
-   "rationale": "종교를 이유로 한 시청 배제 요구. PM 검수(10/23): 보류"
+   "rationale": "종교 집단에 대한 시청 배제 요구. 경고·배려로도 읽혀 문맥 없이 구분 불가(CP-3.3 보류 기준). PM 검수(10/23): 보류"
   },
   {
    "id": "C03",
