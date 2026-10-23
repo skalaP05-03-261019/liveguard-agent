@@ -1,3 +1,3 @@
-# Experimental local inference only; install into the existing Agent venv.
+# Experimental local inference only; install into a disposable local Agent venv.
 torch>=2.2,<3
-transformers>=4.40,<5
+transformers==4.57.6

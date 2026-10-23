@@ -34,8 +34,13 @@ class UnSmilePickle:
         import torch
         from transformers import AutoTokenizer
 
-        with path.open("rb") as stream:
-            model = pickle.load(stream)  # Only an explicitly trusted local file.
+        try:
+            with path.open("rb") as stream:
+                model = pickle.load(stream)  # Only an explicitly trusted local file.
+        except (AttributeError, ModuleNotFoundError) as error:
+            raise ValueError(
+                "Model pickle requires the compatible PyTorch/Transformers versions used when it was saved"
+            ) from error
         if not hasattr(model, "config") or not hasattr(model, "eval"):
             raise ValueError("Pickle does not contain a sequence classifier")
         model.to("cpu")
