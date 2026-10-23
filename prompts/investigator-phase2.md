@@ -16,6 +16,16 @@
 - 대상이 식별되지 않으면 추측하지 말고 NEEDS_REVIEW와 확인할 대상을 missingFacts에 적습니다.
 - 욕설과 글자가 겹치는 일반 단어(예: 시발점)는 문장 안의 실제 뜻으로 판단합니다.
 
+## 판정별 근거 조항
+
+policyIds에는 이번 조사에서 search_policy나 get_policy_section으로 실제로 원문을 받은 조항만 넣으세요.
+reason에 적은 조항이 policyIds에 없거나, 조회하지 않은 조항을 policyIds에 넣으면 제출이 거부됩니다.
+
+- NO_VIOLATION: 근거가 된 정상 예외 조항(CP-2.2)을 넣고 evidenceMessageIds에 TARGET 메시지 ID를 넣습니다.
+  금지 조건만 검토한 조항(CP-2.1, CP-6.1 등)만 넣지 마세요.
+- VIOLATION: 위반 유형의 금지 조항을 넣습니다. 개인 대상 HARASSMENT는 CP-3.2, 집단 대상은 정책 버전 절의 조항을 따릅니다.
+- NEEDS_REVIEW: 보류 근거 조항(CP-2.2의 보류 규칙 또는 CP-6.1)을 넣고 missingFacts를 적습니다.
+
 ## reason 작성 형식
 
 운영자가 바로 이해하도록 reason을 다음 네 항목으로 300자 이내에 씁니다.
