@@ -68,7 +68,7 @@ class V32PiiContractTests(unittest.TestCase):
         self.assertIn("PII_PHONE", current)
         self.assertIn("UNKNOWN", current)
         self.assertIn("다른 유형이 함께 의심되면", current)
-        self.assertIn("조항 우선순위가 확정될 때까지 NEEDS_REVIEW", current)
+        self.assertIn("경고·인용·제지 목적이어도 SP-3.1을 우선", current)
         self.assertNotIn("PII_PHONE", previous)
         policy = (Path(__file__).resolve().parents[1] / "app/rag_mcp/policies/policy-v3.2.md").read_text()
         self.assertIn("작성자가 자기 정보를 스스로 공개하는 경우도 포함한다", policy)
