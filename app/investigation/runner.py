@@ -6,6 +6,7 @@ fails closed with finite calls/time and basic masking, and has no retry policy.
 
 import asyncio
 from collections import Counter
+from contextlib import nullcontext
 from copy import deepcopy
 import json
 from pathlib import Path
@@ -19,7 +20,7 @@ from app.clients.business_mcp import AgentToolError
 from app.clients.rag_mcp import require_trace
 from app.policy_evidence import retrieve_policy_evidence, retrieve_policy_section_evidence
 from app.schemas import Category, Contract, MessageFinding
-from app.investigation.model import InvestigationModel, ModelTurn
+from app.investigation.model import InvestigationModel, ModelRequest, ModelTurn
 from app.investigation.validation import validate_analysis
 
 
@@ -97,8 +98,9 @@ class StandaloneGate:
         if exceeded or remaining <= 0:
             raise AgentToolError("INVESTIGATION_LIMIT", trace_id=self.trace_id)
         try:
-            async with asyncio.timeout(remaining):
-                return await operation()
+            async with operation.admission() if hasattr(operation, "admission") else nullcontext():
+                async with asyncio.timeout(remaining):
+                    return await operation()
         except TimeoutError:
             raise AgentToolError("INVESTIGATION_LIMIT", trace_id=self.trace_id) from None
 
@@ -171,8 +173,8 @@ async def run_investigation(state: dict, *, model: InvestigationModel, business,
     # The execution gate counts all attempts, including low-level MCP calls.
     # A defensive hard ceiling also protects against a misconfigured external gate.
     for _ in range(8):
-        turn = await active_gate.run("model", lambda: model.complete(
-            deepcopy(messages), tool_definitions(), trace_id=trace_id))
+        turn = await active_gate.run("model", ModelRequest(
+            model, deepcopy(messages), tool_definitions(), trace_id=trace_id))
         turns += 1
         if not isinstance(turn, ModelTurn) or len(turn.calls) != 1:
             raise AgentToolError("INVALID_MODEL_OUTPUT", trace_id=trace_id)

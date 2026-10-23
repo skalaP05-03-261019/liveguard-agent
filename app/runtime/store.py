@@ -6,6 +6,7 @@ and per-thread exclusion work across workers sharing the SAME database file.
 import hashlib
 import fcntl
 import json
+import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -14,6 +15,10 @@ from app.schemas import TaskEnvelope
 
 
 class TaskConflict(Exception):
+    pass
+
+
+class InboxCapacityExceeded(Exception):
     pass
 
 
@@ -27,16 +32,22 @@ def operation_id(task):
 
 def task_payload(task):
     payload = task.model_dump(mode="json", by_alias=True)
+    if payload.get("liveId") is None:
+        payload.pop("liveId", None)  # Preserve fingerprints of pre-liveId envelopes.
     logical = {k: v for k, v in payload.items() if k not in {"eventId", "traceId"}}
     fingerprint = hashlib.sha256(json.dumps(logical, sort_keys=True).encode()).hexdigest()
     return payload, fingerprint
 
 
 class TaskStore:
-    def __init__(self, path):
+    def __init__(self, path, *, capacity=None):
         if not path or path == ":memory:":
             raise ValueError("AGENT_TASK_DB_PATH must be a persistent file")
         self.path = str(Path(path).resolve())
+        self.capacity = int(capacity if capacity is not None else
+                            os.getenv("AGENT_INBOX_CAPACITY", "10000"))
+        if self.capacity < 1:
+            raise ValueError("Inbox capacity must be positive")
         Path(self.path).parent.mkdir(parents=True, exist_ok=True)
         with self.connection() as db:
             db.execute("PRAGMA journal_mode=WAL")
@@ -97,6 +108,10 @@ class TaskStore:
                     raise TaskConflict("IDEMPOTENCY_CONFLICT")
                 db.commit()
                 return self.public(old), False
+            count = db.execute("""SELECT count(*) FROM jobs
+                WHERE status IN ('QUEUED','RUNNING','WAITING_REVIEW','UNKNOWN')""").fetchone()[0]
+            if count >= self.capacity:
+                raise InboxCapacityExceeded()
             origin = db.execute("SELECT * FROM threads WHERE thread_id=?", (task.thread_id,)).fetchone()
             if task.kind == "RESUME_REVIEW":
                 if origin is None or tuple(origin) != refs:

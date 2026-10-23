@@ -10,7 +10,9 @@ import httpx
 
 from app.candidate_detection.contracts import Assessment
 from app.candidate_detection.demo_web import create_app, read_model_key
+from app.candidate_detection.screen import CandidateScreen
 from app.clients.business_mcp import AgentToolError
+from app.investigation.model import ModelTurn, ToolCall
 
 
 class Screen:
@@ -94,6 +96,24 @@ class DemoWebTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.json()['selected'])
         self.assertEqual(result.json()['assessment']['missingFacts'], ['Synthetic missing context'])
         self.assertFalse(result.json()['executionAuthorized'])
+
+    async def test_message_id_only_model_evidence_is_exact_in_public_demo_response(self):
+        body = payload('Synthetic full target message')
+
+        class ReferenceModel:
+            async def complete(self, messages, tools, *, trace_id):
+                return ModelTurn([ToolCall('one', 'report_candidate_signals', {
+                    'signals': [{'kind': 'TARGETED_ATTACK', 'strength': 'CLEAR',
+                                 'reason': 'Synthetic targeted attack',
+                                 'evidence': [{'messageId': body['input']['target']['messageId']}]}],
+                    'missingFacts': []})])
+
+        result = await self.request(create_app(CandidateScreen(ReferenceModel())),
+                                    'POST', '/api/screen', json=body)
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.json()['assessment']['signals'][0]['evidence'],
+                         [{'messageId': body['input']['target']['messageId'],
+                           'text': 'Synthetic full target message'}])
 
     async def test_cross_origin_host_content_type_and_body_limit_are_rejected_before_screen(self):
         screen = Screen(); app = create_app(screen)

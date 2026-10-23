@@ -61,6 +61,8 @@ class GraphWorker:
         self.failure_code = None
         self.active_guard = None
         self.active_heartbeat = None
+        self._active = {}
+        self._lanes = set()
 
     @property
     def ready(self):
@@ -88,22 +90,37 @@ class GraphWorker:
                 self.active_guard.lost = True
             if self.active_heartbeat is not None:
                 self.active_heartbeat.cancel()
+            for guard, heartbeat in list(self._active.values()):
+                guard.lost = True
+                heartbeat.cancel()
+            for lane in self._lanes:
+                lane.cancel()
             self.worker.cancel()
             done, _ = await asyncio.wait({self.worker}, timeout=self.settings.shutdown_seconds)
             if done and not self.worker.cancelled():
                 self.worker.result()
 
     async def serve(self):
-        try:
+        async def lane():
             while not self.stopping.is_set():
                 if not await self.run_one():
                     try:
                         await asyncio.wait_for(self.stopping.wait(), self.settings.poll_seconds)
                     except TimeoutError:
                         pass
+
+        try:
+            self._lanes = {asyncio.create_task(lane())
+                           for _ in range(self.store.worker_concurrency)}
+            await asyncio.gather(*self._lanes)
         except asyncio.CancelledError:
             raise
         except Exception:
+            for guard, heartbeat in list(self._active.values()):
+                guard.lost = True
+                heartbeat.cancel()
+            for task in self._lanes:
+                task.cancel()
             self.failure_code = "WORKER_RUNTIME_UNAVAILABLE"
             raise WorkerFailure(self.failure_code) from None
 
@@ -131,6 +148,7 @@ class GraphWorker:
         heartbeat = asyncio.create_task(self._heartbeat(guard, execution))
         self.active_guard = guard
         self.active_heartbeat = heartbeat
+        self._active[execution] = (guard, heartbeat)
         try:
             await execution
         except LeaseLost:
@@ -143,6 +161,7 @@ class GraphWorker:
             await asyncio.gather(heartbeat, return_exceptions=True)
             self.active_guard = None
             self.active_heartbeat = None
+            self._active.pop(execution, None)
         return True
 
     async def _finish(self, guard, status, code=None):
@@ -234,6 +253,8 @@ class GraphWorker:
             reject("THREAD_NOT_FOUND")
         if not _bound(task, snapshot.values, require_decision=False):
             reject("CHECKPOINT_BINDING_MISMATCH")
+        if task.live_id is not None and str(task.live_id) != snapshot.values.get("live_id"):
+            reject("LIVE_BINDING_MISMATCH")
         if not snapshot.interrupts:
             reject("NO_PENDING_APPROVAL")
         if not _waiting_is_bound(task, snapshot):

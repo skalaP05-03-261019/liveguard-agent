@@ -68,10 +68,10 @@ class InvestigationHandoff(Contract):
         if (t.case_id != s.case_id or t.snapshot_id != s.snapshot_id
                 or t.expected_evidence_version != s.evidence_version):
             raise ValueError('Backend task and immutable case must match')
-        if (not r.selected or not s.user_id or s.live_id != r.live_id
+        if (not s.user_id or s.live_id != r.live_id
                 or s.handling_route != 'CONTEXT_REVIEW'
                 or s.confirmation_status not in {'UNCONFIRMED', 'PENDING'}):
-            raise ValueError('Only selected, unconfirmed CONTEXT cases are admissible')
+            raise ValueError('Only Backend-held, unconfirmed CONTEXT cases are admissible')
         if r.target_message_id not in s.target_message_ids:
             raise ValueError('Screened message must be an explicit Backend target')
         ids = [m.message_id for m in self.messages]

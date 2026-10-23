@@ -1,21 +1,24 @@
 """실행 한도와 오류 복구 (#6). 조사 루프의 ExecutionGate(app.investigation.runner)를 구현한다.
 
 - 한도: 모델 호출 8회, 같은 도구 3회, 활성 실행 120초 (수업 Harness 표 6-3, 기획서 10.1).
-- 재시도: retryable로 표시된 일시 오류(429·503·타임아웃 등)만 호출당 최대 2회. 재시도도 호출 수에 포함한다.
+- 재시도: 일시 오류만 호출당 최대 2회. 모델 추가 재시도는 Graph당 4회이며
+  공유 Inbox에서는 checkpoint 전에도 소모를 영속화한다. 재시도도 호출 수에 포함한다.
 - 지속: 카운터를 State `harness_budget`에 저장해 재시작·재개·재전달로 예산이 초기화되지 않게 한다.
   운영자 승인 대기는 연산이 실행되는 시간이 아니므로 활성 시간에 포함되지 않는다.
 """
 
 import asyncio
 from collections.abc import Awaitable, Callable
+from contextlib import nullcontext
 from dataclasses import dataclass
+import random
 import time
 from typing import Any
 
 from app.clients.business_mcp import AgentToolError
 from app.harness.observability import Observer, TraceRecorder, record_event
 from app.harness.safety import safe_presentation
-from app.runtime.fencing import check_execution
+from app.runtime.fencing import check_execution, current_lease
 
 EXECUTION_LIMIT = "EXECUTION_LIMIT"
 MODEL = "model"
@@ -33,6 +36,7 @@ class ExecutionLimits:
     max_same_tool_calls: int = 3
     max_active_seconds: float = 120.0
     max_retries_per_call: int = 2
+    max_model_retries: int = 4
     backoff_seconds: tuple[float, ...] = (0.5, 1.0)
 
 
@@ -59,6 +63,7 @@ class HarnessGate:
         self.tool_calls: dict[str, int] = dict(budget.get("toolCalls", {}))
         self.active_seconds = float(budget.get("activeSeconds", 0.0))
         self.retry_count = int(budget.get("retryCount", 0))
+        self.model_retry_count = int(budget.get("modelRetryCount", 0))
         self.exhausted: str | None = budget.get("exhausted")
         self.last_error: dict[str, Any] | None = budget.get("lastError")
 
@@ -73,6 +78,7 @@ class HarnessGate:
             "toolCalls": dict(self.tool_calls),
             "activeSeconds": round(self.active_seconds, 3),
             "retryCount": self.retry_count,
+            "modelRetryCount": self.model_retry_count,
             "exhausted": self.exhausted,
             "lastError": self.last_error,
             "limits": {
@@ -80,6 +86,7 @@ class HarnessGate:
                 "maxSameToolCalls": self.limits.max_same_tool_calls,
                 "maxActiveSeconds": self.limits.max_active_seconds,
                 "maxRetriesPerCall": self.limits.max_retries_per_call,
+                "maxModelRetries": self.limits.max_model_retries,
             },
         }
 
@@ -123,16 +130,34 @@ class HarnessGate:
 
     async def run(self, name: str, operation: Callable[[], Awaitable[Any]]) -> Any:
         retries = 0
+        guard = current_lease.get()
         while True:
             await check_execution()
             try:
-                self._count_attempt(name)
+                if name != MODEL or guard is None:
+                    self._count_attempt(name)
+                elif self.model_calls >= self.limits.max_model_calls:
+                    raise self._limit("MODEL_CALLS")
             except AgentToolError:
                 self._emit("limit", name=name, reason=self.exhausted)
+                if name == MODEL and guard:
+                    await asyncio.to_thread(guard.inbox.count_event, "model_limits")
                 raise
             started = self._clock()
             try:
-                result = await self._timed(operation)
+                async with operation.admission() if hasattr(operation, "admission") else nullcontext():
+                    if name == MODEL and guard is not None:
+                        count = await asyncio.to_thread(
+                            guard.inbox.claim_model_call,
+                            guard.job,
+                            used=self.model_calls,
+                            maximum=self.limits.max_model_calls,
+                        )
+                        if count is None:
+                            self.model_calls = self.limits.max_model_calls
+                            raise self._limit("MODEL_CALLS")
+                        self.model_calls = count
+                    result = await self._timed(operation)
                 await check_execution()
             except AgentToolError as error:
                 self._emit("call", name=name, attempt=retries + 1, status="error", errorCode=error.code,
@@ -143,15 +168,34 @@ class HarnessGate:
                 self.last_error = {"code": error.code, "operation": name, "retryable": error.retryable}
                 if not error.retryable or retries >= self.limits.max_retries_per_call:
                     raise
+                if name == MODEL and self.model_retry_count >= self.limits.max_model_retries:
+                    guard = current_lease.get()
+                    if guard:
+                        await asyncio.to_thread(guard.inbox.count_event, "model_limits")
+                    raise self._limit("MODEL_RETRIES")
+                retry_after = error.retry_after
             else:
                 usage = getattr(result, "usage", None) or {}
                 self._emit("call", name=name, attempt=retries + 1, status="ok",
                            latencyMs=self._elapsed_ms(started),
                            inputTokens=usage.get("inputTokens"), outputTokens=usage.get("outputTokens"))
                 return result
+            if name == MODEL:
+                self.model_retry_count += 1
+                if guard:
+                    count = await asyncio.to_thread(guard.inbox.claim_model_retry, guard.job,
+                        used=self.model_retry_count - 1, maximum=self.limits.max_model_retries)
+                    if count is None:
+                        self.model_retry_count = self.limits.max_model_retries
+                        raise self._limit("MODEL_RETRIES")
+                    self.model_retry_count = count
             retries += 1
             self.retry_count += 1
-            delay = self.limits.backoff_seconds[min(retries, len(self.limits.backoff_seconds)) - 1]
+            if name == MODEL:
+                delay = max(retry_after, min(30, 2 ** retries + random.uniform(0, 1)))
+            else:
+                delay = max(retry_after,
+                    self.limits.backoff_seconds[min(retries, len(self.limits.backoff_seconds)) - 1])
             self._emit("retry", name=name, attempt=retries + 1, delayMs=int(delay * 1000))
             started = self._clock()
             await self._sleep(delay)

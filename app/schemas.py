@@ -17,6 +17,7 @@ class Contract(BaseModel):
 class TaskEnvelope(Contract):
     event_id: UUID
     task_id: UUID
+    live_id: UUID | None = None
     case_id: UUID
     kind: Literal["ANALYZE", "REANALYZE", "RESUME_REVIEW", "RECONCILE"]
     thread_id: str = Field(min_length=1)

@@ -35,6 +35,12 @@ uv run --env-file .env.draft uvicorn app.phase2_bridge.api:app --host 127.0.0.1 
 
 `POST /agent/investigations/draft`, `Authorization: Bearer <INVESTIGATION_DRAFT_SERVICE_TOKEN>`으로 호출합니다. 입력은 [draft-request.json](../../examples/phase2-handoff/draft-request.json), 형식은 [DraftRequest Schema](../../examples/phase2-handoff/schemas/DraftRequest.json)와 [DraftResponse Schema](../../examples/phase2-handoff/schemas/DraftResponse.json)를 참조합니다. 예제 UUID는 실제 BE에 존재하지 않습니다. 실제 BE 발행 작업과 그 후보 판별 입력·결과를 사용해야 합니다. 서비스 토큰은 신뢰된 내부 발신자를 인증하며 작업 JSON 자체가 BE 발행 사실을 암호학적으로 증명하지는 않습니다.
 
+2026-10-23 회의 기준으로 유효한 판별 결과의 `selected=false`는 BE가 이미 보류한
+후보의 조사를 막지 않습니다. 조사 허용 조건은 BE의 `CONTEXT_REVIEW`·`HELD`
+사건과 작업·대상·증거 버전의 일치입니다. 이 독립 Draft API는 아직 판별 결과를
+입력으로 요구합니다. 판별 호출 자체가 실패했다면 이 API에 가짜 음성 결과를
+만들어 넣지 말고, 기존 BE→Agent Inbox/Worker 조사 경로를 유지합니다.
+
 기본 비활성, 동시 처리 기본 1건/프로세스, 본문 최대 64 KiB입니다. 시간 상한 120초는 초기 BE 조회와 조사 전체를 포함합니다. 기존 Harness의 모델 8회·동일 도구 3회·재시도/활성 시간 한도를 재사용합니다. API는 자동 재시도하지 않습니다. 작업을 저장·접수하는 202 API가 아니며 검증된 초안을 얻은 경우에만 200입니다.
 
 | 응답 | 의미 |
