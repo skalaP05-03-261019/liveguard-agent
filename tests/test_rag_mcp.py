@@ -257,7 +257,8 @@ class RagMcpHttpTests(unittest.TestCase):
 
         self.assertEqual(
             health,
-            {"status": "ready", "readyForTasks": True, "indexedPolicyVersions": ["3.0", "3.1", VERSION]},
+            {"status": "ready", "readyForTasks": True,
+             "indexedPolicyVersions": ["3.0", "3.1", "3.2", VERSION]},
         )
         self.assertEqual(unauthenticated.status_code, 401)
         self.assertEqual(wrong.status_code, 401)
