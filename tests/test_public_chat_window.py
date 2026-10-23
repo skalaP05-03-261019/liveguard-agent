@@ -30,6 +30,9 @@ class PublicChatWindowTests(unittest.TestCase):
         data["messages"] = [later, data["messages"][0]]
         parsed = PublicChatWindow.model_validate(data)
         self.assertEqual(str(parsed.ordered_messages()[0].message_id), MESSAGE)
+        payload = parsed.summary_input_payload()
+        self.assertNotIn("complete", payload)
+        self.assertEqual(payload["messages"][0]["messageId"], MESSAGE)
         self.assertEqual(parsed.source_fingerprint(),
                          PublicChatWindow.model_validate({**data,
                              "messages": list(reversed(data["messages"]))}).source_fingerprint())

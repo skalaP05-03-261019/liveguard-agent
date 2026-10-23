@@ -67,6 +67,19 @@ class PublicChatWindow(Contract):
         return tuple(sorted(self.messages, key=lambda item: (
             _utc(item.sent_at), str(item.message_id))))
 
+    def summary_input_payload(self) -> dict:
+        """#72 SummaryInput fields only; never pass the local completeness flag."""
+        payload = {
+            "liveId": str(self.live_id),
+            "windowStart": _utc(self.window_start).isoformat(),
+            "windowEnd": _utc(self.window_end).isoformat(),
+            "messages": [message.model_dump(mode="json", by_alias=True)
+                         for message in self.ordered_messages()],
+        }
+        if self.source_version is not None:
+            payload["sourceVersion"] = self.source_version
+        return payload
+
     def source_fingerprint(self) -> str:
         """Stable digest for change detection; never log the unhashed payload."""
         payload = {
