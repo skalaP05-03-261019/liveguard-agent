@@ -6,14 +6,13 @@ authenticated Backend contract; that provider API is still to be agreed.
 """
 
 from datetime import datetime, timezone
-import hashlib
-import json
 from typing import Literal
 from uuid import UUID
 
 from pydantic import Field, model_validator
 
 from app.schemas import Contract
+from app.chat_summary.schemas import SummaryInput
 
 
 def _utc(value: datetime) -> datetime:
@@ -67,8 +66,8 @@ class PublicChatWindow(Contract):
         return tuple(sorted(self.messages, key=lambda item: (
             _utc(item.sent_at), str(item.message_id))))
 
-    def summary_input_payload(self) -> dict:
-        """#72 SummaryInput fields only; never pass the local completeness flag."""
+    def summary_input(self) -> SummaryInput:
+        """Validate the complete public window against #109's canonical input."""
         payload = {
             "liveId": str(self.live_id),
             "windowStart": _utc(self.window_start).isoformat(),
@@ -78,22 +77,8 @@ class PublicChatWindow(Contract):
         }
         if self.source_version is not None:
             payload["sourceVersion"] = self.source_version
-        return payload
+        return SummaryInput.model_validate(payload)
 
     def source_fingerprint(self) -> str:
-        """Stable digest for change detection; never log the unhashed payload."""
-        payload = {
-            "liveId": str(self.live_id),
-            "windowStart": _utc(self.window_start).isoformat(),
-            "windowEnd": _utc(self.window_end).isoformat(),
-            "sourceVersion": self.source_version,
-            "messages": [
-                {"messageId": str(message.message_id),
-                 "sentAt": _utc(message.sent_at).isoformat(),
-                 "version": message.version, "text": message.text}
-                for message in self.ordered_messages()
-            ],
-        }
-        encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True,
-                             separators=(",", ":")).encode("utf-8")
-        return hashlib.sha256(encoded).hexdigest()
+        """Use #109's only cache/invalidation fingerprint algorithm."""
+        return self.summary_input().fingerprint()
