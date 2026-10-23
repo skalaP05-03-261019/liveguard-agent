@@ -147,7 +147,11 @@ async def evaluate(case_set: CaseSet, cases, standard, *, policy_version, invest
         record = {"id": case.id, "split": case.split, "group": case.group, "sourceCaseId": case.source_case_id}
         try:
             if predictions is not None:
-                prediction = Prediction.model_validate(predictions[case.id])
+                row = predictions[case.id]
+                if isinstance(row, dict) and row.get("status") == "ERROR":
+                    # Replay a recorded failure as the same failure; never invent a verdict for it.
+                    raise AgentToolError(str(row.get("errorCode", "INVESTIGATOR_ERROR")), trace_id="")
+                prediction = Prediction.model_validate(row)
                 detail = {}
             else:
                 fixture = build_fixture(case, policy_version)
@@ -171,6 +175,8 @@ async def evaluate(case_set: CaseSet, cases, standard, *, policy_version, invest
             code = error.code if isinstance(error, AgentToolError) else "INVESTIGATOR_ERROR"
             record.update(status="ERROR", errorCode=code if re.fullmatch(r"[A-Z_]{1,64}", str(code))
                           else "INVESTIGATOR_ERROR")
+            # Keep failures in details so a details file replays the complete run.
+            details.append({"id": case.id, "status": "ERROR", "errorCode": record["errorCode"]})
         if meter:
             record["usage"] = {k: meter.usage[k] - before[k] for k in ("inputTokens", "outputTokens")}
         record["latencyMs"] = round((time.monotonic() - started) * 1000, 2)
