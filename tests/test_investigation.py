@@ -79,6 +79,44 @@ class InvestigationTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("집단 대상 비하·배제", new)
         self.assertEqual(prompt_for_policy("fixture-policy-v1"), old)
 
+    async def test_v32_group_clause_requires_same_version_policy_evidence(self):
+        self.state["policy_version"] = "v3.2"
+        section = {"policyId": "CP-3.3", "title": "집단 대상 비하·배제 (HARASSMENT)",
+                   "text": "식별 가능한 집단의 열등 단정·배제를 문맥에서 확인한다.",
+                   "version": "v3.2", "category": "HARASSMENT",
+                   "resourceUri": "policy://v3.2/operating-policy/CP-3.3"}
+        self.policy.sections = [section]
+        target = self.state["target_messages"][0]["messageId"]
+        finding = {"messageId": target, "verdict": "VIOLATION", "categories": ["HARASSMENT"],
+                   "policyIds": ["CP-3.3"], "evidenceMessageIds": [target],
+                   "reason": "식별 가능한 집단의 열등 단정과 배제 요구를 확인함", "missingFacts": []}
+        model = ScriptedModel([ToolCall("section", "get_policy_section", {"policyId": "CP-3.3"}),
+                               finish([finding])])
+        result = await run_investigation(self.state, model=model, business=self.business,
+                                         policy=self.policy)
+        self.assertEqual(result["message_findings"][0].categories, ["HARASSMENT"])
+        self.assertEqual(result["policy_evidence"][0]["version"], "v3.2")
+        self.assertIn("CP-3.3", model.inputs[0][0][0]["content"])
+
+        old_state = {**self.state, "policy_version": "v3.1"}
+        old_model = ScriptedModel([ToolCall("section", "get_policy_section", {"policyId": "CP-3.3"})])
+        with self.assertRaises(AgentToolError) as raised:
+            await run_investigation(old_state, model=old_model, business=self.business,
+                                    policy=self.policy)
+        self.assertEqual(raised.exception.code, "POLICY_MISMATCH")
+
+    async def test_phase2_hints_cannot_override_policy_version_or_evidence(self):
+        model = ScriptedModel([search(), finish([finding(self.state)])])
+        await run_investigation(self.state, model=model, business=self.business,
+                                policy=self.policy, extra_input={"candidateHints": {"signals": []}})
+        sent = json.loads(model.inputs[0][0][1]["content"])
+        self.assertEqual(sent["policyVersion"], self.state["policy_version"])
+        self.assertEqual(sent["candidateHints"], {"signals": []})
+        with self.assertRaises(AgentToolError) as raised:
+            await run_investigation(self.state, model=ScriptedModel([]), business=self.business,
+                                    policy=self.policy, extra_input={"policyVersion": "v3.2"})
+        self.assertEqual(raised.exception.code, "INVALID_INPUT")
+
     async def asyncSetUp(self):
         self.business = FixtureTools(deepcopy(FIXTURE))
         self.state = await load_case_data(TaskEnvelope.model_validate(FIXTURE["task"]), self.business)
