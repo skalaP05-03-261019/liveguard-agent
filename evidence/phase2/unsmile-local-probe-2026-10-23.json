@@ -19,9 +19,13 @@
     "unsmileAssessed": 8,
     "unsmileCandidates": 4,
     "unsmileElapsedMsMedian": 12.95,
-    "gptAssessed": 0,
-    "gptFailureCode": "MODEL_UNAVAILABLE",
-    "qualityMetrics": null
+    "qualityMetrics": null,
+    "existingGptDemoAssessed": 8,
+    "existingGptDemoCandidates": 4,
+    "candidateAgreement": 6,
+    "existingGptDemoHttpMedianMs": 1500.04,
+    "directInProcessGptAssessed": 0,
+    "directInProcessGptFailureCode": "MODEL_UNAVAILABLE on direct in-process comparison; existing demo at localhost:8765 returned 8/8"
   },
   "cases": [
     {
@@ -43,7 +47,17 @@
         "악플/욕설": 0.0783,
         "clean": 0.8983
       },
-      "unsmileElapsedMs": 126.66
+      "unsmileElapsedMs": 126.66,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": false,
+        "signals": [],
+        "usage": {
+          "inputTokens": 1138,
+          "outputTokens": 22
+        },
+        "httpElapsedMs": 1236.05
+      }
     },
     {
       "id": "normal-information",
@@ -64,7 +78,17 @@
         "악플/욕설": 0.0585,
         "clean": 0.915
       },
-      "unsmileElapsedMs": 13.26
+      "unsmileElapsedMs": 13.26,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": false,
+        "signals": [],
+        "usage": {
+          "inputTokens": 1182,
+          "outputTokens": 22
+        },
+        "httpElapsedMs": 1180.159
+      }
     },
     {
       "id": "normal-homograph",
@@ -85,7 +109,17 @@
         "악플/욕설": 0.069,
         "clean": 0.9071
       },
-      "unsmileElapsedMs": 12.64
+      "unsmileElapsedMs": 12.64,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": false,
+        "signals": [],
+        "usage": {
+          "inputTokens": 1153,
+          "outputTokens": 22
+        },
+        "httpElapsedMs": 949.922
+      }
     },
     {
       "id": "profanity-variant",
@@ -108,7 +142,26 @@
         "악플/욕설": 0.899,
         "clean": 0.0716
       },
-      "unsmileElapsedMs": 14.02
+      "unsmileElapsedMs": 14.02,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": true,
+        "signals": [
+          {
+            "kind": "PROFANITY_VARIANT",
+            "strength": "CLEAR"
+          },
+          {
+            "kind": "TARGETED_ATTACK",
+            "strength": "CLEAR"
+          }
+        ],
+        "usage": {
+          "inputTokens": 1153,
+          "outputTokens": 215
+        },
+        "httpElapsedMs": 2072.608
+      }
     },
     {
       "id": "targeted-insult",
@@ -131,7 +184,22 @@
         "악플/욕설": 0.8889,
         "clean": 0.0775
       },
-      "unsmileElapsedMs": 11.63
+      "unsmileElapsedMs": 11.63,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": true,
+        "signals": [
+          {
+            "kind": "TARGETED_ATTACK",
+            "strength": "CLEAR"
+          }
+        ],
+        "usage": {
+          "inputTokens": 1161,
+          "outputTokens": 123
+        },
+        "httpElapsedMs": 1525.186
+      }
     },
     {
       "id": "region-disparagement",
@@ -152,7 +220,22 @@
         "악플/욕설": 0.4824,
         "clean": 0.0821
       },
-      "unsmileElapsedMs": 11.93
+      "unsmileElapsedMs": 11.93,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": true,
+        "signals": [
+          {
+            "kind": "REGION_DISPARAGEMENT",
+            "strength": "CLEAR"
+          }
+        ],
+        "usage": {
+          "inputTokens": 1152,
+          "outputTokens": 117
+        },
+        "httpElapsedMs": 1474.899
+      }
     },
     {
       "id": "quoted-term",
@@ -175,7 +258,22 @@
         "악플/욕설": 0.0563,
         "clean": 0.0482
       },
-      "unsmileElapsedMs": 11.32
+      "unsmileElapsedMs": 11.32,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": false,
+        "signals": [
+          {
+            "kind": "GROUP_HATE",
+            "strength": "UNCERTAIN"
+          }
+        ],
+        "usage": {
+          "inputTokens": 1158,
+          "outputTokens": 221
+        },
+        "httpElapsedMs": 2469.654
+      }
     },
     {
       "id": "group-hostility",
@@ -198,14 +296,44 @@
         "악플/욕설": 0.058,
         "clean": 0.0408
       },
-      "unsmileElapsedMs": 13.63
+      "unsmileElapsedMs": 13.63,
+      "existingGptDemo": {
+        "status": "OK",
+        "selected": true,
+        "signals": [
+          {
+            "kind": "GROUP_HATE",
+            "strength": "CLEAR"
+          }
+        ],
+        "usage": {
+          "inputTokens": 1137,
+          "outputTokens": 133
+        },
+        "httpElapsedMs": 1713.691
+      }
     }
   ],
   "limitations": [
     "Ad hoc probes are not a policy/QA-approved golden set.",
     "No accuracy or model superiority is claimed.",
-    "GPT did not return results in this restricted local execution environment.",
     "Target-text-only UnSmile output has no quote-span, conversation context, or approved policy verdict.",
-    "No Backend, FE, moderation, or sanction command was executed."
-  ]
+    "No Backend, FE, moderation, or sanction command was executed.",
+    "Direct in-process GPT comparison failed with MODEL_UNAVAILABLE, but a pre-existing local GPT demo returned 8/8 results through its HTTP API.",
+    "The running GPT demo container version and model name could not be independently verified.",
+    "Latency values use different paths (UnSmile in-process versus GPT demo HTTP/network) and are not a service performance benchmark."
+  ],
+  "comparison": {
+    "source": "pre-existing local GPT candidate demo at http://127.0.0.1:8765/api/screen",
+    "modelName": "not independently verified from running container",
+    "sameTargetText": true,
+    "contextMessages": 0,
+    "experiment": "clear-or-possible",
+    "sameExecutionPath": false,
+    "differentCandidateIds": [
+      "region-disparagement",
+      "quoted-term"
+    ],
+    "interpretation": "observations only; no independently reviewed expected outcomes or quality metrics"
+  }
 }
