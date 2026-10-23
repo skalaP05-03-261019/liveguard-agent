@@ -255,9 +255,11 @@ class McpHttpTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(backend.calls), 1)
 
     async def test_timeout_is_bounded_and_not_retried(self):
-        backend = FixtureBackend(delay=0.5)
+        # Leave enough time for the TCP MCP handshake on a loaded CI runner;
+        # the backend delay still exceeds the per-call deadline.
+        backend = FixtureBackend(delay=3.0)
         async with local_mcp(backend) as url:
-            client = BusinessMcpReadClient(BusinessMcpSettings(url, TOKEN, timeout_seconds=0.15))
+            client = BusinessMcpReadClient(BusinessMcpSettings(url, TOKEN, timeout_seconds=1.5))
             with self.assertRaises(AgentToolError) as raised:
                 await client.call("get_moderation_case", self.arguments())
         self.assertEqual(raised.exception.code, "TEMPORARY_UNAVAILABLE")
