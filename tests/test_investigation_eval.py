@@ -62,6 +62,34 @@ class CaseSetTests(unittest.TestCase):
                 CaseSet.model_validate(data)
 
 
+class CaseSetV2Tests(unittest.TestCase):
+    def test_v2_keeps_v31_labels_and_maps_group_hate_to_cp33(self):
+        v1 = {c.id: c for c in case_set().cases}
+        v2 = load_case_set(ROOT / "tests/fixtures/phase2/investigation-eval-v2.json")
+        self.assertEqual(set(v2.standards), {"v3.1", "v3.2"})
+        for case in v2.cases:
+            # v3.1 expectations are unchanged so Phase 1 comparisons stay valid.
+            self.assertEqual(case.expected["v3.1"], v1[case.id].expected["v3.1"])
+            if case.group in {"HATE", "INJECTION"}:
+                expected = case.expected["v3.2"]
+                self.assertEqual(([v.value for v in expected.verdicts], expected.categories, expected.policy_ids),
+                                 (["VIOLATION"], ["HARASSMENT"], ["CP-3.3"]))
+
+    def test_v3_applies_pm_review_only_where_marked(self):
+        v2 = {c.id: c for c in load_case_set(ROOT / "tests/fixtures/phase2/investigation-eval-v2.json").cases}
+        v3 = load_case_set(ROOT / "tests/fixtures/phase2/investigation-eval-v3.json")
+        self.assertEqual((v3.version, v3.review_status), ("inv-eval-v3", "REVIEWED"))
+        # BE rule-confirmed profanity is out of the investigation scope (PM review).
+        self.assertEqual(set(v2) - {c.id for c in v3.cases}, {"C11", "C12"})
+        changed = {(c.id, s) for c in v3.cases for s in v3.standards if c.expected[s] != v2[c.id].expected[s]}
+        # The PM reviewed the v3.2 answers only; v3.1 stays the author draft.
+        verdicts = {case_id: [v.value for v in next(c for c in v3.cases if c.id == case_id)
+                              .expected[standard].verdicts] for case_id, standard in changed}
+        self.assertEqual({standard for _, standard in changed}, {"v3.2"})
+        self.assertEqual(verdicts, {"D-P2-08": ["NEEDS_REVIEW"], "C02": ["NEEDS_REVIEW"],
+                                    "C05": ["NO_VIOLATION"]})
+
+
 class ScoringTests(unittest.TestCase):
     def setUp(self):
         self.cases = {c.id: c for c in case_set().cases}
@@ -137,7 +165,14 @@ class EvaluateTests(unittest.IsolatedAsyncioTestCase):
         report, details = await evaluate(data, [case], "v3.1", policy_version=POLICY_VERSION,
                                          investigator_factory=lambda business: Broken())
         self.assertEqual((report["errors"], report["results"][0]["errorCode"]), (1, "INVESTIGATOR_ERROR"))
-        self.assertEqual(details, [])
+        self.assertEqual(details, [{"id": case.id, "status": "ERROR", "errorCode": "INVESTIGATOR_ERROR"}])
+        # A recorded failure replays as the same failure under another standard.
+        replay = {case.id: {k: v for k, v in details[0].items() if k != "id"}}
+        again, _ = await evaluate(data, [case], "v3.2-draft", policy_version=POLICY_VERSION, predictions=replay)
+        self.assertEqual((again["errors"], again["results"][0]["errorCode"]), (1, "INVESTIGATOR_ERROR"))
+        malformed = {case.id: {"status": "ERROR", "errorCode": "not a code"}}
+        again, _ = await evaluate(data, [case], "v3.1", policy_version=POLICY_VERSION, predictions=malformed)
+        self.assertEqual(again["results"][0]["errorCode"], "INVESTIGATOR_ERROR")
         self.assertNotIn(case.target, json.dumps(report, ensure_ascii=False))
 
     async def test_offline_predictions_and_summary(self):
