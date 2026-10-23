@@ -17,7 +17,7 @@ from app.schemas import Category
 POLICY_FILE = policy_file_for(DEFAULT_POLICY_VERSION)
 
 EXPECTED_POLICY_IDS = [
-    "CP-1.1", "CP-1.2", "CP-2.1", "CP-2.2", "CP-3.1", "CP-3.2", "CP-4.1",
+    "CP-1.1", "CP-1.2", "CP-2.1", "CP-2.2", "CP-3.1", "CP-3.2", "CP-3.3", "CP-4.1",
     "CP-4.2", "CP-5.1", "CP-5.2", "SP-2.1", "SP-3.1", "CP-6.1", "MP-1.1",
     "MP-1.2", "MP-1.3", "MP-1.4", "MP-2.1", "MP-2.2", "MP-2.3", "MP-3.1",
     "MP-3.2", "MP-4.1", "MP-4.2", "MP-4.3", "SP-4.1", "MM-1.1", "MM-2.1",
@@ -66,6 +66,17 @@ class PolicyParserTest(unittest.TestCase):
         old = parse_policy((POLICY_DIR / "policy-v3.0.md").read_text(encoding="utf-8"), version="3.0")
         self.assertEqual(len(old), 23)
         self.assertNotIn("CP-5.2", {chunk.policy_id for chunk in old})
+
+    def test_v32_group_clause_is_searchable_without_changing_v31(self) -> None:
+        newer = parse_policy(policy_file_for("v3.2").read_text(encoding="utf-8"), version="v3.2")
+        by_id = {chunk.policy_id: chunk for chunk in newer}
+        legacy = parse_policy(policy_file_for("v3.1").read_text(encoding="utf-8"), version="v3.1")
+        self.assertNotIn("CP-3.3", {chunk.policy_id for chunk in legacy})
+        self.assertEqual(by_id["CP-3.3"].category, Category.HARASSMENT)
+        self.assertEqual(by_id["CP-3.3"].resource_uri,
+                         "policy://v3.2/operating-policy/CP-3.3")
+        self.assertIn("대상 집단과 열등 단정 또는 배제 표현", by_id["CP-3.3"].text)
+        self.assertIn("CP-3.3", by_id["CP-6.1"].text)
 
     def test_maps_categories_and_leaves_common_sections_unmapped(self) -> None:
         self.assertEqual(self.by_id["CP-2.1"].category, Category.PROFANITY)
@@ -170,10 +181,10 @@ class IndexDatabaseTest(unittest.TestCase):
 
 
 class PolicyVersionLabelTests(unittest.TestCase):
-    """#49: BE 계약의 활성 이름표 v3.1은 같은 원문 policy-v3.1.md를 쓴다."""
+    """활성 v3.2와 과거 v3.1 원문을 서로 다른 버전으로 유지한다."""
 
     def test_v_prefixed_label_uses_same_source_file(self) -> None:
-        self.assertEqual(DEFAULT_POLICY_VERSION, "v3.1")
+        self.assertEqual(DEFAULT_POLICY_VERSION, "v3.2")
         self.assertEqual(policy_file_for("v3.1"), policy_file_for("3.1"))
         self.assertTrue(policy_file_for(DEFAULT_POLICY_VERSION).is_file())
         chunk = parse_policy(policy_file_for("v3.1").read_text(encoding="utf-8"), version="v3.1")[0]

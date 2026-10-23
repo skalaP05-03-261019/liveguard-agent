@@ -11,7 +11,7 @@ from app.case_loader import load_case_data
 from app.clients.business_mcp import AgentToolError
 from app.investigation.graph import build_investigation_graph
 from app.investigation.model import ModelTurn, ToolCall, OpenAIInvestigationModel, model_from_env
-from app.investigation.runner import run_investigation, StandaloneGate, basic_presentation, tool_definitions
+from app.investigation.runner import run_investigation, StandaloneGate, basic_presentation, tool_definitions, prompt_for_policy
 from app.investigation.validation import validate_analysis
 from app.schemas import TaskEnvelope
 from test_agent_read import FIXTURE, FixtureTools
@@ -70,6 +70,16 @@ def finding(state, verdict="NO_VIOLATION"):
 
 
 class InvestigationTests(unittest.IsolatedAsyncioTestCase):
+    def test_policy_specific_prompt_does_not_reclassify_v31_cases(self):
+        old = prompt_for_policy("v3.1")
+        new = prompt_for_policy("v3.2")
+        self.assertIn("혐오·성적 위해 후보는 CP-6.1", old)
+        self.assertNotIn("CP-3.3", old)
+        self.assertIn("CP-3.3", new)
+        self.assertIn("집단 대상 비하·배제", new)
+        with self.assertRaises(ValueError):
+            prompt_for_policy("v3.3")
+
     async def asyncSetUp(self):
         self.business = FixtureTools(deepcopy(FIXTURE))
         self.state = await load_case_data(TaskEnvelope.model_validate(FIXTURE["task"]), self.business)

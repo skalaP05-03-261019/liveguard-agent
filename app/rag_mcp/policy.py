@@ -16,6 +16,7 @@ CATEGORY_BY_POLICY_ID: dict[str, Category] = {
     "CP-2.1": Category.PROFANITY,
     "CP-3.1": Category.HARASSMENT,
     "CP-3.2": Category.HARASSMENT,
+    "CP-3.3": Category.HARASSMENT,
     "CP-4.1": Category.FLOOD,
     "CP-4.2": Category.FLOOD,
     "CP-5.1": Category.PHISHING,

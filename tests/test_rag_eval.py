@@ -12,25 +12,27 @@ from app.schemas import Category
 
 class EvalsetTests(unittest.TestCase):
     def test_expected_sections_exist_in_policy_text(self) -> None:
-        version, cases = load_evalset(EVALSET_DIR / "policy-v3.1.json")
-        markdown = policy_file_for(version).read_text(encoding="utf-8")
-        section_ids = {chunk.policy_id for chunk in parse_policy(markdown, version=version)}
-        self.assertGreaterEqual(len(cases), 20)
-        self.assertEqual(len({case.id for case in cases}), len(cases))
-        for case in cases:
-            with self.subTest(case=case.id):
-                self.assertTrue(case.expected)
-                self.assertLessEqual(set(case.expected), section_ids)
+        for label in ("v3.1", "v3.2"):
+            version, cases = load_evalset(EVALSET_DIR / f"policy-{label}.json")
+            markdown = policy_file_for(version).read_text(encoding="utf-8")
+            section_ids = {chunk.policy_id for chunk in parse_policy(markdown, version=version)}
+            self.assertGreaterEqual(len(cases), 20)
+            self.assertEqual(len({case.id for case in cases}), len(cases))
+            for case in cases:
+                with self.subTest(version=version, case=case.id):
+                    self.assertTrue(case.expected)
+                    self.assertLessEqual(set(case.expected), section_ids)
 
     def test_category_filter_keeps_primary_answer_searchable(self) -> None:
         # 유형을 지정해도 주 정답이 검색 후보(해당 유형 또는 공통 조항)에 남아야 공정한 평가다.
-        _, cases = load_evalset(EVALSET_DIR / "policy-v3.1.json")
-        for case in cases:
-            if case.category is None:
-                continue
-            with self.subTest(case=case.id):
-                primary_category = CATEGORY_BY_POLICY_ID.get(case.expected[0])
-                self.assertIn(primary_category, {case.category, None})
+        for label in ("v3.1", "v3.2"):
+            _, cases = load_evalset(EVALSET_DIR / f"policy-{label}.json")
+            for case in cases:
+                if case.category is None:
+                    continue
+                with self.subTest(version=label, case=case.id):
+                    primary_category = CATEGORY_BY_POLICY_ID.get(case.expected[0])
+                    self.assertIn(primary_category, {case.category, None})
 
 
 class MetricTests(unittest.IsolatedAsyncioTestCase):
