@@ -19,8 +19,6 @@ async def prepare_handoff(*, task: TaskEnvelope, request: ScreenRequest, result:
             or result.live_id != request.input.live_id
             or result.target_message_id != request.input.target.message_id):
         raise AgentToolError('SCREENING_BINDING_MISMATCH', trace_id=trace)
-    if not result.selected:
-        raise AgentToolError('NOT_A_CANDIDATE', trace_id=trace)
     if task.kind not in {'ANALYZE', 'REANALYZE'}:
         raise AgentToolError('INVALID_TASK_KIND', trace_id=trace)
     try:
