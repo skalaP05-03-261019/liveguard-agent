@@ -1,10 +1,12 @@
 """v3.2 PII contract stays separate from existing v3.1 cases (BE #84)."""
 
 from pathlib import Path
+import asyncio
+import json
 import unittest
 
 from app.clients.business_mcp import AgentToolError
-from app.investigation.runner import prompt_for_policy
+from app.investigation.runner import prompt_for_policy, run_investigation
 from app.investigation.validation import validate_analysis
 
 
@@ -37,6 +39,27 @@ def payload(version, *, mixed=False):
 
 
 class V32PiiContractTests(unittest.TestCase):
+    def test_only_be_phone_tag_reaches_v32_pii_model_input(self):
+        class CaptureModel:
+            async def complete(self, messages, tools, *, trace_id):
+                self.messages = messages
+                raise RuntimeError("captured first input")
+
+        for version, tags, expected in (("v3.2", ["PII_PHONE"], True),
+                                        ("v3.2", ["PII_EMAIL"], False),
+                                        ("v3.1", ["PII_PHONE"], None)):
+            case = {**state(version), "trace_id": CASE,
+                    "case_snapshot": {"matchingTags": tags},
+                    "context_messages": []}
+            model = CaptureModel()
+            with self.subTest(version=version, tags=tags), self.assertRaises(RuntimeError):
+                asyncio.run(run_investigation(case, model=model, business=None, policy=None))
+            sent = json.loads(model.messages[1]["content"])
+            if expected is None:
+                self.assertNotIn("backendPiiPhoneCandidate", sent)
+            else:
+                self.assertIs(sent["backendPiiPhoneCandidate"], expected)
+
     def test_only_v32_prompt_accepts_unknown_for_phone_form(self):
         current = prompt_for_policy("v3.2")
         previous = prompt_for_policy("v3.1")
