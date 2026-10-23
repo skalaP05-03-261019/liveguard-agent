@@ -26,6 +26,11 @@ INVESTIGATOR_SOURCES = ("prompts/investigator.md", "app/investigation/runner.py"
                         "app/investigation/validation.py", "app/investigation/graph.py", "app/nodes.py",
                         "app/policy_evidence.py", "app/harness/execution.py", "app/harness/safety.py",
                         "app/phase2_bridge/handoff.py")
+PHASE2_SOURCES = (*INVESTIGATOR_SOURCES, "prompts/investigator-v3.2.md", "prompts/investigator-phase2.md",
+                  "prompts/investigator-phase2-v3.1.md", "prompts/investigator-phase2-v3.2.md",
+                  "app/phase2_investigation/investigator.py")
+# Operator-facing reason labels requested by the Phase 2 prompt (#71). Counted, never stored in reports.
+REASON_LABELS = ("대상:", "표현:", "문맥:", "판단:")
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -100,6 +105,7 @@ def summarize(case_set: CaseSet, cases, standard, results) -> dict:
             "unsupportedAssertions": outcomes.get("FALSE_VIOLATION", 0) + outcomes.get("UNSUPPORTED_NORMAL", 0),
             "confusionExpectedByActual": confusion,
             "policyCitation": {"applicable": len(cited), "cited": sum(r["policyCited"] for r in cited)},
+            "structuredReasons": sum(r.get("structuredReason", False) for r in assessed),
             "bySplit": by("split"), "byGroup": by("group"),
             "latencyMs": {"p50": percentile(.5), "p95": percentile(.95)},
             "usage": {k: sum(r.get("usage", {}).get(k, 0) for r in results) for k in ("inputTokens", "outputTokens")},
@@ -143,7 +149,11 @@ async def evaluate(case_set: CaseSet, cases, standard, *, policy_version, invest
         record = {"id": case.id, "split": case.split, "group": case.group, "sourceCaseId": case.source_case_id}
         try:
             if predictions is not None:
-                prediction = Prediction.model_validate(predictions[case.id])
+                row = predictions[case.id]
+                if isinstance(row, dict) and row.get("status") == "ERROR":
+                    # Replay a recorded failure as the same failure; never invent a verdict for it.
+                    raise AgentToolError(str(row.get("errorCode", "INVESTIGATOR_ERROR")), trace_id="")
+                prediction = Prediction.model_validate(row)
                 detail = {}
             else:
                 fixture = build_fixture(case, policy_version)
@@ -155,7 +165,8 @@ async def evaluate(case_set: CaseSet, cases, standard, *, policy_version, invest
                 prediction = Prediction(verdict=finding.verdict, categories=[c.value for c in finding.categories],
                                         policy_ids=finding.policy_ids, missing_facts=finding.missing_facts)
                 record.update(modelCalls=int(draft.harness_budget.get("modelCalls", 0)),
-                              readTools=sorted(set(business.calls)))
+                              readTools=sorted(set(business.calls)),
+                              structuredReason=all(label in finding.reason for label in REASON_LABELS))
                 detail = {"reason": finding.reason}
             record.update(status="ASSESSED", **score(case, standard, prediction))
             # Same shape as a Prediction, so a details file can be replayed under another standard.
@@ -166,6 +177,8 @@ async def evaluate(case_set: CaseSet, cases, standard, *, policy_version, invest
             code = error.code if isinstance(error, AgentToolError) else "INVESTIGATOR_ERROR"
             record.update(status="ERROR", errorCode=code if re.fullmatch(r"[A-Z_]{1,64}", str(code))
                           else "INVESTIGATOR_ERROR")
+            # Keep failures in details so a details file replays the complete run.
+            details.append({"id": case.id, "status": "ERROR", "errorCode": record["errorCode"]})
         if meter:
             record["usage"] = {k: meter.usage[k] - before[k] for k in ("inputTokens", "outputTokens")}
         record["latencyMs"] = round((time.monotonic() - started) * 1000, 2)
@@ -173,8 +186,8 @@ async def evaluate(case_set: CaseSet, cases, standard, *, policy_version, invest
     return summarize(case_set, cases, standard, results), details
 
 
-def source_fingerprint(root: Path = ROOT) -> dict:
-    files = {path: hashlib.sha256((root / path).read_bytes()).hexdigest() for path in INVESTIGATOR_SOURCES}
+def source_fingerprint(root: Path = ROOT, sources=INVESTIGATOR_SOURCES) -> dict:
+    files = {path: hashlib.sha256((root / path).read_bytes()).hexdigest() for path in sources}
     combined = hashlib.sha256("".join(f"{p}:{h}\n" for p, h in sorted(files.items())).encode()).hexdigest()
     try:
         commit = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"], capture_output=True,

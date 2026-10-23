@@ -10,6 +10,8 @@
 | `app/investigation_eval/evaluate.py` | 실행, 채점, 집계, 조사 코드 지문 |
 | `app/investigation_eval/__main__.py` | CLI |
 | `tests/fixtures/phase2/investigation-eval-v1.json` | 평가 사례 36건 (`AUTHOR_DRAFT`) |
+| `tests/fixtures/phase2/investigation-eval-v2.json` | 같은 36건. 기준 `v3.1`(v1과 동일) + `v3.2`(집단 열등 단정·배제 = HARASSMENT, CP-3.3). v1의 `v3.2-draft`(HATE)는 팀 결정으로 미채택 |
+| `tests/fixtures/phase2/investigation-eval-v3.json` | v2에 PM 검수(2026-10-23, v3.2 정답) 반영, `REVIEWED`. D-P2-08·C02 보류, C05 정상(D-P2-01은 CP-3.3 기준 정리로 위반 유지), C11·C12는 BE 확정 욕설 규칙 대상이라 제외(34건). v3.1 정답은 초안 유지 |
 | `tests/test_investigation_eval.py` | 통제 모델·대역 테스트 12개 |
 
 실행 경로는 #63 인계 경로와 같다. 사례마다 결정적 ID로 BE 형태의 작업·사건·문맥·후보 결과를 만들고, `run_readonly_investigation`으로 조사기를 실행한 뒤 기존 출력 검증(`validate_analysis`)을 통과한 결과만 채점한다. Phase 1 조사는 `ExistingInvestigator`(기존 `guarded_investigate`, Harness 예산 포함)로 실행한다. #71의 조사기는 같은 자리에 꽂는다.
@@ -76,7 +78,7 @@ uv run --locked --env-file .env python -m app.investigation_eval \
 
 - 기본 묶음은 `development`다. 확인용은 `--split confirmation`을 명시해야 실행된다.
 - `--live`는 `--limit`(1~200)이 필수다. 출력 파일은 새로 만들 때만 쓰고 덮어쓰지 않는다.
-- 같은 결과를 두 기준으로 보려면 `--details-out` 파일의 행(`verdict`, `categories`, `policyIds`, `missingFacts`)을 `{id: 행}` 예측 파일로 바꿔 다른 `--standard`로 재생한다(`reason`은 무시하도록 빼고 넣는다). 모델을 다시 호출하지 않는다.
+- 같은 결과를 두 기준으로 보려면 `--details-out` 파일의 행(`verdict`, `categories`, `policyIds`, `missingFacts`)을 `{id: 행}` 예측 파일로 바꿔 다른 `--standard`로 재생한다(`reason`은 무시하도록 빼고 넣는다). 모델을 다시 호출하지 않는다. 실행 중 오류가 난 사례는 details에 `{"status": "ERROR", "errorCode": …}`로 남고, 재생 때도 같은 오류로 집계된다(판정을 만들어 채우지 않는다).
 
 ## Phase 1 baseline 절차
 
