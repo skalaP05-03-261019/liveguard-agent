@@ -51,6 +51,9 @@ class DemoWebTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("script-src 'self'", page.headers['content-security-policy'])
         script = await self.request(app, 'GET', '/demo.js')
         self.assertIn("fetch('/api/screen'", script.text)
+        self.assertIn("experiment: 'include-uncertain'", script.text)
+        self.assertIn('정상 · 후보 신호 없음', script.text)
+        self.assertNotIn('운영자 판단 대기', script.text)
         self.assertIn('textContent', script.text)
         self.assertNotIn('innerHTML', script.text)
         self.assertEqual((await self.request(app, 'GET', '/health')).json()['executionAuthorized'], False)
@@ -78,6 +81,21 @@ class DemoWebTests(unittest.IsolatedAsyncioTestCase):
         result = await self.request(app, 'POST', '/api/screen', json=body)
         self.assertTrue(result.json()['selected'])
         self.assertEqual(result.json()['assessment']['signals'][0]['reason'], 'Synthetic local reason')
+
+    async def test_uncertain_signal_is_candidate_in_binary_demo_experiment(self):
+        body = payload('Synthetic ambiguous target')
+        body['experiment'] = 'include-uncertain'
+        signal = {'signals': [{'kind': 'TARGETED_ATTACK', 'strength': 'UNCERTAIN',
+                   'reason': 'Synthetic target may need review',
+                   'evidence': [{'messageId': body['input']['target']['messageId'],
+                                 'text': 'Synthetic ambiguous target'}]}],
+                  'missingFacts': ['Synthetic missing context']}
+        result = await self.request(create_app(Screen(Assessment.model_validate(signal))),
+                                    'POST', '/api/screen', json=body)
+        self.assertEqual(result.status_code, 200)
+        self.assertTrue(result.json()['selected'])
+        self.assertEqual(result.json()['assessment']['missingFacts'], ['Synthetic missing context'])
+        self.assertFalse(result.json()['executionAuthorized'])
 
     async def test_message_id_only_model_evidence_is_exact_in_public_demo_response(self):
         body = payload('Synthetic full target message')

@@ -10,7 +10,7 @@ from .service import DraftRequest, DraftResponse, service_from_env
 
 PATH = '/agent/investigations/draft'
 
-CONFLICTS = frozenset({'SCREENING_BINDING_MISMATCH', 'NOT_A_CANDIDATE', 'INVALID_TASK_KIND',
+CONFLICTS = frozenset({'SCREENING_BINDING_MISMATCH', 'INVALID_TASK_KIND',
                       'INVALID_SCREENING_EVIDENCE', 'HANDOFF_NOT_READY', 'STALE_EVIDENCE',
                       'INVALID_EVIDENCE', 'POLICY_MISMATCH'})
 

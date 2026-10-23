@@ -42,6 +42,17 @@ class DraftServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.draft.harness_budget['modelCalls'], 1)
         self.assertEqual(result.draft.analysis.message_findings[0].verdict, 'NEEDS_REVIEW')
 
+    async def test_be_candidate_still_runs_when_screening_does_not_select(self):
+        p = payload()
+        p['screeningResult']['selected'] = False
+        p['screeningResult']['assessment'] = {'signals': [], 'missingFacts': []}
+        runner, reads, model = service()
+        result = await runner.run(DraftRequest.model_validate(p))
+        self.assertEqual(reads.calls, ['get_moderation_case', 'get_chat_context'])
+        self.assertEqual(len(model.inputs), 1)
+        self.assertEqual(result.draft.analysis.message_findings[0].verdict, 'NEEDS_REVIEW')
+        self.assertFalse(result.execution_authorized)
+
     async def test_policy_search_resource_and_draft_validation_reused(self):
         f = deepcopy(FIXTURE)
         f['case']['policyVersion'] = POLICY['version']

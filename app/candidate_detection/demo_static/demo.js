@@ -77,12 +77,11 @@ function showResult(data, elapsedMs) {
   const signals = data.assessment.signals || [];
   const hasSignals = signals.length > 0;
   const verdict = element('div', `verdict ${data.selected ? 'flagged' : 'clear'}`);
-  verdict.append(element('small', 'verdict-caption', '현재 실험 기준 · 명확 + 가능'),
-                 element('strong', '', data.selected ? '검토 후보' : hasSignals ? '기준상 후보 아님' : '특이 신호 없음'),
+  verdict.append(element('small', 'verdict-caption', '현재 데모 기준 · 신호 있으면 검토'),
+                 element('strong', '', data.selected ? '검토 후보' : '정상 · 후보 신호 없음'),
                  element('p', '', data.selected
                     ? '근거를 확인한 뒤 사람이 최종 판단합니다.'
-                    : hasSignals ? '관찰 신호는 있으나 현재 선택 기준에는 포함되지 않았습니다.'
-                                 : '현재 모델은 이 채팅에서 위험 신호를 제시하지 않았습니다.'));
+                    : '현재 모델은 이 채팅에서 위험 신호를 제시하지 않았습니다.'));
   analysis.append(verdict);
   analysis.append(element('p', 'signal-heading', `근거 신호 · ${signals.length}건`));
   if (!hasSignals) analysis.append(element('p', 'no-signal', '표시할 위험 신호가 없습니다. 앞선 채팅 문맥도 함께 검사했습니다.'));
@@ -111,7 +110,7 @@ async function submitChat(text) {
     const response = await fetch('/api/screen', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requestId: crypto.randomUUID(), experiment: 'clear-or-possible',
+      body: JSON.stringify({ requestId: crypto.randomUUID(), experiment: 'include-uncertain',
                              input: { liveId, target, context } }),
     });
     const data = await response.json();
@@ -119,7 +118,7 @@ async function submitChat(text) {
     showResult(data, performance.now() - started);
     entry.row.classList.add(data.selected ? 'flagged' : 'cleared');
     entry.status.classList.add(data.selected ? 'flagged' : 'cleared');
-    entry.status.textContent = data.selected ? '검토 후보 · 운영자 판단 대기' : '기준상 후보 아님';
+    entry.status.textContent = data.selected ? '검토 후보 · 데모 결과' : '정상 · 후보 신호 없음';
     updateConnection(true);
   } catch (error) {
     const code = error instanceof Error ? error.message : 'MODEL_UNAVAILABLE';

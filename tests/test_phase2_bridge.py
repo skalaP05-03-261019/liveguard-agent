@@ -167,18 +167,25 @@ class HandoffTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(handoff.execution_authorized)
         self.assertEqual(len(handoff.agent_state()['target_messages']), 1)
 
-    async def test_receipt_identity_or_unselected_stops_before_backend_reads(self):
-        for change in ('requestId', 'liveId', 'targetMessageId', 'unselected'):
+    async def test_receipt_identity_stops_before_backend_reads(self):
+        for change in ('requestId', 'liveId', 'targetMessageId'):
             f = deepcopy(FIXTURE)
-            if change == 'unselected':
-                f['screenResult']['selected'] = False
-                f['screenResult']['assessment'] = {'signals': [], 'missingFacts': []}
-            else:
-                f['screenResult'][change] = '00000000-0000-4000-8000-000000000099'
+            f['screenResult'][change] = '00000000-0000-4000-8000-000000000099'
             reads = Reads(f)
             with self.subTest(change=change), self.assertRaises(AgentToolError):
                 await self.prepare(f, reads)
             self.assertEqual(reads.calls, [])
+
+    async def test_backend_held_candidate_is_investigated_when_screen_not_selected(self):
+        f = deepcopy(FIXTURE)
+        f['screenResult']['selected'] = False
+        f['screenResult']['assessment'] = {'signals': [], 'missingFacts': []}
+        reads = Reads(f)
+        handoff = await self.prepare(f, reads)
+        self.assertEqual(reads.calls, ['get_moderation_case', 'get_chat_context'])
+        self.assertFalse(handoff.screening.selected)
+        self.assertEqual(handoff.snapshot.handling_route, 'CONTEXT_REVIEW')
+        self.assertEqual(handoff.agent_state()['target_messages'][0]['visibility'], 'HELD')
 
     async def test_stale_case_scope_route_visibility_and_changed_quotes_fail_closed(self):
         changes = [('snapshot', lambda f: f['case'].update(evidenceVersion=2)),
