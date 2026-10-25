@@ -21,7 +21,7 @@ EXPECTED_POLICY_IDS = [
     "CP-4.2", "CP-5.1", "CP-5.2", "SP-2.1", "SP-3.1", "CP-6.1", "MP-1.1",
     "MP-1.2", "MP-1.3", "MP-1.4", "MP-2.1", "MP-2.2", "MP-2.3", "MP-3.1",
     "MP-3.2", "MP-4.1", "MP-4.2", "MP-4.3", "SP-4.1", "MM-1.1", "MM-2.1",
-    "CP-7.1",
+    "CP-7.1", "CP-7.2",
 ]
 
 
@@ -77,6 +77,16 @@ class PolicyParserTest(unittest.TestCase):
                          "policy://v3.2/operating-policy/CP-3.3")
         self.assertIn("대상 집단과 열등 단정 또는 배제 표현", by_id["CP-3.3"].text)
         self.assertIn("CP-3.3", by_id["CP-6.1"].text)
+
+    def test_v32_harassment_profile_precedence_is_indexed(self) -> None:
+        profile = self.by_id["CP-7.2"].text
+        self.assertIn("프로필 적용표는 HARASSMENT 판단에서 조항 간 참조보다 우선한다", profile)
+        self.assertIn("`STRICT`", profile)
+        self.assertIn("CP-2.2", profile)
+        self.assertIn("CP-3.3", profile)
+        self.assertIn("`RELAXED`", profile)
+        self.assertIn("PHISHING", profile)
+        self.assertIn("설정 revision", profile)
 
     def test_maps_categories_and_leaves_common_sections_unmapped(self) -> None:
         self.assertEqual(self.by_id["CP-2.1"].category, Category.PROFANITY)
