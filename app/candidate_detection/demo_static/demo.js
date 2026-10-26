@@ -53,19 +53,31 @@ function addChat(text) {
   const wrap = element('div', 'bubble-wrap');
   wrap.append(element('p', 'bubble-meta', '시청자 · 방금'), element('div', 'bubble', text));
   const status = element('span', 'entry-status', 'AI 판독 중…');
-  wrap.append(status);
+  const origin = element('span', 'entry-origin', 'BE 미연결 · Agent 직접 검사');
+  wrap.append(status, origin);
   row.append(avatar, wrap);
   chatLog.append(row);
   chatLog.scrollTop = chatLog.scrollHeight;
-  return { row, status };
+  return { row, status, origin };
 }
 
 function showThinking() {
   analysis.replaceChildren(element('div', 'thinking', '채팅의 표현과 문맥을 확인하고 있습니다…'));
 }
 
-function showError(code) {
-  analysis.replaceChildren(element('div', 'error-box', errorFor[code] || '판독에 실패했습니다. 모델 연결을 확인하고 다시 보내 주세요.'));
+function showError(code, elapsedMs) {
+  analysis.replaceChildren();
+  const head = element('div', 'result-head');
+  head.append(element('span', 'result-title', '방금 보낸 채팅의 처리'),
+              element('span', 'elapsed', `${(elapsedMs / 1000).toFixed(2)}초`));
+  analysis.append(head, element('p', 'source-summary', 'BE 미연결 · Agent 판독 불가 · 시스템 검토 전환'));
+  const verdict = element('div', 'verdict flagged');
+  verdict.append(element('small', 'verdict-caption', 'AI 근거 없음 · 안전 분기'),
+                 element('strong', '', '검토 후보'),
+                 element('p', '', 'AI가 위반이라고 판단한 결과가 아닙니다. 응답을 확인할 수 없어 정상으로 단정하지 않고 사람이 원문과 문맥을 검토하도록 남겼습니다.'));
+  analysis.append(verdict,
+                  element('p', 'review-note', errorFor[code] || 'AI 판독 불가 · 모델 연결을 확인해 주세요.'),
+                  element('p', 'diagnostic-code', `AI 판독 불가 · ${code}`));
 }
 
 function showResult(data, elapsedMs) {
@@ -74,6 +86,8 @@ function showResult(data, elapsedMs) {
   head.append(element('span', 'result-title', '방금 보낸 채팅의 판독'),
               element('span', 'elapsed', `${(elapsedMs / 1000).toFixed(2)}초`));
   analysis.append(head);
+  analysis.append(element('p', 'source-summary',
+    `BE 미연결 · ${data.selected ? 'Agent 후보 신호' : 'Agent 후보 신호 없음'}`));
   const signals = data.assessment.signals || [];
   const hasSignals = signals.length > 0;
   const verdict = element('div', `verdict ${data.selected ? 'flagged' : 'clear'}`);
@@ -119,11 +133,15 @@ async function submitChat(text) {
     entry.row.classList.add(data.selected ? 'flagged' : 'cleared');
     entry.status.classList.add(data.selected ? 'flagged' : 'cleared');
     entry.status.textContent = data.selected ? '검토 후보 · 데모 결과' : '정상 · 후보 신호 없음';
+    entry.origin.textContent = `BE 미연결 · ${data.selected ? 'Agent 후보 신호' : 'Agent 후보 신호 없음'}`;
     updateConnection(true);
   } catch (error) {
     const code = error instanceof Error ? error.message : 'MODEL_UNAVAILABLE';
-    showError(code);
-    entry.status.textContent = '판독 실패 · 다시 시도 가능';
+    showError(code, performance.now() - started);
+    entry.row.classList.add('flagged');
+    entry.status.classList.add('flagged');
+    entry.status.textContent = '검토 후보 · AI 판독 불가';
+    entry.origin.textContent = 'BE 미연결 · Agent 판독 불가';
     // A failed call has no verified observation; do not pass it as prior context.
     history = history.filter((item) => item.messageId !== target.messageId);
     if (code === 'MODEL_UNAVAILABLE') updateConnection(false);
