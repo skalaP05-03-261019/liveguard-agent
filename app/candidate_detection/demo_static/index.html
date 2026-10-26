@@ -6,6 +6,7 @@
   <meta name="color-scheme" content="light">
   <title>LIVE:GUARD · 채팅 판독 데모</title>
   <link rel="stylesheet" href="/demo.css">
+  <link rel="stylesheet" href="/backend.css">
   <script src="/demo.js" defer></script>
 </head>
 <body>
@@ -17,8 +18,14 @@
     <main class="workspace">
       <section class="chat-panel" aria-labelledby="chat-heading">
         <div class="panel-head">
-          <div><p class="eyebrow">LOCAL LIVE ROOM / 시청자 화면</p><h1 id="chat-heading">채팅을 입력해 보세요<span class="period">.</span></h1><p class="intro">보낸 문장을 실제 Agent 모델이 검사합니다. 앞선 채팅 최대 8개가 문맥으로 함께 전달됩니다.</p></div>
+          <div><p class="eyebrow">LOCAL LIVE ROOM / 시청자 화면</p><h1 id="chat-heading">채팅을 입력해 보세요<span class="period">.</span></h1><p class="intro">보낸 문장을 실제 Agent 모델이 검사합니다. 앞선 채팅 최대 8개가 문맥으로 함께 전달됩니다.</p><p class="route-note" id="route-note">검사 경로: BE 필터 미연결 → Agent 직접 판독</p></div>
           <div class="live-badge"><span aria-hidden="true"></span>LIVE DEMO</div>
+        </div>
+        <div class="backend-setup" id="backend-setup" hidden>
+          <div class="backend-mode"><label for="demo-mode">검사 경로</label><select id="demo-mode"><option value="backend">실제 BE 전송 + Agent 별도 비교</option><option value="agent">Agent 단독 실험</option></select></div>
+          <form id="backend-login"><label for="backend-username">BE 시청자 로그인</label><div class="backend-login-row"><input id="backend-username" autocomplete="username" placeholder="아이디" required><input id="backend-password" type="password" autocomplete="current-password" placeholder="비밀번호" required><button type="submit">연결</button></div></form>
+          <div id="backend-session" hidden><label for="backend-channel">방송 채널</label><select id="backend-channel"></select></div>
+          <p id="backend-state" role="status">BE 연결 준비 중</p>
         </div>
         <div class="chat-log" id="chat-log" role="log" aria-live="polite" aria-relevant="additions">
           <div class="empty-chat" id="empty-chat"><div class="empty-icon" aria-hidden="true">⌁</div><p>아직 채팅이 없습니다</p><span>직접 써도 되고, 아래 문장으로 먼저 시험해도 됩니다.</span></div>
