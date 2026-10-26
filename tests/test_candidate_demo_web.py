@@ -57,6 +57,7 @@ class DemoWebTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('textContent', script.text)
         self.assertNotIn('innerHTML', script.text)
         self.assertEqual((await self.request(app, 'GET', '/health')).json()['executionAuthorized'], False)
+        self.assertFalse((await self.request(app, 'GET', '/health')).json()['backendConfigured'])
 
     async def test_chat_and_context_reach_screen_without_mutation(self):
         screen = Screen(); app = create_app(screen)

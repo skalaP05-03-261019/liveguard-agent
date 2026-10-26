@@ -1,6 +1,6 @@
 # 직접 채팅하며 보는 Agent 후보 판독 데모 (#83)
 
-사용자가 시청자 채팅을 입력하면 실제 Agent의 `CandidateScreen`이 현재 문장과 앞선 채팅 최대8개를 읽고 **검토 후보 여부·신호 유형·강도·인용·이유**를 화면에 반환한다. 정책 위반 판정이나 강퇴는 수행하지 않는다. BE/FE 서비스와 별개의 로컬 전용 화면이다. 사용자 요청의 “직접 채팅 치면서 판독 보기”를 위한 Agent 범위 시연이다.
+사용자가 시청자 채팅을 입력하면 실제 Agent의 `CandidateScreen`이 현재 문장과 앞선 채팅 최대8개를 읽고 **검토 후보 여부·신호 유형·강도·인용·이유**를 화면에 반환한다. 정책 위반 판정이나 강퇴는 수행하지 않는다. 기본은 Agent 단독 모드이며, 선택적으로 로컬 BE의 실제 채팅 전송 결과를 나란히 볼 수 있다.
 
 ## 바로 열기
 
@@ -23,7 +23,8 @@ docker run --rm --name liveguard-candidate-demo \
   -v /Users/taegwankim/Downloads/.env:/run/liveguard-model.env:ro \
   -w /work liveguard-unified-agent \
   python -m app.candidate_detection.demo_web \
-  --env-file /run/liveguard-model.env --model gpt-5.4-mini --port 8765 --container
+  --env-file /run/liveguard-model.env --model gpt-5.4-mini --port 8765 \
+  --backend-url http://host.docker.internal:8080 --container
 ```
 
 Docker 명령은 repo 루트에서 실행한다. 사용 후 `docker stop liveguard-candidate-demo`로 종료한다. 같은 로컬 포트를 다른 앱이 사용하면 다른 `--port`와 Docker 양쪽 포트를 맞춘다. 키가 유효하지 않으면 화면에 오류 코드만 보이며 원문/모델 응답의 예외 내용은 외부 응답으로 내보내지 않는다.
@@ -44,4 +45,10 @@ Docker 명령은 repo 루트에서 실행한다. 사용 후 `docker stop livegua
 
 Playwright 실제 브라우저 실행에서 페이지 오류0. 데스크톱·모바일 화면을 캡처해 레이아웃을 확인했다. 합성 ASGI 검사8개는 Host/Origin·본문 크기·입력 오류·모델 오류 누출·문맥 전달·정적 화면을 확인한다. 전체 회귀 382개가 격리 PostgreSQL·ASGI/TCP에서 성공했으며 skip은 0개다. GitHub CI 결과는 PR에서 확인한다.
 
-이 화면은 Agent 후보 판별만 호출한다. 검사 경로 표시는 “BE 미연결 · Agent 직접 검사”로 고정하며, BE가 실제로 걸러 낸 결과를 뜻하지 않는다. BE 채팅 저장, 사건 생성, 운영자 승인, 집행, FE 서비스 화면은 이 시연의 결과가 아니다. 기존 팀 정책·승인 흐름은 그대로이며, 새 혐오/비하 정책 합의와 고객사 민감도 설정도 이 데모로 확정하지 않는다.
+BE 연결을 지정하지 않은 화면은 Agent 후보 판별만 호출한다. 검사 경로 표시는 “BE 미연결 · Agent 직접 검사”이며, BE가 실제로 걸러 낸 결과를 뜻하지 않는다. BE 채팅 저장, 사건 생성, 운영자 승인, 집행, FE 서비스 화면은 이 단독 모드의 결과가 아니다. 기존 팀 정책·승인 흐름은 그대로이며, 새 혐오/비하 정책 합의와 고객사 민감도 설정도 이 데모로 확정하지 않는다.
+
+## 선택형 BE 연결
+
+로컬 Python 실행에서 `--backend-url http://127.0.0.1:8080`을 지정하면 데모에 실제 BE 시청자 로그인·진행 중 방송 선택이 열린다. Docker 데모에서는 `http://host.docker.internal:8080`을 사용한다. URL은 로컬 호스트로 제한한다. 브라우저의 세션 쿠키와 CSRF 토큰을 같은 출처의 제한된 프록시가 BE의 로그인·계정·현재 방송·채팅 전송 경로에만 전달한다. 계정 비밀번호나 서비스 토큰을 데모 코드에 저장하지 않는다.
+
+통합 모드의 순서는 **BE에 실제 채팅 전송 → BE 응답의 `visibility`·`moderationReasonCode` 표시 → 같은 메시지 ID로 Agent 후보 판독을 별도 실행**이다. 화면에서 BE 공개·보류·숨김과 Agent 후보 신호를 독립적으로 보여 준다. Agent 후보 판독은 BE 사건·운영자 결정 API에 제출하지 않으므로 실제 집행 근거가 아니다. BE가 전송을 거부하면 Agent 비교를 실행하지 않는다. Agent가 실패하면 BE 처리 상태를 유지하고 Agent 결과만 판독 불가로 표시한다. 현재 데모는 Agent Worker의 사건 조사 결과나 운영자 승인 결과를 읽지 않는다.

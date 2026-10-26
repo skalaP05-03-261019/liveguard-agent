@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import os
 from pathlib import Path
+from uuid import UUID
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -15,6 +16,7 @@ from app.clients.business_mcp import AgentToolError
 from app.investigation.model import model_from_env
 from app.phase2_bridge.contracts import ScreenRequest, ScreenResult
 from .contracts import select_candidate
+from .demo_backend import DemoBackend
 from .screen import CandidateScreen
 
 STATIC = Path(__file__).with_name('demo_static')
@@ -39,7 +41,8 @@ class LocalDemoBoundary:
         name = host.partition(':')[0]
         if name not in {'127.0.0.1', 'localhost'}:
             return await fail(403, 'LOCAL_HOST_REQUIRED')(scope, receive, send)
-        if scope.get('path') in {'/api/screen', '/api/compare'}:
+        if (scope.get('path') in {'/api/screen', '/api/compare'}
+                or (scope.get('path', '').startswith('/api/backend/') and scope.get('method') == 'POST')):
             if scope.get('method') != 'POST':
                 return await fail(405, 'METHOD_NOT_ALLOWED')(scope, receive, send)
             if headers.get('origin') != 'http://' + host:
@@ -70,7 +73,7 @@ class LocalDemoBoundary:
         return await self.app(scope, receive, send)
 
 
-def create_app(screen, *, max_concurrent=2):
+def create_app(screen, *, max_concurrent=2, backend=None):
     if type(max_concurrent) is not int or not 1 <= max_concurrent <= 8:
         raise ValueError('Invalid demo concurrency')
     app = FastAPI(title='LIVE:GUARD local candidate demo',
@@ -101,6 +104,10 @@ def create_app(screen, *, max_concurrent=2):
     async def css():
         return FileResponse(STATIC/'demo.css', media_type='text/css')
 
+    @app.get('/backend.css')
+    async def backend_css():
+        return FileResponse(STATIC/'backend.css', media_type='text/css')
+
     @app.get('/demo.js')
     async def script():
         return FileResponse(STATIC/'demo.js', media_type='application/javascript')
@@ -108,7 +115,31 @@ def create_app(screen, *, max_concurrent=2):
     @app.get('/health')
     async def health():
         return {'mode': 'local-candidate-demo', 'modelConfigured': screen is not None,
-                'executionAuthorized': False}
+                'backendConfigured': backend is not None, 'executionAuthorized': False}
+
+    @app.post('/api/backend/login')
+    async def backend_login(request: Request):
+        if backend is None:
+            return fail(503, 'BACKEND_NOT_CONFIGURED')
+        return await backend.relay(request, 'POST', '/api/auth/login')
+
+    @app.get('/api/backend/me')
+    async def backend_me(request: Request):
+        if backend is None:
+            return fail(503, 'BACKEND_NOT_CONFIGURED')
+        return await backend.relay(request, 'GET', '/api/auth/me')
+
+    @app.get('/api/backend/channels/{channel_id}/current-live')
+    async def backend_current_live(channel_id: UUID, request: Request):
+        if backend is None:
+            return fail(503, 'BACKEND_NOT_CONFIGURED')
+        return await backend.relay(request, 'GET', f'/api/channels/{channel_id}/lives/current')
+
+    @app.post('/api/backend/lives/{live_id}/messages')
+    async def backend_message(live_id: UUID, request: Request):
+        if backend is None:
+            return fail(503, 'BACKEND_NOT_CONFIGURED')
+        return await backend.relay(request, 'POST', f'/api/lives/{live_id}/messages')
 
     @app.post('/api/screen', response_model=ScreenResult)
     async def assess(request: ScreenRequest):
@@ -166,6 +197,7 @@ def main():
     parser.add_argument('--env-file', type=Path, required=True)
     parser.add_argument('--model', required=True)
     parser.add_argument('--port', type=int, default=8765)
+    parser.add_argument('--backend-url', help='Optional loopback Backend, e.g. http://127.0.0.1:8080')
     parser.add_argument('--container', action='store_true',
                         help='Bind inside container; publish the Docker port to host 127.0.0.1 only')
     args = parser.parse_args()
@@ -178,7 +210,11 @@ def main():
         screen = CandidateScreen(model_from_env())
     except (OSError, ValueError):
         parser.error('Cannot load local model configuration; check env file privately')
-    uvicorn.run(create_app(screen), host='0.0.0.0' if args.container else '127.0.0.1',
+    try:
+        backend = DemoBackend(args.backend_url) if args.backend_url else None
+    except ValueError as error:
+        parser.error(str(error))
+    uvicorn.run(create_app(screen, backend=backend), host='0.0.0.0' if args.container else '127.0.0.1',
                 port=args.port, log_level='warning', access_log=False)
 
 

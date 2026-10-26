@@ -1,0 +1,9 @@
+.backend-setup{margin:0 24px 16px;padding:14px 16px;border:1px solid #dedfe5;border-radius:12px;background:#f9f9fb;color:#282b32;font-size:12px}
+.backend-setup[hidden],#backend-session[hidden],#backend-login[hidden]{display:none}
+.backend-mode,.backend-login-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.backend-setup label{font-weight:700}.backend-setup select,.backend-setup input{min-height:34px;padding:6px 9px;border:1px solid #c9cbd3;border-radius:7px;background:#fff;color:#222}
+.backend-setup button{min-height:34px;padding:6px 14px;border:0;border-radius:7px;background:#dc293d;color:white;font-weight:700;cursor:pointer}
+#backend-login,#backend-session{margin-top:10px}#backend-state{margin:9px 0 0;color:#5e6570}
+.backend-result{padding:12px 14px;margin:12px 0;border-left:3px solid #4a5f83;border-radius:7px;background:#f0f3f8;color:#202937;line-height:1.5}
+.backend-result strong{display:block;margin-bottom:4px}.backend-result p{margin:3px 0}.backend-result small{color:#5b6270}
+.backend-result.held{border-color:#e5a923;background:#fff8e6}.backend-result.hidden{border-color:#d93349;background:#fff0f2}
